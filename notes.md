@@ -9,3 +9,9 @@ pkill -f "php artisan serve"
 
 
 paste link here for the member to access only 8000
+
+
+admin@gmail.com 
+admin
+
+staff
