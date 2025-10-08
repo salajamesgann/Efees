@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +27,34 @@ class StudentProfileController extends Controller
 
         $student = $user->roleable; // Morph relation to Student
 
+        // Get notifications for the user
+        $notifications = DB::table('notifications')
+            ->where('user_id', $user->user_id)
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
         return view('auth.student_profile', [
+            'user' => $user,
+            'student' => $student,
+            'notifications' => $notifications,
+        ]);
+    }
+
+    /**
+     * Show the student settings page.
+     */
+    public function settings(Request $request): View
+    {
+        $user = Auth::user();
+
+        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+            abort(403);
+        }
+
+        $student = $user->roleable; // Morph relation to Student
+
+        return view('auth.student_settings', [
             'user' => $user,
             'student' => $student,
         ]);
@@ -52,7 +80,7 @@ class StudentProfileController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->user_id . ',user_id'],
             'contact_number' => ['required', 'string', 'min:7', 'max:20'],
             'sex' => ['required', 'string', 'in:Male,Female'],
-            'year' => ['required', 'string', 'in:1st Year,2nd Year,3rd Year,4th Year'],
+            'level' => ['required', 'string', 'max:255'],
             'section' => ['required', 'string', 'max:255'],
             'new_password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'], // 2MB
@@ -64,7 +92,7 @@ class StudentProfileController extends Controller
         $student->last_name = $validated['last_name'];
         $student->contact_number = $validated['contact_number'];
         $student->sex = $validated['sex'];
-        $student->year = $validated['year'];
+        $student->level = $validated['level'];
         $student->section = $validated['section'];
 
         // Handle profile picture upload

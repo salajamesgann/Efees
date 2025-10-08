@@ -14,6 +14,14 @@ use Illuminate\Support\Facades\DB;
 class AdminStudentController extends Controller
 {
     /**
+     * Show the form for creating a new student.
+     */
+    public function create(): View
+    {
+        return view('auth.admin_students_create');
+    }
+
+    /**
      * Show Manage Students page with list and create form.
      */
     public function index(Request $request): View
@@ -52,10 +60,10 @@ class AdminStudentController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'middle_initial' => ['nullable', 'string', 'max:1'],
             'last_name' => ['required', 'string', 'max:255'],
-            'contact_number' => ['required', 'numeric'],
+            'contact_number' => ['required', 'string', 'min:7', 'max:20'],
+            'sex' => ['required', 'string', 'in:Male,Female'],
+            'level' => ['required', 'string', 'max:255'],
             'section' => ['required', 'string', 'max:255'],
-            'department' => ['required', 'string', 'max:255'],
-            'level' => ['required', 'string', 'in:1st Year,2nd Year,3rd Year,4th Year'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
@@ -71,16 +79,16 @@ class AdminStudentController extends Controller
         }
         $studentId = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-        // Create student
+        // Create student with signup information
         $student = Student::create([
             'student_id' => $studentId,
             'first_name' => $validated['first_name'],
             'middle_initial' => $validated['middle_initial'] ?? null,
             'last_name' => $validated['last_name'],
             'contact_number' => $validated['contact_number'],
+            'sex' => $validated['sex'],
             'level' => $validated['level'],
             'section' => $validated['section'],
-            'department' => $validated['department'],
         ]);
 
         // Link a user with role=student
@@ -96,7 +104,7 @@ class AdminStudentController extends Controller
 
         return redirect()
             ->route('admin.students.index')
-            ->with('success', 'Student created successfully.');
+            ->with('success', 'Student created successfully with signup credentials.');
     }
 
     /**
@@ -123,10 +131,10 @@ class AdminStudentController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'middle_initial' => ['nullable', 'string', 'max:1'],
             'last_name' => ['required', 'string', 'max:255'],
-            'contact_number' => ['required', 'numeric'],
+            'contact_number' => ['required', 'string', 'min:7', 'max:20'],
+            'sex' => ['required', 'string', 'in:Male,Female'],
+            'level' => ['required', 'string', 'max:255'],
             'section' => ['required', 'string', 'max:255'],
-            'department' => ['required', 'string', 'max:255'],
-            'level' => ['required', 'string', 'in:1st Year,2nd Year,3rd Year,4th Year'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . ($user?->user_id ?? 'NULL') . ',user_id'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
@@ -137,9 +145,9 @@ class AdminStudentController extends Controller
                 'middle_initial' => $validated['middle_initial'] ?? null,
                 'last_name' => $validated['last_name'],
                 'contact_number' => $validated['contact_number'],
+                'sex' => $validated['sex'],
                 'level' => $validated['level'],
                 'section' => $validated['section'],
-                'department' => $validated['department'],
             ]);
 
             if ($user) {
@@ -153,7 +161,7 @@ class AdminStudentController extends Controller
 
         return redirect()
             ->route('admin.students.index')
-            ->with('success', 'Student updated successfully.');
+            ->with('success', 'Student updated successfully with signup information.');
     }
 
     /**

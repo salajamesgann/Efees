@@ -47,11 +47,14 @@ class AuthLoginController extends Controller
         }
 
         $upcomingFees = collect();
+        $paidFees = collect();
         $transactions = collect();
         $notifications = collect();
         $balanceDue = 0.0;
+        $totalPaid = 0.0;
 
         if ($studentId) {
+            // Get upcoming/unpaid fees
             $upcomingFees = FeeRecord::where('student_id', $studentId)
                 ->where(function ($q) {
                     $q->where('status', '!=', 'paid')
@@ -62,20 +65,35 @@ class AuthLoginController extends Controller
                 ->limit(10)
                 ->get();
 
+            // Calculate total balance due
             $balanceDue = $upcomingFees->reduce(function ($carry, $item) {
+                $val = is_numeric($item->balance) ? (float) $item->balance : 0.0;
+                return $carry + $val;
+            }, 0.0);
+
+            // Get paid fees for current student
+            $paidFees = FeeRecord::where('student_id', $studentId)
+                ->where('status', 'paid')
+                ->orderBy('id', 'desc')
+                ->limit(10)
+                ->get();
+
+            // Calculate total paid amount
+            $totalPaid = $paidFees->reduce(function ($carry, $item) {
                 $val = is_numeric($item->balance) ? (float) $item->balance : 0.0;
                 return $carry + $val;
             }, 0.0);
         }
 
         if ($user) {
+            // Get notifications for the user
             $notifications = DB::table('notifications')
                 ->where('user_id', $user->user_id)
                 ->orderBy('created_at', 'desc')
                 ->limit(10)
                 ->get();
 
-            // Recent transactions (if the table exists)
+            // Get recent transactions (payment history)
             try {
                 $transactions = DB::table('payment_transactions')
                     ->where('user_id', $user->user_id)
@@ -90,9 +108,11 @@ class AuthLoginController extends Controller
 
         return view('auth.user_dashboard', [
             'upcomingFees' => $upcomingFees,
+            'paidFees' => $paidFees,
             'transactions' => $transactions,
             'notifications' => $notifications,
             'balanceDue' => $balanceDue,
+            'totalPaid' => $totalPaid,
         ]);
     }
 
@@ -154,20 +174,19 @@ class AuthLoginController extends Controller
     public function register(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'student_id' => ['required', 'string', 'max:255', 'unique:students,student_id'],
             'first_name' => ['required', 'string', 'max:255'],
             'middle_initial' => ['nullable', 'string', 'max:1'],
             'last_name' => ['required', 'string', 'max:255'],
             'contact_number' => ['required', 'string', 'max:20'],
             'sex' => ['required', 'string', 'in:Male,Female'],
-            'year' => ['required', 'string', 'in:1st Year,2nd Year,3rd Year,4th Year'],
+            'level' => ['required', 'string', 'max:255'],
             'section' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        // Use provided student ID
-        $studentId = $validated['student_id'];
+        // Generate a unique student ID
+        $studentId = $this->generateUniqueStudentId();
 
         // Create new student record
         $student = Student::create([
@@ -177,7 +196,7 @@ class AuthLoginController extends Controller
             'last_name' => $validated['last_name'],
             'contact_number' => $validated['contact_number'],
             'sex' => $validated['sex'],
-            'year' => $validated['year'],
+            'level' => $validated['level'],
             'section' => $validated['section'],
         ]);
 
@@ -195,6 +214,19 @@ class AuthLoginController extends Controller
         ]);
 
         return redirect()->route('login')->with('success', 'Account created successfully! Please log in.');
+    }
+
+    /**
+     * Generate a unique student ID.
+     */
+    private function generateUniqueStudentId(): string
+    {
+        do {
+            // Generate student ID using timestamp and random string
+            $studentId = 'STU' . date('Y') . strtoupper(substr(md5(uniqid()), 0, 8));
+        } while (Student::where('student_id', $studentId)->exists());
+
+        return $studentId;
     }
 
     /**

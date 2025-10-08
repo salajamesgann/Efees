@@ -41,10 +41,20 @@ class Student extends Model
 
     /**
      * The data type of the auto-incrementing ID.
-     *
      * @var string
      */
     protected $keyType = 'string';
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'contact_number' => 'string',
+        'level' => 'string',
+        'middle_initial' => 'string',
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -58,10 +68,10 @@ class Student extends Model
         'last_name',
         'contact_number',
         'sex',
-        'year',
+        'level',
         'section',
-        'address',
         'profile_picture_url',
+        'department',
     ];
 
     /**

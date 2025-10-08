@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('USER', function (Blueprint $table) {
+        Schema::create('users', function (Blueprint $table) {
             $table->bigIncrements('user_id');
             $table->string('email')->nullable();
             $table->string('password')->nullable();
@@ -20,7 +20,7 @@ return new class extends Migration
             $table->rememberToken();
 
             $table->unique('student_id');
-            $table->foreign('student_id')->references('student_id')->on('STUDENT');
+            $table->foreign('student_id')->references('student_id')->on('students');
         });
     }
 
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('USER');
+        Schema::dropIfExists('users');
     }
 };

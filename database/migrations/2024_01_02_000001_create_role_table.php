@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ROLE', function (Blueprint $table) {
+        Schema::create('roles', function (Blueprint $table) {
             $table->id('role_id');
             $table->string('role_name', 50)->unique();
             $table->string('description', 255)->nullable();
         });
 
         // Insert default roles
-        DB::table('ROLE')->insert([
+        DB::table('roles')->insert([
             ['role_name' => 'student', 'description' => 'Student role with access to fee management'],
             ['role_name' => 'admin', 'description' => 'Administrator with full system access'],
             ['role_name' => 'staff', 'description' => 'Staff member with limited administrative access']
@@ -30,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('ROLE');
+        Schema::dropIfExists('roles');
     }
 };

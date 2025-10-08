@@ -8,37 +8,52 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <style>
-    body { font-family: 'Inter', 'Noto Sans', sans-serif; background-color: #000; min-height: 100vh; }
-    .card { background-color: #1a1a1a; color: #fb923c; }
-    .btn { background-color: #f97316; color: #000; }
-    .btn:hover { background-color: #ea7a11; }
+    body { font-family: 'Inter', 'Noto Sans', sans-serif; }
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.2);
+    }
   </style>
 </head>
-<body class="flex flex-col md:flex-row min-h-screen">
+<body class="flex flex-col md:flex-row min-h-screen bg-slate-900 text-slate-100">
   <!-- Sidebar -->
-  <aside class="flex flex-col bg-black text-[#fb923c] w-full md:w-64 min-h-screen border-r border-[#ea9e4a] overflow-y-auto" id="sidebar" style="scrollbar-width: thin; scrollbar-color: #f97316 transparent;">
-    <div class="flex items-center gap-3 px-8 py-6 border-b border-[#e7f4e7]">
-      <div class="w-8 h-8 flex-shrink-0 text-[#f97316]">
-        <svg class="w-full h-full" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+  <aside class="flex flex-col bg-slate-800 text-slate-300 w-full md:w-72 min-h-screen border-r border-slate-700 overflow-y-auto" id="sidebar" style="scrollbar-width: thin; scrollbar-color: #8b5cf6 transparent;">
+    <div class="flex items-center gap-3 px-8 py-6 border-b border-slate-700">
+      <div class="w-8 h-8 flex-shrink-0 text-indigo-500">
           <path d="M24 4C25.7818 14.2173 33.7827 22.2182 44 24C33.7827 25.7818 25.7818 33.7827 24 44C22.2182 33.7827 14.2173 25.7818 4 24C14.2173 22.2182 22.2182 14.2173 24 4Z" fill="currentColor"></path>
         </svg>
       </div>
-      <h1 class="text-[#f97316] font-extrabold text-xl tracking-tight select-none" style="letter-spacing: -0.015em;">Efees Admin</h1>
+      <h1 class="text-indigo-400 font-extrabold text-xl tracking-tight select-none" style="letter-spacing: -0.015em;">Efees Admin</h1>
     </div>
     <nav class="flex flex-col mt-6 px-4 space-y-1 flex-grow">
-      <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#1a1a1a] transition-colors duration-300" href="{{ route('admin_dashboard') }}">
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-indigo-400 transition-colors duration-200" href="{{ route('admin_dashboard') }}">
         <i class="fas fa-tachometer-alt w-5"></i>
         <span class="text-sm font-semibold">Dashboard</span>
       </a>
-      <a aria-current="page" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#f97316] text-black font-semibold transition-colors duration-300" href="{{ route('admin.students.index') }}">
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-indigo-400 transition-colors duration-200" href="{{ route('admin.students.index') }}">
         <i class="fas fa-users w-5"></i>
         <span class="text-sm font-semibold">Manage Students</span>
       </a>
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-indigo-400 transition-colors duration-200" href="{{ route('admin.staff.index') }}">
+        <i class="fas fa-user-tie w-5"></i>
+        <span class="text-sm font-semibold">Staff Management</span>
+      </a>
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-indigo-400 transition-colors duration-200" href="#">
+        <i class="fas fa-chart-bar w-5"></i>
+        <span class="text-sm font-semibold">Reports</span>
+      </a>
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-indigo-400 transition-colors duration-200" href="#">
+        <i class="fas fa-cog w-5"></i>
+        <span class="text-sm font-semibold">Settings</span>
+      </a>
     </nav>
-    <div class="px-4 py-4 border-t border-[#e7f4e7]">
+    <div class="px-4 py-4 border-t border-slate-700">
       <form method="POST" action="{{ route('logout') }}">
         @csrf
-        <button type="submit" class="w-full flex items-center gap-3 bg-[#f97316] text-black font-bold text-sm rounded-lg h-10 justify-center cursor-pointer select-none transition-colors duration-300 hover:bg-[#ea7a11]" aria-label="Logout">
+        <button type="submit" class="w-full flex items-center gap-3 bg-indigo-500 text-white font-bold text-sm rounded-lg h-10 justify-center cursor-pointer select-none transition-colors duration-300 hover:bg-indigo-600" aria-label="Logout">
           <i class="fas fa-sign-out-alt"></i>
           <span>Logout</span>
         </button>
@@ -47,18 +62,18 @@
   </aside>
 
   <!-- Main content -->
-  <main class="flex-1 p-8 overflow-y-auto" style="color: #fb923c; background-color: #121212;">
-    <div class="flex items-center justify-between mb-8">
-      <h1 class="text-3xl font-extrabold select-none" style="letter-spacing: -0.015em;">Edit Student</h1>
-      <a href="{{ route('admin.students.index') }}" class="btn font-semibold px-4 py-2 rounded inline-flex items-center">
-        <i class="fas fa-arrow-left mr-2"></i> Back to list
+  <main class="flex-1 p-8 overflow-y-auto bg-slate-900">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-semibold tracking-tight text-slate-100">Edit Student</h1>
+      <a href="{{ route('admin.students.index') }}" class="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold px-4 py-2 rounded-lg transition-colors duration-200">
+        <i class="fas fa-arrow-left"></i>
+        Back to Students
       </a>
     </div>
 
     @if ($errors->any())
-      <div class="mb-6 rounded border border-red-700 bg-red-900/40 text-red-200 px-4 py-3">
-        <div class="font-bold mb-1">Please fix the following errors:</div>
-        <ul class="list-disc list-inside text-sm">
+      <div class="mb-6 border border-red-600 text-red-300 bg-red-900/20 rounded-md px-4 py-3">
+        <ul class="list-disc list-inside">
           @foreach ($errors->all() as $error)
             <li>{{ $error }}</li>
           @endforeach
@@ -66,72 +81,73 @@
       </div>
     @endif
 
-    <section class="card rounded-lg shadow-lg p-6">
-      <form method="POST" action="{{ route('admin.students.update', $student) }}" class="space-y-6">
-        @csrf
-        @method('PUT')
+    <form method="POST" action="{{ route('admin.students.update', $student) }}" class="bg-slate-800 rounded-2xl shadow-lg border border-slate-700 p-6 card-hover">
+      @csrf
+      @method('PUT')
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-sm mb-1">Student ID</label>
-            <input type="text" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" value="{{ $student->student_id }}" disabled />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">First Name</label>
-            <input name="first_name" value="{{ old('first_name', $student->first_name) }}" type="text" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" required />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Middle Initial</label>
-            <input name="middle_initial" value="{{ old('middle_initial', $student->middle_initial) }}" type="text" maxlength="1" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Last Name</label>
-            <input name="last_name" value="{{ old('last_name', $student->last_name) }}" type="text" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" required />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Contact Number</label>
-            <input name="contact_number" value="{{ old('contact_number', $student->contact_number) }}" type="number" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" required />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Level</label>
-            <select name="level" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" required>
-              @php($levels = ['1st Year','2nd Year','3rd Year','4th Year'])
-              @foreach($levels as $lvl)
-                <option value="{{ $lvl }}" {{ old('level', $student->level) === $lvl ? 'selected' : '' }}>{{ $lvl }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Section</label>
-            <input name="section" value="{{ old('section', $student->section) }}" type="text" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" required />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Department</label>
-            <input name="department" value="{{ old('department', $student->department) }}" type="text" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" required />
-          </div>
+      <h2 class="text-xl font-semibold mb-6 text-indigo-400">Student Information</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">First Name</label>
+          <input name="first_name" value="{{ old('first_name', $student->first_name) }}" type="text" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm mb-1">Email</label>
-            <input name="email" value="{{ old('email', optional($student->user)->email) }}" type="email" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" required />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">New Password (optional)</label>
-            <input name="password" type="password" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" placeholder="Leave blank to keep current" />
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Confirm New Password</label>
-            <input name="password_confirmation" type="password" class="w-full rounded border border-[#ea9e4a] bg-[#0f0f0f] text-[#fb923c] px-3 py-2" />
-          </div>
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Middle Initial</label>
+          <input name="middle_initial" value="{{ old('middle_initial', $student->middle_initial) }}" type="text" maxlength="1" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
         </div>
 
-        <div class="flex items-center gap-3">
-          <button type="submit" class="btn font-bold px-6 py-2 rounded">Save Changes</button>
-          <a href="{{ route('admin.students.index') }}" class="inline-flex items-center px-4 py-2 rounded bg-[#1f2937] text-[#fb923c] hover:bg-[#374151]">Cancel</a>
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Last Name</label>
+          <input name="last_name" value="{{ old('last_name', $student->last_name) }}" type="text" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required />
         </div>
-      </form>
-    </section>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Contact Number</label>
+          <input name="contact_number" value="{{ old('contact_number', $student->contact_number) }}" type="text" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Sex</label>
+          <select name="sex" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+            <option value="">Select Sex</option>
+            <option value="Male" {{ old('sex', $student->sex) === 'Male' ? 'selected' : '' }}>Male</option>
+            <option value="Female" {{ old('sex', $student->sex) === 'Female' ? 'selected' : '' }}>Female</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Email</label>
+          <input name="email" value="{{ old('email', optional($student->user)->email) }}" type="email" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Password (leave blank to keep current)</label>
+          <input name="password" type="password" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Confirm Password</label>
+          <input name="password_confirmation" type="password" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Grade Level</label>
+          <input name="level" value="{{ old('level', $student->level) }}" type="text" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required placeholder="e.g., Grade 7, 1st Year, etc." />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 text-slate-300">Section</label>
+          <input name="section" value="{{ old('section', $student->section) }}" type="text" class="w-full rounded-lg border border-slate-600 bg-slate-700 text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-4 mt-8">
+        <a href="{{ route('admin.students.index') }}" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-lg transition-colors duration-200">Cancel</a>
+        <button type="submit" class="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors duration-200">Update Student</button>
+      </div>
+    </form>
   </main>
 </body>
 </html>
