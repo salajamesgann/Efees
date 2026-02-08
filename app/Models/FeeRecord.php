@@ -42,16 +42,11 @@ class FeeRecord extends Model
      *
      * @var bool
      */
-<<<<<<< HEAD
     public $timestamps = true;
-=======
-    public $timestamps = false;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The attributes that are mass assignable.
      *
-<<<<<<< HEAD
      * @var array<string>
      */
     protected $fillable = [
@@ -75,15 +70,6 @@ class FeeRecord extends Model
         'amount' => 'decimal:2',
         'balance' => 'decimal:2',
         'payment_date' => 'datetime',
-=======
-     * @var list<string>
-     */
-    protected $fillable = [
-        'student_id',
-        'fee_id',
-        'balance',
-        'status',
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     ];
 
     /**
@@ -93,7 +79,6 @@ class FeeRecord extends Model
     {
         return $this->belongsTo(Student::class, 'student_id', 'student_id');
     }
-<<<<<<< HEAD
 
     /**
      * Get the fee assignment associated with this record.
@@ -190,6 +175,4 @@ class FeeRecord extends Model
     {
         return $this->status === 'overdue';
     }
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 }

@@ -154,7 +154,10 @@ class StaffRecordsController extends Controller
 
     private function checkPermission(): void
     {
-        abort(403, 'Staff accounts are view-only (Monitoring Mode).');
+        $canEditFees = SystemSetting::where('key', 'allow_staff_edit_fees')->value('value') === '1';
+        if (! $canEditFees) {
+            abort(403, 'Staff accounts are view-only (Monitoring Mode).');
+        }
     }
 
     private function logAudit(string $type, string $message): void

@@ -2,132 +2,97 @@
 
 namespace App\Http\Controllers;
 
-<<<<<<< HEAD
+use App\Models\ParentContact;
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\FeeManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-=======
-use App\Models\Staff;
-use App\Models\User;
-use App\Models\Role;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class AdminStaffController extends Controller
 {
     /**
-     * Display a listing of all staff accounts.
+     * Display a listing of all users (staff and parents).
      */
     public function index(Request $request): View
     {
         $query = trim($request->input('q', ''));
         $status = $request->input('status', 'all');
 
-<<<<<<< HEAD
-        $staffQuery = Staff::with(['user', 'user.role'])
-            ->select(['staff_id', 'first_name', 'MI', 'last_name', 'contact_number', 'department', 'position', 'is_active', 'created_at'])
-=======
-        $staffQuery = Staff::with('user')
-            ->select(['staff_id', 'first_name', 'MI', 'last_name', 'contact_number', 'department', 'position', 'salary'])
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
+        $usersQuery = User::with(['role', 'roleable'])
+            ->whereHas('role', function($q) {
+                $q->whereIn('role_name', ['staff', 'admin', 'parent']);
+            })
             ->when($query !== '', function ($q) use ($query) {
                 $q->where(function ($sub) use ($query) {
-                    $sub->where('first_name', 'like', "%{$query}%")
-                        ->orWhere('last_name', 'like', "%{$query}%")
-                        ->orWhere('staff_id', 'like', "%{$query}%")
-                        ->orWhere('position', 'like', "%{$query}%")
-                        ->orWhere('department', 'like', "%{$query}%");
+                    $sub->where('name', 'like', "%{$query}%")
+                        ->orWhere('email', 'like', "%{$query}%");
                 });
             })
             ->when($status === 'active', function ($q) {
-<<<<<<< HEAD
-                $q->where('is_active', true);
+                $q->whereHasMorph('roleable', [Staff::class, ParentContact::class], function ($q, $type) {
+                    if ($type === Staff::class) {
+                        $q->where('is_active', true);
+                    } elseif ($type === ParentContact::class) {
+                        $q->where('account_status', 'Active');
+                    }
+                });
             })
             ->when($status === 'inactive', function ($q) {
-                $q->where('is_active', false);
+                $q->whereHasMorph('roleable', [Staff::class, ParentContact::class], function ($q, $type) {
+                    if ($type === Staff::class) {
+                        $q->where('is_active', false);
+                    } elseif ($type === ParentContact::class) {
+                        $q->where('account_status', '!=', 'Active');
+                    }
+                });
             })
-            ->orderBy('created_at', 'desc')
-=======
-                // Note: is_active column may not exist, filtering handled in view
-            })
-            ->when($status === 'inactive', function ($q) {
-                // Note: is_active column may not exist, filtering handled in view
-            })
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-            ->orderBy('first_name', 'asc')
-            ->orderBy('last_name', 'asc');
+            ->orderBy('user_id', 'desc');
 
-        // Use cursor pagination or manual pagination to avoid created_at dependency
-        $staff = $staffQuery->paginate(15);
+        $users = $usersQuery->paginate(15);
 
         return view('auth.admin_staff_index', [
-            'staff' => $staff,
+            'users' => $users,
             'query' => $query,
             'status' => $status,
         ]);
     }
 
     /**
-     * Show the form for creating a new staff account.
+     * Show the form for creating a new user account.
      */
-<<<<<<< HEAD
-    /**
-     * Display the specified staff member's details.
-     */
-    public function show(Staff $staff): View
-    {
-        $staff->load('user');
-
-        return view('auth.admin_staff_show', compact('staff'));
-    }
-
-    /**
-     * Show the form for creating a new staff account.
-     */
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     public function create(): View
     {
-        $roles = Role::whereIn('role_name', ['staff', 'admin'])->get();
-
-        return view('auth.admin_staff_create', [
-            'roles' => $roles,
-        ]);
+        $roles = Role::whereIn('role_name', ['staff', 'admin', 'parent'])->get();
+        return view('auth.admin_staff_create', compact('roles'));
     }
 
     /**
-     * Store a newly created staff account.
+     * Store a newly created user account in storage.
      */
     public function store(Request $request): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
-            'first_name' => ['required', 'string', 'max:100'],
-            'middle_initial' => ['nullable', 'string', 'max:1'],
-            'last_name' => ['required', 'string', 'max:100'],
-            'phone_number' => ['nullable', 'string', 'min:7', 'max:15'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_initial' => ['nullable', 'string', 'max:5'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'phone_number' => ['nullable', 'string', 'max:20'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'role_name' => ['required', 'string', 'exists:roles,role_name'],
             'password' => [
                 'required',
                 'string',
                 'min:8',
                 'confirmed',
-<<<<<<< HEAD
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
-=======
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             ],
         ], [
             'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
@@ -135,393 +100,325 @@ class AdminStaffController extends Controller
         ]);
 
         if ($validator->fails()) {
-<<<<<<< HEAD
-            if ($request->boolean('from_modal')) {
-                return redirect()
-                    ->route('admin.students.index')
-                    ->withErrors($validator)
-                    ->with('error', 'Staff/Admin creation failed. Please review the errors below.')
-                    ->withInput();
-            }
-
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return redirect()
                 ->route('admin.staff.create')
                 ->withErrors($validator)
                 ->withInput();
         }
 
-        $validated = $validator->validated();
-
         try {
-<<<<<<< HEAD
-            DB::transaction(function () use ($validated, $request) {
-                $roleName = strtolower($request->input('role_name', 'staff'));
-                if (! in_array($roleName, ['staff', 'admin'], true)) {
-                    $roleName = 'staff';
-                }
-                $role = Role::firstOrCreate(
-                    ['role_name' => $roleName],
-                    ['description' => ucfirst($roleName)]
-                );
-                $position = $roleName === 'admin' ? 'Admin' : 'Staff';
-                $createdStaff = Staff::createWithAccount([
-                    'first_name' => $validated['first_name'],
-                    'MI' => $validated['middle_initial'] ?? null,
-                    'last_name' => $validated['last_name'],
-                    'contact_number' => $validated['phone_number'] ?? '',
-                    'department' => 'General',
-                    'position' => $position,
-=======
-            DB::transaction(function () use ($validated) {
-                Staff::createWithAccount([
-                    'first_name' => $validated['first_name'],
-                    'MI' => $validated['middle_initial'] ?? null,
-                    'last_name' => $validated['last_name'],
-                    'contact_number' => $validated['phone_number'] ?? null,
-                    'department' => null, // Default to null since not in form
-                    'position' => 'Staff', // Default position
-                    'salary' => null, // Default to null since not in form
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-                    'is_active' => true,
-                ], [
-                    'email' => strtolower($validated['email']),
-                    'password' => $validated['password'],
-<<<<<<< HEAD
-                    'role_id' => $role->role_id,
-                ]);
+            $roleName = $request->input('role_name');
 
-                // Audit Log
-                try {
-                    AuditService::log(
-                        'Staff Account Created',
-                        $createdStaff,
-                        "Created staff account: {$createdStaff->first_name} {$createdStaff->last_name}",
-                        null,
-                        $createdStaff->toArray()
-                    );
-                } catch (\Throwable $e) {
+            DB::transaction(function () use ($request, $validator, $roleName) {
+                $validated = $validator->validated();
+                $role = Role::where('role_name', $roleName)->firstOrFail();
+
+                if ($roleName === 'parent') {
+                    // Create Parent Contact
+                    $parentData = [
+                        'full_name' => trim($validated['first_name'] . ' ' . ($validated['middle_initial'] ?? '') . ' ' . $validated['last_name']),
+                        'phone' => $validated['phone_number'] ?? null,
+                        'email' => strtolower($validated['email']),
+                        'account_status' => 'Active',
+                    ];
+                    
+                    $parent = ParentContact::create($parentData);
+
+                    // Sync to Supabase
+                    try {
+                        $svc = app(FeeManagementService::class);
+                        $svc->syncToSupabase('parents', [
+                            'parent_id' => $parent->id,
+                            'full_name' => $parent->full_name,
+                            'phone' => $parent->phone,
+                            'phone_secondary' => null,
+                            'email' => $parent->email,
+                            'address_street' => null,
+                            'address_barangay' => null,
+                            'address_city' => null,
+                            'address_province' => null,
+                            'address_zip' => null,
+                            'account_status' => $parent->account_status,
+                            'updated_at' => now()->toISOString(),
+                        ], 'parent_id', $parent->id);
+                    } catch (\Throwable $e) {
+                        // Continue if sync fails
+                    }
+
+                    // Create User Account
+                    User::create([
+                        'name' => $parentData['full_name'],
+                        'email' => strtolower($validated['email']),
+                        'password' => Hash::make($validated['password']),
+                        'role_id' => $role->role_id,
+                        'roleable_type' => ParentContact::class,
+                        'roleable_id' => $parent->id,
+                    ]);
+
+                    // Audit Log
+                    try {
+                        AuditService::log(
+                            'Parent Account Created',
+                            $parent,
+                            "Created parent account: {$parent->full_name}",
+                            null,
+                            $parent->toArray()
+                        );
+                    } catch (\Throwable $e) {
+                    }
+
+                } else {
+                    // Create Staff/Admin
+                    $staffData = [
+                        'first_name' => $validated['first_name'],
+                        'MI' => $validated['middle_initial'] ?? null,
+                        'last_name' => $validated['last_name'],
+                        'contact_number' => $validated['phone_number'] ?? null,
+                        'department' => $request->input('department'),
+                        'position' => $request->input('position'),
+                        'is_active' => true,
+                    ];
+
+                    $userData = [
+                        'name' => $validated['first_name'] . ' ' . $validated['last_name'],
+                        'email' => strtolower($validated['email']),
+                        'password' => $validated['password'],
+                        'role_id' => $role->role_id,
+                    ];
+
+                    $createdStaff = Staff::createWithAccount($staffData, $userData);
+
+                    // Audit Log
+                    try {
+                        AuditService::log(
+                            'Staff Account Created',
+                            $createdStaff,
+                            "Created staff account: {$createdStaff->first_name} {$createdStaff->last_name} (Role: {$roleName})",
+                            null,
+                            $createdStaff->toArray()
+                        );
+                    } catch (\Throwable $e) {
+                    }
                 }
             });
 
-            if ($request->boolean('from_modal')) {
-                return redirect()
-                    ->route('admin.students.index')
-                    ->with('success', 'Account created successfully.');
-            }
-
-=======
-                    'role_id' => 3, // Staff role (ID 3 based on migration order)
-                ]);
-            });
-
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return redirect()
                 ->route('admin.staff.index')
-                ->with('success', 'Staff account created successfully.');
+                ->with('success', ucfirst($roleName) . ' account created successfully.');
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.staff.create')
-<<<<<<< HEAD
-                ->with('error', 'Failed to create staff account. Please try again. Error: '.$e->getMessage())
-=======
-                ->with('error', 'Failed to create staff account. Please try again. Error: ' . $e->getMessage())
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
+                ->with('error', 'Failed to create account. Please try again. Error: '.$e->getMessage())
                 ->withInput();
         }
     }
 
     /**
-     * Show the form for editing the specified staff account.
+     * Display the specified user details.
      */
-    public function edit(Staff $staff): View
+    public function show(User $user): View
     {
-        $staff->load('user');
-        $roles = Role::whereIn('role_name', ['staff', 'admin'])->get();
+        $user->load(['role', 'roleable']);
+        // For compatibility with view, we might need to pass specific vars
+        // But better to update view to use $user
+        return view('auth.admin_staff_show', compact('user'));
+    }
+
+    /**
+     * Show the form for editing the specified user account.
+     */
+    public function edit(User $user): View
+    {
+        $user->load(['role', 'roleable']);
+        $roles = Role::whereIn('role_name', ['staff', 'admin'])->get(); // Can we change role to parent? Probably not easily.
 
         return view('auth.admin_staff_edit', [
-            'staff' => $staff,
+            'user' => $user,
             'roles' => $roles,
         ]);
     }
 
     /**
-     * Update the specified staff account.
+     * Update the specified user account.
      */
-    public function update(Request $request, Staff $staff): RedirectResponse
+    public function update(Request $request, User $user): RedirectResponse
     {
-        $staff->load('user');
-<<<<<<< HEAD
-        $oldValues = $staff->toArray();
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
+        $user->load(['role', 'roleable']);
+        $roleable = $user->roleable;
+
         $validator = Validator::make($request->all(), [
-            'first_name' => ['required', 'string', 'max:100'],
-            'middle_initial' => ['nullable', 'string', 'max:1'],
-            'last_name' => ['required', 'string', 'max:100'],
-<<<<<<< HEAD
-            'phone_number' => ['nullable', 'string', 'min:11', 'max:11'],
-=======
-            'phone_number' => ['nullable', 'string', 'min:7', 'max:15'],
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-            'email' => ['required', 'string', 'email', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_initial' => ['nullable', 'string', 'max:5'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'phone_number' => ['nullable', 'string', 'max:20'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->user_id . ',user_id'],
             'password' => [
                 'nullable',
                 'string',
                 'min:8',
                 'confirmed',
-<<<<<<< HEAD
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
-=======
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             ],
-        ], [
-            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
         ]);
 
         if ($validator->fails()) {
-<<<<<<< HEAD
-            if ($request->boolean('from_modal')) {
-                return redirect()
-                    ->route('admin.students.index')
-                    ->withErrors($validator)
-                    ->with('error', 'Staff update failed. Please review the errors below.')
-                    ->withInput();
-            }
-
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return redirect()
-                ->route('admin.staff.edit', $staff)
+                ->route('admin.staff.edit', $user)
                 ->withErrors($validator)
                 ->withInput();
         }
 
-        $validated = $validator->validated();
-
         try {
-            $userData = [
-                'email' => strtolower($validated['email']),
-            ];
+            DB::transaction(function () use ($request, $user, $roleable, $validator) {
+                $validated = $validator->validated();
+                $fullName = $validated['first_name'] . ' ' . ($validated['middle_initial'] ?? '') . ' ' . $validated['last_name'];
+                $fullName = trim(str_replace('  ', ' ', $fullName));
 
-<<<<<<< HEAD
-            if (! empty($validated['password'])) {
-=======
-            if (!empty($validated['password'])) {
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-                $userData['password'] = $validated['password'];
-            }
+                // Update User
+                $userData = [
+                    'name' => $fullName,
+                    'email' => strtolower($validated['email']),
+                ];
+                if (!empty($validated['password'])) {
+                    $userData['password'] = Hash::make($validated['password']);
+                }
+                $user->update($userData);
 
-            $staff->updateWithAccount([
-                'first_name' => $validated['first_name'],
-                'MI' => $validated['middle_initial'] ?? null,
-                'last_name' => $validated['last_name'],
-                'contact_number' => $validated['phone_number'] ?? null,
-                // Note: department, position, salary not included in simplified edit form
-            ], $userData);
+                // Update Roleable
+                if ($user->roleable_type === ParentContact::class) {
+                    $roleable->update([
+                        'full_name' => $fullName,
+                        'phone' => $validated['phone_number'] ?? null,
+                        'email' => strtolower($validated['email']),
+                    ]);
+                } elseif ($user->roleable_type === Staff::class) {
+                    $roleable->update([
+                        'first_name' => $validated['first_name'],
+                        'MI' => $validated['middle_initial'] ?? null,
+                        'last_name' => $validated['last_name'],
+                        'contact_number' => $validated['phone_number'] ?? null,
+                    ]);
+                }
+            });
 
-<<<<<<< HEAD
-            // Audit Log
-            try {
-                AuditService::log(
-                    'Staff Account Updated',
-                    $staff,
-                    "Updated staff account: {$staff->first_name} {$staff->last_name}",
-                    $oldValues,
-                    $staff->toArray()
-                );
-            } catch (\Throwable $e) {
-            }
-
-            if ($request->boolean('from_modal')) {
-                return redirect()
-                    ->route('admin.students.index')
-                    ->with('success', 'Staff account updated successfully.');
-            }
-
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return redirect()
                 ->route('admin.staff.index')
-                ->with('success', 'Staff account updated successfully.');
+                ->with('success', 'Account updated successfully.');
+
         } catch (\Exception $e) {
             return redirect()
-                ->route('admin.staff.edit', $staff)
-                ->with('error', 'Failed to update staff account. Please try again.')
+                ->route('admin.staff.edit', $user)
+                ->with('error', 'Failed to update account. Error: '.$e->getMessage())
                 ->withInput();
         }
     }
 
     /**
-<<<<<<< HEAD
-     * Reset staff password.
+     * Toggle user account status.
      */
-    /**
-     * Toggle staff account status.
-     */
-    /**
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-     * Toggle staff account status.
-     */
-    public function toggleStatus(Staff $staff): RedirectResponse
+    public function toggleStatus(User $user): RedirectResponse
     {
-<<<<<<< HEAD
-        $oldStatus = $staff->is_active ? 'Active' : 'Inactive';
         try {
-            DB::beginTransaction();
-
-            // Toggle the is_active status
-            $staff->update([
-                'is_active' => ! $staff->is_active,
-            ]);
-
-            DB::commit();
-
-            $status = $staff->is_active ? 'activated' : 'deactivated';
-
-            // Audit Log
-            try {
-                AuditService::log(
-                    'Staff Account Status Changed',
-                    $staff,
-                    "Changed status for staff: {$staff->first_name} {$staff->last_name} to {$status}",
-                    ['is_active' => $oldStatus],
-                    ['is_active' => $staff->is_active ? 'Active' : 'Inactive']
-                );
-            } catch (\Throwable $e) {
+            $user->load('roleable');
+            $roleable = $user->roleable;
+            
+            if (!$roleable) {
+                return back()->with('error', 'Role profile not found.');
             }
 
-            return back()->with('success', "Staff account has been {$status} successfully.");
+            if ($user->roleable_type === Staff::class) {
+                $roleable->update(['is_active' => !$roleable->is_active]);
+                $status = $roleable->is_active ? 'activated' : 'deactivated';
+            } elseif ($user->roleable_type === ParentContact::class) {
+                $newStatus = $roleable->account_status === 'Active' ? 'Inactive' : 'Active';
+                $roleable->update(['account_status' => $newStatus]);
+                $status = $newStatus === 'Active' ? 'activated' : 'deactivated';
+            } else {
+                return back()->with('error', 'Cannot toggle status for this user type.');
+            }
+
+            return back()->with('success', "Account has been {$status} successfully.");
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to toggle staff status', [
-                'staff_id' => $staff->staff_id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return back()->with('error', 'Failed to update staff account status.');
-=======
-        try {
-            // Since is_active column may not exist, we'll handle this in the application layer
-            // For now, just return success since we can't actually toggle database status
-            $message = 'Status toggle functionality requires database migration.';
-
-            return redirect()
-                ->route('admin.staff.index')
-                ->with('info', $message);
-        } catch (\Exception $e) {
-            return redirect()
-                ->route('admin.staff.index')
-                ->with('error', 'Failed to update staff account status.');
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
+            return back()->with('error', 'Failed to update status.');
         }
     }
 
     /**
-<<<<<<< HEAD
-     * Activate a staff account.
+     * Activate a user account.
      */
-    public function activate(Staff $staff): RedirectResponse
+    public function activate(User $user): RedirectResponse
     {
-        $oldStatus = $staff->is_active ? 'Active' : 'Inactive';
         try {
-            DB::beginTransaction();
+            $user->load('roleable');
+            $roleable = $user->roleable;
 
-            // Activate the staff account
-            $staff->update(['is_active' => true]);
-
-            DB::commit();
-
-            // Audit Log
-            try {
-                AuditService::log(
-                    'Staff Account Activated',
-                    $staff,
-                    "Activated staff account: {$staff->first_name} {$staff->last_name}",
-                    ['is_active' => $oldStatus],
-                    ['is_active' => 'Active']
-                );
-            } catch (\Throwable $e) {
+            if ($user->roleable_type === Staff::class) {
+                $roleable->update(['is_active' => true]);
+            } elseif ($user->roleable_type === ParentContact::class) {
+                $roleable->update(['account_status' => 'Active']);
             }
 
-            return back()->with('success', 'Staff account has been activated successfully.');
+            return back()->with('success', 'Account has been activated successfully.');
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to activate staff account', [
-                'staff_id' => $staff->staff_id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return back()->with('error', 'Failed to activate staff account.');
+            return back()->with('error', 'Failed to activate account.');
         }
     }
 
     /**
-     * Reset staff password.
+     * Reset user password.
      */
-    public function resetPassword(Staff $staff): RedirectResponse
+    public function resetPassword(User $user): RedirectResponse
     {
         try {
             // Generate a random password
-            $newPassword = 'Staff@'.rand(1000, 9999);
+            $newPassword = 'User@'.rand(1000, 9999);
 
-            // Update the user password
-            if ($staff->user) {
-                $staff->user->update([
-                    'password' => Hash::make($newPassword),
-                ]);
+            $user->update([
+                'password' => Hash::make($newPassword),
+            ]);
 
-                // Log the password reset
-                Log::info('Staff password reset', [
-                    'staff_id' => $staff->staff_id,
-                    'admin_id' => Auth::user()->user_id ?? null,
-                ]);
+            return redirect()
+                ->route('admin.staff.show', $user)
+                ->with('success', "Password reset successfully. New password: {$newPassword}");
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.staff.show', $user)
+                ->with('error', 'Failed to reset password. Please try again.');
+        }
+    }
 
+    /**
+     * Remove the specified user account.
+     */
+    public function destroy(User $user): RedirectResponse
+    {
+        try {
+            DB::transaction(function () use ($user) {
+                $roleable = $user->roleable;
+                
                 // Audit Log
                 try {
                     AuditService::log(
-                        'Staff Password Reset',
-                        $staff,
-                        "Reset password for staff: {$staff->first_name} {$staff->last_name}",
-                        null,
+                        'Account Deleted',
+                        $user,
+                        "Deleted account: {$user->name}",
+                        $user->toArray(),
                         null
                     );
                 } catch (\Throwable $e) {
                 }
 
-                return redirect()
-                    ->route('admin.staff.show', $staff)
-                    ->with('success', "Password reset successfully. New password: {$newPassword}");
-            }
+                $user->delete();
+                if ($roleable) {
+                    $roleable->delete();
+                }
+            });
 
-            return redirect()
-                ->route('admin.staff.show', $staff)
-                ->with('error', 'Staff account not found.');
+            return redirect()->route('admin.staff.index')->with('success', 'Account deleted successfully.');
         } catch (\Exception $e) {
-            Log::error('Staff password reset failed', [
-                'error' => $e->getMessage(),
-                'staff_id' => $staff->staff_id,
-            ]);
-
-            return redirect()
-                ->route('admin.staff.show', $staff)
-                ->with('error', 'Failed to reset password. Please try again.');
+            return redirect()->back()->with('error', 'Failed to delete account.');
         }
-=======
-     * Show staff account details with confirmation for actions.
-     */
-    public function show(Staff $staff): View
-    {
-        $staff->load('user');
-
-        return view('auth.admin_staff_show', [
-            'staff' => $staff,
-        ]);
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 }

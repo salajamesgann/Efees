@@ -2,19 +2,11 @@
 
 namespace Database\Seeders;
 
-<<<<<<< HEAD
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-=======
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Models\Role;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
 class AdminPasswordSeeder extends Seeder
 {

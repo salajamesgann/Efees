@@ -58,11 +58,7 @@ class Admin extends Model
      */
     public function getFullNameAttribute(): string
     {
-<<<<<<< HEAD
         return trim($this->first_name.' '.($this->MI ? $this->MI.'. ' : '').$this->last_name);
-=======
-        return trim($this->first_name . ' ' . ($this->MI ? $this->MI . '. ' : '') . $this->last_name);
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 
     /**
@@ -76,10 +72,6 @@ class Admin extends Model
         } else {
             $initials .= strtoupper(substr($this->last_name, 0, 1));
         }
-<<<<<<< HEAD
-
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         return $initials;
     }
 }

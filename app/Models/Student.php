@@ -6,18 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
-<<<<<<< HEAD
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Student extends Model
 {
     use HasFactory, SoftDeletes;
-=======
-
-class Student extends Model
-{
-    use HasFactory;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The table associated with the model.
@@ -31,11 +24,7 @@ class Student extends Model
      *
      * @var bool
      */
-<<<<<<< HEAD
     public $timestamps = true;
-=======
-    public $timestamps = false;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The primary key associated with the table.
@@ -53,32 +42,10 @@ class Student extends Model
 
     /**
      * The data type of the auto-incrementing ID.
-<<<<<<< HEAD
      *
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
      * @var string
      */
     protected $keyType = 'string';
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-<<<<<<< HEAD
-        'level' => 'string',
-        'middle_initial' => 'string',
-        'date_of_birth' => 'date',
-        'strand' => 'string',
-        'is_shs_voucher' => 'boolean',
-=======
-        'contact_number' => 'string',
-        'level' => 'string',
-        'middle_initial' => 'string',
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-    ];
 
     /**
      * The attributes that are mass assignable.
@@ -87,7 +54,6 @@ class Student extends Model
      */
     protected $fillable = [
         'student_id',
-<<<<<<< HEAD
         'lrn',
         'first_name',
         'middle_name',
@@ -105,17 +71,6 @@ class Student extends Model
         'profile_picture_url',
         'strand',
         'is_shs_voucher',
-=======
-        'first_name',
-        'middle_initial',
-        'last_name',
-        'contact_number',
-        'sex',
-        'level',
-        'section',
-        'profile_picture_url',
-        'department',
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     ];
 
     /**
@@ -127,7 +82,6 @@ class Student extends Model
     }
 
     /**
-<<<<<<< HEAD
      * Get the parents associated with this student.
      */
     public function parents()
@@ -149,17 +103,11 @@ class Student extends Model
      * Get the fee records associated with the student.
      */
     public function feeRecords(): HasMany
-=======
-     * Get the fee records for the student.
-     */
-    public function feeRecords()
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     {
         return $this->hasMany(FeeRecord::class, 'student_id', 'student_id');
     }
 
     /**
-<<<<<<< HEAD
      * Get the fee assignments for the student.
      */
     public function feeAssignments()
@@ -212,41 +160,6 @@ class Student extends Model
     }
 
     /**
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-     * Get the student's full name.
-     */
-    public function getFullNameAttribute()
-    {
-<<<<<<< HEAD
-        $middle = $this->middle_name
-            ? " {$this->middle_name} "
-            : ($this->middle_initial ? " {$this->middle_initial}. " : ' ');
-        $suffix = $this->suffix ? " {$this->suffix}" : '';
-
-        return trim("{$this->first_name}{$middle}{$this->last_name}{$suffix}");
-    }
-
-    public function getAgeAttribute(): ?int
-    {
-        $dob = $this->date_of_birth;
-        if (! $dob) {
-            return null;
-        }
-
-        try {
-            if ($dob instanceof \Carbon\CarbonInterface) {
-                return $dob->age;
-            }
-
-            return \Carbon\Carbon::parse($dob)->age;
-        } catch (\Throwable $e) {
-            return null;
-        }
-=======
-        $middleInitial = $this->middle_initial ? " {$this->middle_initial}. " : ' ';
-        return trim("{$this->first_name}{$middleInitial}{$this->last_name}");
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 
     /**

@@ -436,7 +436,18 @@ class FeeAssignment extends Model
         // Calculate totals
         $feeAssignment->calculateTotal();
 
-        // Create fee records from tuition payment schedule
+        // Generate installments based on payment schedule
+        $feeAssignment->generateInstallments();
+
+        return $feeAssignment;
+    }
+
+    /**
+     * Generate fee records based on the tuition fee's payment schedule.
+     */
+    public function generateInstallments(): void
+    {
+        $tuitionFee = $this->tuitionFee;
         $schedule = is_array($tuitionFee?->payment_schedule) ? $tuitionFee->payment_schedule : [];
 
         // Handle both new format (with 'items') and legacy/manual format (array of items)
@@ -464,18 +475,16 @@ class FeeAssignment extends Model
                 }
 
                 FeeRecord::create([
-                    'student_id' => $studentId,
+                    'student_id' => $this->student_id,
                     'record_type' => 'tuition_installment',
                     'amount' => $amount,
                     'balance' => $amount,
                     'status' => 'pending',
-                    'notes' => trim("{$schoolYear} {$semester} ".($label ?: 'Tuition')),
+                    'notes' => trim("{$this->school_year} {$this->semester} ".($label ?: 'Tuition')),
                     'payment_date' => $due,
                 ]);
             }
         }
-
-        return $feeAssignment;
     }
 
     /**

@@ -229,14 +229,25 @@ class AdminParentController extends Controller
 
     public function destroy(ParentContact $parent): RedirectResponse
     {
-        $parent->delete();
-
         try {
-            AuditService::log('Parent Deleted', $parent, "Deleted parent {$parent->full_name}", null, null);
-        } catch (\Throwable $e) {
-        }
+            DB::transaction(function () use ($parent) {
+                $user = User::where('roleable_type', ParentContact::class)
+                    ->where('roleable_id', $parent->id)
+                    ->first();
 
-        return redirect()->route('admin.parents.index')->with('success', 'Parent deleted.');
+                if ($user) {
+                    $user->delete();
+                }
+
+                $parent->delete();
+
+                AuditService::log('Parent Deleted', $parent, "Deleted parent {$parent->full_name}", null, null);
+            });
+
+            return redirect()->route('admin.parents.index')->with('success', 'Parent deleted.');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Failed to delete parent: ' . $e->getMessage());
+        }
     }
 
     public function archive(ParentContact $parent): RedirectResponse

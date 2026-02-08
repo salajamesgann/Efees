@@ -31,11 +31,7 @@ class Staff extends Model
     /**
      * Indicates if the model should be timestamped.
      */
-<<<<<<< HEAD
     public $timestamps = true;
-=======
-    public $timestamps = false;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The attributes that should be mutated to dates.
@@ -45,20 +41,12 @@ class Staff extends Model
     /**
      * The name of the "created at" column.
      */
-<<<<<<< HEAD
     const CREATED_AT = 'created_at';
-=======
-    const CREATED_AT = null;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The name of the "updated at" column.
      */
-<<<<<<< HEAD
     const UPDATED_AT = 'updated_at';
-=======
-    const UPDATED_AT = null;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The attributes that are mass assignable.
@@ -70,30 +58,19 @@ class Staff extends Model
         'last_name',
         'contact_number',
         'position',
-<<<<<<< HEAD
         'department',
         'is_active',
         'created_at',
         'updated_at',
-=======
-        'salary',
-        // Note: is_active, created_at, updated_at are handled conditionally since columns may not exist
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     ];
 
     /**
      * The attributes that should be cast.
      */
     protected $casts = [
-<<<<<<< HEAD
         'is_active' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-=======
-        'salary' => 'decimal:2',
-        // Note: is_active casting removed since column may not exist
-        // Note: created_at and updated_at casting removed since columns may not exist
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     ];
 
     /**
@@ -101,11 +78,7 @@ class Staff extends Model
      */
     public function usesTimestamps(): bool
     {
-<<<<<<< HEAD
         return true;
-=======
-        return false;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 
     /**
@@ -121,11 +94,7 @@ class Staff extends Model
      */
     public function getFullNameAttribute(): string
     {
-<<<<<<< HEAD
         return trim($this->first_name.' '.($this->MI ? $this->MI.'. ' : '').$this->last_name);
-=======
-        return trim($this->first_name . ' ' . ($this->MI ? $this->MI . '. ' : '') . $this->last_name);
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 
     /**
@@ -139,19 +108,8 @@ class Staff extends Model
         } else {
             $initials .= strtoupper(substr($this->last_name, 0, 1));
         }
-<<<<<<< HEAD
 
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         return $initials;
-    }
-
-    /**
-     * Check if staff is active.
-     */
-    public function isActive(): bool
-    {
-        return $this->is_active ?? true;
     }
 
     /**
@@ -159,32 +117,14 @@ class Staff extends Model
      */
     public static function createWithAccount(array $staffData, array $userData): self
     {
-        // Generate staff ID if not provided
-        if (empty($staffData['staff_id'])) {
-<<<<<<< HEAD
-            $staffData['staff_id'] = 'STF'.str_pad(static::count() + 1, 4, '0', STR_PAD_LEFT);
-        }
-
-        // Normalize optional fields to satisfy non-null columns
-        if (! array_key_exists('contact_number', $staffData) || $staffData['contact_number'] === null) {
-            $staffData['contact_number'] = '';
-        }
-        if (! array_key_exists('department', $staffData) || $staffData['department'] === null) {
-            $staffData['department'] = 'General';
-        }
-        if (! array_key_exists('position', $staffData) || $staffData['position'] === null) {
-            $staffData['position'] = 'Staff';
-=======
-            $staffData['staff_id'] = 'STF' . str_pad(static::count() + 1, 4, '0', STR_PAD_LEFT);
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
+        // Generate UUID if not provided
+        if (!isset($staffData['staff_id'])) {
+            $staffData['staff_id'] = (string) \Illuminate\Support\Str::uuid();
         }
 
         // Set timestamps only if columns exist
         try {
-<<<<<<< HEAD
             $staffData['created_at'] = now();
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             $staffData['updated_at'] = now();
         } catch (\Exception $e) {
             // Columns might not exist, skip timestamp setting

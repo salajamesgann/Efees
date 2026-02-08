@@ -35,6 +35,8 @@
               </div>
               <span class="text-sm font-medium">Student Management</span>
           </a>
+
+
           
             <!-- User Management -->
             <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.users.index') }}">

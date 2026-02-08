@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-<<<<<<< HEAD
 use App\Models\FeeRecord;
 use App\Models\FeeUpdateAudit;
 use App\Models\Student;
@@ -13,13 +12,6 @@ use App\Services\SmsGatewayService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-=======
-use App\Models\Student;
-use App\Models\FeeRecord;
-use App\Models\User;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -27,12 +19,169 @@ use Illuminate\View\View;
 
 class StaffDashboardController extends Controller
 {
-<<<<<<< HEAD
     protected $smsGateway;
 
     public function __construct(SmsGatewayService $smsGateway)
     {
         $this->smsGateway = $smsGateway;
+    }
+
+    /**
+     * Display the staff dashboard with student records.
+     */
+    public function index(Request $request): View
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->hasRole('staff')) {
+            abort(403, 'Unauthorized');
+        }
+
+        $activeYear = SystemSetting::where('key', 'school_year')->value('value');
+        
+        // Notifications
+        $notifications = DB::table('notifications')
+            ->where('user_id', $user->user_id)
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Filters
+        $query = Student::query();
+
+        // Search
+        if ($request->filled('q')) {
+            $term = $request->input('q');
+            $query->where(function($q) use ($term) {
+                $q->where('first_name', 'like', "%{$term}%")
+                  ->orWhere('last_name', 'like', "%{$term}%")
+                  ->orWhere('student_id', 'like', "%{$term}%");
+            });
+        }
+
+        // Dropdown Filters
+        if ($request->filled('level')) {
+            $query->where('level', $request->input('level'));
+        }
+        if ($request->filled('strand')) {
+            $query->where('strand', $request->input('strand'));
+        }
+        if ($request->filled('section')) {
+            $query->where('section', $request->input('section'));
+        }
+
+        // Sorting
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction', 'asc');
+
+        if ($sort === 'name') {
+            $query->orderBy('last_name', $direction)->orderBy('first_name', $direction);
+        } elseif ($sort === 'level') {
+            $query->orderBy('level', $direction);
+        } elseif ($sort === 'section') {
+            $query->orderBy('section', $direction);
+        } else {
+            // Default sort
+            $query->orderBy('last_name', 'asc');
+        }
+
+        // Get distinct values for dropdowns
+        $levels = Student::distinct()->pluck('level')->sort()->values();
+        $strands = Student::distinct()->whereNotNull('strand')->where('strand', '!=', '')->pluck('strand')->sort()->values();
+        $sections = Student::distinct()->whereNotNull('section')->where('section', '!=', '')->pluck('section')->sort()->values();
+
+        // Pagination
+        $students = $query->paginate(15);
+        $svc = app(FeeManagementService::class);
+
+        // Transform collection
+        $transformedCollection = $students->getCollection()->map(function ($student) use ($svc) {
+            $totals = $svc->computeTotalsForStudent($student);
+            $totalFee = (float) ($totals['totalAmount'] ?? 0);
+            $paidAmount = (float) ($totals['paidAmount'] ?? 0);
+            $dueAmount = (float) ($totals['remainingBalance'] ?? max($totalFee - $paidAmount, 0));
+
+            $status = 'unpaid';
+            $statusText = 'Unpaid';
+            if ($dueAmount <= 0 && $totalFee > 0) {
+                $status = 'paid';
+                $statusText = 'Fully Paid';
+            } elseif ($paidAmount > 0) {
+                $status = 'partially-paid';
+                $statusText = 'Partially Paid';
+            } elseif ($totalFee == 0) {
+                $status = 'paid'; // No fees = paid
+                $statusText = 'No Fees';
+            }
+
+            // Latest transaction
+            $latestTransaction = \App\Models\Payment::where('student_id', $student->student_id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            return (object) [
+                'student' => $student,
+                'totalFee' => $totalFee,
+                'paidAmount' => $paidAmount,
+                'dueAmount' => $dueAmount,
+                'status' => $status,
+                'statusText' => $statusText,
+                'latestTransaction' => $latestTransaction,
+            ];
+        });
+        
+        // Filter by status (Post-query filter - only filters current page, implies pagination might look weird but better than crashing)
+        if ($request->filled('status')) {
+            $statusFilter = $request->input('status');
+            $transformedCollection = $transformedCollection->filter(function ($record) use ($statusFilter) {
+                return $record->status === $statusFilter;
+            });
+        }
+
+        // Replace collection in paginator
+        $students->setCollection($transformedCollection);
+
+        // Calculate Stats using raw SQL for performance
+        $statsResult = DB::select("
+            SELECT
+                SUM(CASE WHEN balance <= 0 THEN 1 ELSE 0 END) as paid,
+                SUM(CASE WHEN balance > 0 AND paid > 0 THEN 1 ELSE 0 END) as partial,
+                SUM(CASE WHEN balance > 0 AND paid = 0 THEN 1 ELSE 0 END) as unpaid
+            FROM (
+                SELECT 
+                    s.student_id,
+                    COALESCE((SELECT SUM(balance) FROM fee_records fr WHERE fr.student_id = s.student_id AND fr.status != 'cancelled'), 0) as balance,
+                    COALESCE((SELECT SUM(amount_paid) FROM payments p WHERE p.student_id = s.student_id AND (p.status = 'approved' OR p.status IS NULL)), 0) as paid
+                FROM students s
+                WHERE s.deleted_at IS NULL
+            ) as totals
+        ")[0];
+
+        $stats = [
+            'paid' => (int) ($statsResult->paid ?? 0),
+            'partial' => (int) ($statsResult->partial ?? 0),
+            'unpaid' => (int) ($statsResult->unpaid ?? 0),
+        ];
+        
+        return view('auth.staff_dashboard', [
+            'studentRecords' => $students,
+            'activeYear' => $activeYear,
+            'notifications' => $notifications,
+            'stats' => $stats,
+            'levels' => $levels,
+            'strands' => $strands,
+            'sections' => $sections,
+            'query' => $request->input('q'),
+            'level' => $request->input('level'),
+            'strand' => $request->input('strand'),
+            'section' => $request->input('section'),
+            'status' => $request->input('status'),
+            'sort' => $sort,
+            'direction' => $direction,
+        ]);
+    }
+
+    public function list() {
+        return redirect()->route('staff_dashboard');
     }
 
     public function updateCategory(Request $request, Student $student): RedirectResponse
@@ -72,255 +221,12 @@ class StaffDashboardController extends Controller
         return back()->with('success', 'Category updated successfully.');
     }
 
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-    /**
-     * Display the staff dashboard with search and metrics.
-     */
-    public function index(Request $request): View
-    {
-<<<<<<< HEAD
-        $data = $this->getStudentData($request);
-        $data['notifications'] = DB::table('notifications')
-            ->where('user_id', Auth::id())
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        return view('auth.staff_dashboard', $data);
-    }
-
-    /**
-     * Get the student data for the dashboard (JSON).
-     */
-    public function list(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $data = $this->getStudentData($request);
-
-        return response()->json($data);
-    }
-
-    private function getStudentData(Request $request): array
-    {
-        $user = Auth::user();
-        if (! $user || ! $user->hasRole('staff')) {
-            abort(403, 'Unauthorized');
-        }
-
-        $activeYear = SystemSetting::where('key', 'school_year')->value('value');
-
-        $query = trim($request->input('q', ''));
-        $statusFilter = $request->input('status', '');
-        $levelFilter = $request->input('level', '');
-        $sectionFilter = $request->input('section', '');
-        $strandFilter = $request->input('strand', '');
-        $sort = $request->input('sort', 'name');
-        $direction = strtolower($request->input('direction', 'asc')) === 'desc' ? 'desc' : 'asc';
-        $perPage = 15;
-
-        $students = Student::with(['feeRecords', 'user', 'payments'])
-            ->when($query !== '' && $query !== null, function ($q) use ($query) {
-                $q->where(function ($sub) use ($query) {
-                    $sub->where('student_id', 'like', "%{$query}%")
-                        ->orWhere('first_name', 'like', "%{$query}%")
-                        ->orWhere('last_name', 'like', "%{$query}%")
-                        ->orWhere('level', 'like', "%{$query}%");
-                });
-            })
-            ->when($levelFilter !== '' && $levelFilter !== null, function ($q) use ($levelFilter) {
-                $q->where('level', $levelFilter);
-            })
-            ->when($sectionFilter !== '' && $sectionFilter !== null, function ($q) use ($sectionFilter) {
-                $q->where('section', $sectionFilter);
-            })
-            ->when($strandFilter !== '' && $strandFilter !== null, function ($q) use ($strandFilter) {
-                $q->where('strand', $strandFilter);
-            })
-            ->orderBy('last_name')
-            ->get();
-
-        $svc = app(FeeManagementService::class);
-        $studentRecords = $students->map(function ($student) use ($svc) {
-            $totals = $svc->computeTotalsForStudent($student);
-            $totalFee = (float) ($totals['totalAmount'] ?? 0.0);
-
-            $paidAmount = (float) $student->feeRecords
-                ->where('status', 'paid')
-                ->sum('amount');
-
-            $dueAmount = max($totalFee - $paidAmount, 0);
-
-            $status = 'unpaid';
-            $statusText = 'Unpaid';
-
-            if ($dueAmount <= 0) {
-                $status = 'paid';
-                $statusText = 'Paid';
-            } elseif ($paidAmount > 0 && $dueAmount > 0) {
-                $status = 'partially-paid';
-                $statusText = 'Partially Paid';
-            }
-
-            $latestPayment = $student->feeRecords
-                ->where('status', 'paid')
-                ->sortByDesc(function ($record) {
-                    return $record->payment_date ?? $record->created_at;
-                })
-                ->first();
-
-            $latestRejectedPayment = $student->payments
-                ->where('status', 'rejected')
-                ->sortByDesc('created_at')
-                ->first();
-
-            $latestTransaction = $student->payments
-                ->sortByDesc('created_at')
-                ->first();
-
-            return (object) [
-                'student' => $student,
-                'totalFee' => $totalFee,
-                'paidAmount' => $paidAmount,
-                'dueAmount' => $dueAmount,
-                'status' => $status,
-                'statusText' => $statusText,
-                'latestPaymentAt' => $latestPayment
-                    ? ($latestPayment->payment_date ?? $latestPayment->created_at)
-                    : null,
-                'latestRejectedPayment' => $latestRejectedPayment,
-                'latestTransaction' => $latestTransaction,
-            ];
-        });
-
-        // Calculate stats before applying status filter
-        $stats = [
-            'paid' => $studentRecords->where('status', 'paid')->count(),
-            'partial' => $studentRecords->where('status', 'partially-paid')->count(),
-            'unpaid' => $studentRecords->where('status', 'unpaid')->count(),
-        ];
-
-        if ($statusFilter !== '' && $statusFilter !== null) {
-            $studentRecords = $studentRecords
-                ->filter(fn ($record) => $record->status === $statusFilter)
-                ->values();
-        }
-
-        $studentRecords = (match ($sort) {
-            'due' => $direction === 'desc'
-                ? $studentRecords->sortByDesc(fn ($r) => $r->dueAmount)
-                : $studentRecords->sortBy(fn ($r) => $r->dueAmount),
-            'paid' => $direction === 'desc'
-                ? $studentRecords->sortByDesc(fn ($r) => $r->paidAmount)
-                : $studentRecords->sortBy(fn ($r) => $r->paidAmount),
-            'latest_payment' => $direction === 'desc'
-                ? $studentRecords->sortByDesc(fn ($r) => $r->latestPaymentAt ? $r->latestPaymentAt->timestamp : 0)
-                : $studentRecords->sortBy(fn ($r) => $r->latestPaymentAt ? $r->latestPaymentAt->timestamp : 0),
-            'section' => $direction === 'desc'
-                ? $studentRecords->sortByDesc(fn ($r) => $r->student->section)
-                : $studentRecords->sortBy(fn ($r) => $r->student->section),
-            'status' => $direction === 'desc'
-                ? $studentRecords->sortByDesc(fn ($r) => $r->status)
-                : $studentRecords->sortBy(fn ($r) => $r->status),
-            default => $direction === 'desc'
-                ? $studentRecords->sortByDesc(fn ($r) => ($r->student->last_name ?? '').' '.($r->student->first_name ?? ''))
-                : $studentRecords->sortBy(fn ($r) => ($r->student->last_name ?? '').' '.($r->student->first_name ?? '')),
-        })->values();
-
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $paginatedRecords = new LengthAwarePaginator(
-            $studentRecords->slice(($currentPage - 1) * $perPage, $perPage)->values(),
-            $studentRecords->count(),
-            $perPage,
-            $currentPage,
-            [
-                'path' => $request->url(),
-                'query' => $request->query(),
-            ]
-        );
-
-        $levels = Student::select('level')->distinct()->pluck('level')->filter()->values();
-
-        $sectionsQuery = Student::select('section')->distinct();
-        if ($levelFilter) {
-            $sectionsQuery->where('level', $levelFilter);
-        }
-        if ($strandFilter) {
-            $sectionsQuery->where('strand', $strandFilter);
-        }
-        $sections = $sectionsQuery->pluck('section')->filter()->values();
-
-        $strandsQuery = Student::select('strand')->distinct();
-        if ($levelFilter) {
-            $strandsQuery->where('level', $levelFilter);
-        }
-        $strands = $strandsQuery->pluck('strand')->filter()->values();
-
-        return [
-            'studentRecords' => $paginatedRecords,
-            'query' => $query,
-            'status' => $statusFilter,
-            'level' => $levelFilter,
-            'section' => $sectionFilter,
-            'strand' => $strandFilter,
-            'sort' => $sort,
-            'direction' => $direction,
-            'levels' => $levels,
-            'sections' => $sections,
-            'strands' => $strands,
-            'activeYear' => $activeYear,
-            'stats' => $stats,
-        ];
-=======
-        $user = Auth::user();
-        if (!$user || !$user->hasRole('staff')) {
-            abort(403, 'Unauthorized');
-        }
-
-        $q = trim((string) $request->input('q', ''));
-
-        // Paginated students for table (with fee records for totals/status)
-        $students = Student::with('feeRecords')
-            ->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($sub) use ($q) {
-                    $sub->where('student_id', 'like', "%{$q}%")
-                        ->orWhere('first_name', 'like', "%{$q}%")
-                        ->orWhere('last_name', 'like', "%{$q}%")
-                        ->orWhere('level', 'like', "%{$q}%");
-                });
-            })
-            ->orderBy('last_name')
-            ->paginate(10)
-            ->withQueryString();
-
-        // Metrics for chart: paid vs unpaid students
-        $all = Student::with('feeRecords')->get();
-        $paidCount = 0;
-        $unpaidCount = 0;
-        foreach ($all as $s) {
-            $totalBalance = (float) $s->feeRecords->sum('balance');
-            if ($s->feeRecords->count() > 0 && $totalBalance <= 0) {
-                $paidCount++;
-            } elseif ($totalBalance > 0) {
-                $unpaidCount++;
-            }
-        }
-
-        return view('auth.staff_dashboard', [
-            'students' => $students,
-            'query' => $q,
-            'paidCount' => $paidCount,
-            'unpaidCount' => $unpaidCount,
-        ]);
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-    }
-
     /**
      * Ping/remind a student about their fees (logs an action for now).
      */
     public function remind(Student $student): RedirectResponse
     {
         $user = Auth::user();
-<<<<<<< HEAD
         if (! $user || ! $user->hasRole('staff')) {
             abort(403, 'Unauthorized');
         }
@@ -334,29 +240,16 @@ class StaffDashboardController extends Controller
             return back()->with('error', 'This student record belongs to locked School Year '.$student->school_year.'. Only records in the active School Year '.$activeYear.' can be modified.');
         }
 
-=======
-        if (!$user || !$user->hasRole('staff')) {
-            abort(403, 'Unauthorized');
-        }
-
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         // Find the application's user row for this student
         $targetUser = User::where('roleable_type', 'App\\Models\\Student')
             ->where('roleable_id', $student->student_id)
             ->first();
 
-<<<<<<< HEAD
         if (! $targetUser) {
             Log::warning('Reminder failed: no user mapped to student', [
                 'student_id' => $student->student_id,
             ]);
 
-=======
-        if (!$targetUser) {
-            Log::warning('Reminder failed: no user mapped to student', [
-                'student_id' => $student->student_id,
-            ]);
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return back()->with('error', 'No user account found for this student.');
         }
 
@@ -365,11 +258,7 @@ class StaffDashboardController extends Controller
             DB::table('notifications')->insert([
                 'user_id' => $targetUser->user_id,
                 'title' => 'Fee Reminder',
-<<<<<<< HEAD
                 'body' => 'Hello '.$student->first_name.', please review your outstanding fees.',
-=======
-                'body' => 'Hello ' . $student->first_name . ', please review your outstanding fees.',
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                 'created_at' => now(),
             ]);
 
@@ -380,7 +269,6 @@ class StaffDashboardController extends Controller
                 'timestamp' => now()->toDateTimeString(),
             ]);
 
-<<<<<<< HEAD
             // Send Real-time SMS if phone number exists
             $guardian = $student->parents->sortByDesc('pivot.is_primary')->first();
             $mobileNumber = $student->mobile_number ?? ($guardian ? $guardian->phone : null);
@@ -397,35 +285,22 @@ class StaffDashboardController extends Controller
             }
 
             return back()->with('success', 'Reminder sent to '.$student->full_name.'.');
-=======
-            return back()->with('success', 'Reminder sent to ' . $student->full_name . '.');
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         } catch (\Throwable $e) {
             Log::error('Failed to create notification', [
                 'error' => $e->getMessage(),
             ]);
-<<<<<<< HEAD
-
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return back()->with('error', 'Failed to send reminder.');
         }
     }
 
     /**
-     * Approve payments for a student: mark all outstanding fee records as paid with zero balance.
+     * Approve/Clear all outstanding fees for a student.
      */
     public function approve(Student $student): RedirectResponse
     {
         $user = Auth::user();
-<<<<<<< HEAD
         if (! $user || ! $user->hasRole('staff')) {
             abort(403, 'Unauthorized');
-        }
-
-        $allowed = SystemSetting::where('key', 'allow_staff_edit_fees')->value('value');
-        if ($allowed !== '1') {
-            abort(403, 'Editing fee records is disabled by administrator.');
         }
 
         $activeYear = SystemSetting::where('key', 'school_year')->value('value');
@@ -442,18 +317,6 @@ class StaffDashboardController extends Controller
                 $q->where('status', '!=', 'paid')
                     ->orWhereNull('status')
                     ->orWhere('balance', '>', 0);
-=======
-        if (!$user || !$user->hasRole('staff')) {
-            abort(403, 'Unauthorized');
-        }
-
-        // Collect outstanding records first to compute total cleared amount
-        $outstanding = FeeRecord::where('student_id', $student->student_id)
-            ->where(function ($q) {
-                $q->where('status', '!=', 'paid')
-                  ->orWhereNull('status')
-                  ->orWhere('balance', '>', 0);
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             })
             ->get();
 
@@ -468,76 +331,48 @@ class StaffDashboardController extends Controller
             $affected = FeeRecord::where('student_id', $student->student_id)
                 ->where(function ($q) {
                     $q->where('status', '!=', 'paid')
-<<<<<<< HEAD
                         ->orWhereNull('status')
                         ->orWhere('balance', '>', 0);
-=======
-                      ->orWhereNull('status')
-                      ->orWhere('balance', '>', 0);
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                 })
                 ->update(['status' => 'paid', 'balance' => 0]);
         }
 
         if ($affected > 0) {
-<<<<<<< HEAD
             // Log Audit
             FeeUpdateAudit::create([
                 'performed_by_user_id' => $user->user_id,
                 'event_type' => 'staff_fee_approve_all',
                 'message' => "Approved all outstanding payments for student {$student->student_id}. Total cleared: {$totalCleared}, Records affected: {$affected}",
                 'affected_students_count' => 1,
-                'school_year' => SystemSetting::where('key', 'school_year')->value('value'),
+                'school_year' => $activeYear,
                 'semester' => SystemSetting::where('key', 'semester')->value('value'),
             ]);
 
-=======
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
-            // Map student to user for transaction and notification
+            // Find the application's user row for this student
             $targetUser = User::where('roleable_type', 'App\\Models\\Student')
                 ->where('roleable_id', $student->student_id)
                 ->first();
 
             if ($targetUser) {
-                // Best-effort: record a transaction and notify the student
-                try {
-                    DB::table('payment_transactions')->insert([
-                        'user_id' => $targetUser->user_id,
-                        'student_id' => $student->student_id,
-                        'amount' => $totalCleared,
-                        'type' => 'approval',
-                        'note' => 'Payments approved by staff',
-                        'staff_user_id' => $user->user_id ?? null,
-                        'created_at' => now(),
-                    ]);
-                } catch (\Throwable $e) {
-                    Log::warning('payment_transactions insert failed', ['error' => $e->getMessage()]);
-                }
-
                 try {
                     DB::table('notifications')->insert([
                         'user_id' => $targetUser->user_id,
-                        'title' => 'Payment Approved',
-<<<<<<< HEAD
-                        'body' => 'Hi '.$student->first_name.', your payments have been recorded as paid.',
+                        'title' => 'Fees Cleared',
+                        'body' => 'Hello '.$student->first_name.', all your outstanding fees have been approved/cleared.',
                         'created_at' => now(),
-                        'updated_at' => now(),
-=======
-                        'body' => 'Hi ' . $student->first_name . ', your payments have been recorded as paid.',
-                        'created_at' => now(),
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                     ]);
                 } catch (\Throwable $e) {
                     Log::warning('notification insert failed (approval)', ['error' => $e->getMessage()]);
                 }
-<<<<<<< HEAD
-                try {
-                    app(\App\Services\FeeManagementService::class)->recomputeStudentLedger($student);
-                } catch (\Throwable $e) {
-                    Log::warning('fee recompute failed after approval', ['error' => $e->getMessage()]);
-                }
             }
 
+            try {
+                app(\App\Services\FeeManagementService::class)->recomputeStudentLedger($student);
+            } catch (\Throwable $e) {
+                Log::warning('fee recompute failed after approval', ['error' => $e->getMessage()]);
+            }
+
+            return back()->with('success', "Cleared outstanding fees for {$student->full_name}. Total: {$totalCleared}");
         }
 
         return back()->with('info', $student->full_name.' has no outstanding fees.');
@@ -715,12 +550,5 @@ class StaffDashboardController extends Controller
 
             return back()->with('error', 'Failed to process SMS reminders. Please try again.');
         }
-=======
-            }
-
-            return back()->with('success', 'Approved payments for ' . $student->full_name . '.');
-        }
-        return back()->with('info', $student->full_name . ' has no outstanding fees.');
->>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 }

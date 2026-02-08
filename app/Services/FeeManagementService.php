@@ -303,6 +303,56 @@ class FeeManagementService
         ];
     }
 
+    /**
+     * Reconcile tuition installments with the current payment schedule.
+     * Only updates if no payments have been made towards installments.
+     */
+    public function reconcileInstallments(Student $student): void
+    {
+        $assignment = FeeAssignment::where('student_id', $student->student_id)
+            ->where('school_year', $student->school_year)
+            ->with('tuitionFee')
+            ->first();
+
+        if (! $assignment || ! $assignment->tuitionFee) {
+            return;
+        }
+
+        // Check if we have any 'tuition_installment' records that are paid or partially paid
+        $hasPayments = FeeRecord::where('student_id', $student->student_id)
+            ->where('record_type', 'tuition_installment')
+            ->where(function ($q) {
+                $q->where('status', 'paid')
+                    ->orWhere('status', 'partial')
+                    ->orWhereColumn('balance', '<', 'amount');
+            })
+            ->exists();
+
+        if ($hasPayments) {
+            // Cannot safely regenerate if payments exist
+            return;
+        }
+
+        // Check if schedule exists
+        $schedule = $assignment->tuitionFee->payment_schedule;
+        if (empty($schedule)) {
+            return;
+        }
+
+        // Check if we should regenerate (if existing installments differ from schedule or don't exist)
+        // For simplicity and correctness, if no payments exist, we force regeneration to match current schedule.
+        DB::transaction(function () use ($student, $assignment) {
+            // Delete old pending installments
+            FeeRecord::where('student_id', $student->student_id)
+                ->where('record_type', 'tuition_installment')
+                ->where('status', 'pending')
+                ->delete();
+
+            // Generate new ones
+            $assignment->generateInstallments();
+        });
+    }
+
     public function recomputeStudentLedger(Student $student): void
     {
         // Ensure FeeAssignment exists for the student's current school year
@@ -316,6 +366,9 @@ class FeeManagementService
             // Auto-assign fees if missing
             $assignment = FeeAssignment::assignForStudent($student->student_id, $schoolYear, 'N/A');
         }
+
+        // Attempt to reconcile installments (e.g. if schedule changed)
+        $this->reconcileInstallments($student);
 
         $totals = $this->computeTotalsForStudent($student);
 
