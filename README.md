@@ -1,61 +1,105 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Efees - Student Fee Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Overview
 
-## About Laravel
+Efees is a web application developed using Laravel for managing student fees in an educational institution. It supports multiple user roles including students, staff, and administrators, providing role-based access to features like fee tracking, user management, and notifications.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Installation and Setup
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+1. Clone the repository: `git clone <repo-url>`
+2. Install dependencies: `composer install`
+3. Copy environment file: `cp .env.example .env`
+4. Generate application key: `php artisan key:generate`
+5. Configure database in `.env` file (set DB_CONNECTION, DB_HOST, etc.)
+6. Run migrations and seeders: `php artisan migrate --seed`
+7. Install frontend dependencies: `npm install`
+8. Build assets: `npm run dev` or `npm run build`
+9. Start the server: `php artisan serve`
+10. Visit `http://localhost:8000` in your browser.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Note: Ensure you have PHP, Composer, Node.js, and a database server (e.g., MySQL) installed.
 
-## Learning Laravel
+## Key Features
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **User Authentication**: Login, signup (for students), logout.
+- **Role-Based Dashboards**: Separate dashboards for students, staff, and admins.
+- **Student Management**: Admins can create, edit, and delete student records.
+- **Fee Management**: Track fee records, send reminders, approve payments.
+- **Profile Management**: Students can update their personal information.
+- **Notifications**: Real-time notifications for fee reminders and approvals.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## User Roles
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Student**: View personal dashboard with upcoming fees, transactions, notifications; update profile.
+- **Staff**: View student list, search students, send fee reminders, approve payments.
+- **Admin**: Manage student records (CRUD), access admin dashboard.
 
-## Laravel Sponsors
+## Database Structure
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Main Tables
 
-### Premium Partners
+- **users**: Stores user credentials and role information (user_id, email, password, role_id, roleable_type, roleable_id).
+- **roles**: Defines user roles (role_id, role_name, description).
+- **students**: Student details (student_id, first_name, middle_initial, last_name, contact_number, sex, year, section, address, profile_picture_url).
+- **admins**: Admin details (admin_id, first_name, MI, last_name, contact_number, department, position).
+- **staff**: Staff details (staff_id, first_name, MI, last_name, contact_number, department, position, salary).
+- **fee_records**: Fee tracking (record_id, fee_id, balance, status, timestamps; foreign key to student_id).
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Additional tables: sessions, cache, cache_locks, notifications, payment_transactions (if implemented).
 
-## Contributing
+## Routes and Endpoints
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Authentication
+- GET /login - Login page
+- POST /authenticate - Process login
+- GET /signup - Signup page
+- POST /register - Process registration
+- POST /logout - Logout
 
-## Code of Conduct
+### Dashboards
+- GET /user_dashboard - Student dashboard
+- GET /admin_dashboard - Admin dashboard
+- GET /staff_dashboard - Staff dashboard
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Student Profile
+- GET /student/profile - View profile
+- POST /student/profile - Update profile
 
-## Security Vulnerabilities
+### Staff Actions
+- POST /staff/remind/{student} - Send reminder
+- POST /staff/approve/{student} - Approve payments
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Admin Student Management
+- GET /admin/students - List students
+- POST /admin/students - Create student
+- GET /admin/students/{student}/edit - Edit form
+- PUT /admin/students/{student} - Update student
+- DELETE /admin/students/{student} - Delete student
 
-## License
+## Usage Guide
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### For Students
+1. Signup or login.
+2. Access dashboard to view fees and notifications.
+3. Update profile via /student/profile.
+
+### For Staff
+1. Login as staff.
+2. Use staff dashboard to search students, send reminders, approve fees.
+
+### For Admins
+1. Login as admin.
+2. Manage students via /admin/students.
+
+## Additional Notes
+- The system uses Laravel's Eloquent ORM for database interactions.
+- Frontend uses Blade templates and Vite for asset management.
+- For development, use `npm run dev` for hot reloading.
+
+For more details, refer to the source code or contact the developer.
+
+## Maintenance Notes
+
+- Fix: Add Charge create page failed due to missing `layouts.admin` view. The page `resources/views/admin/fees/charges/create.blade.php` was updated to a standalone layout to ensure it renders reliably.
+- Validation and feedback: The create page now shows validation errors and success/error flash messages. It also displays a notice if the local `additional_charges` table is missing, indicating Supabase fallback storage.
+- Tests: Added feature tests for the Add Charge flow in `tests/Feature/AdditionalChargeCreateTest.php` covering page load, Supabase fallback storage path, and validation failures. Run tests with `php artisan test` or `vendor/bin/phpunit`.

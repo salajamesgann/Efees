@@ -1,0 +1,49 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('sections', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('level'); // Grade 7, Grade 8, etc.
+            $table->timestamps();
+
+            $table->unique(['name', 'level']); // Prevent duplicates
+        });
+
+        // Backfill existing sections from students table
+        $existingSections = DB::table('students')
+            ->select('section', 'level')
+            ->distinct()
+            ->whereNotNull('section')
+            ->whereNotNull('level')
+            ->get();
+
+        foreach ($existingSections as $sec) {
+            DB::table('sections')->insertOrIgnore([
+                'name' => $sec->section,
+                'level' => $sec->level,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('sections');
+    }
+};
