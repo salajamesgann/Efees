@@ -2,10 +2,17 @@
 
 namespace Database\Seeders;
 
+<<<<<<< HEAD
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+=======
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
+use App\Models\Role;
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
 class StaffPasswordSeeder extends Seeder
 {
@@ -17,7 +24,11 @@ class StaffPasswordSeeder extends Seeder
         $this->command?->info('Updating staff user credentials...');
 
         // Hash the new password
+<<<<<<< HEAD
         $newPassword = Hash::make('staff');
+=======
+        $newPassword = Hash::make('staff123');
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         $email = 'staff@gmail.com';
 
         // Try to find and update staff user by role
@@ -27,12 +38,20 @@ class StaffPasswordSeeder extends Seeder
                 $updated = User::where('role_id', $staffRole->role_id)
                     ->update([
                         'email' => $email,
+<<<<<<< HEAD
                         'password' => $newPassword,
                     ]);
 
                 if ($updated > 0) {
                     $this->command?->info("Successfully updated staff user with email: {$email} and password: staff");
 
+=======
+                        'password' => $newPassword
+                    ]);
+                
+                if ($updated > 0) {
+                    $this->command?->info("Successfully updated staff user with email: {$email} and password: staff");
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                     return;
                 }
             }
@@ -49,14 +68,22 @@ class StaffPasswordSeeder extends Seeder
             if ($user) {
                 $user->update([
                     'email' => $email,
+<<<<<<< HEAD
                     'password' => $newPassword,
+=======
+                    'password' => $newPassword
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                 ]);
                 $this->command?->info("Successfully updated staff user with ID: {$user->id}");
             } else {
                 $this->command?->warn('No staff user found to update.');
             }
         } catch (\Throwable $e) {
+<<<<<<< HEAD
             $this->command?->error('Failed to update staff user: '.$e->getMessage());
+=======
+            $this->command?->error('Failed to update staff user: ' . $e->getMessage());
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         }
     }
 }

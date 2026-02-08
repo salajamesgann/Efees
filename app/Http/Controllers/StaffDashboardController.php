@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+<<<<<<< HEAD
 use App\Models\FeeRecord;
 use App\Models\FeeUpdateAudit;
 use App\Models\Student;
@@ -12,6 +13,13 @@ use App\Services\SmsGatewayService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+=======
+use App\Models\Student;
+use App\Models\FeeRecord;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +27,7 @@ use Illuminate\View\View;
 
 class StaffDashboardController extends Controller
 {
+<<<<<<< HEAD
     protected $smsGateway;
 
     public function __construct(SmsGatewayService $smsGateway)
@@ -63,11 +72,14 @@ class StaffDashboardController extends Controller
         return back()->with('success', 'Category updated successfully.');
     }
 
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     /**
      * Display the staff dashboard with search and metrics.
      */
     public function index(Request $request): View
     {
+<<<<<<< HEAD
         $data = $this->getStudentData($request);
         $data['notifications'] = DB::table('notifications')
             ->where('user_id', Auth::id())
@@ -258,6 +270,48 @@ class StaffDashboardController extends Controller
             'activeYear' => $activeYear,
             'stats' => $stats,
         ];
+=======
+        $user = Auth::user();
+        if (!$user || !$user->hasRole('staff')) {
+            abort(403, 'Unauthorized');
+        }
+
+        $q = trim((string) $request->input('q', ''));
+
+        // Paginated students for table (with fee records for totals/status)
+        $students = Student::with('feeRecords')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('student_id', 'like', "%{$q}%")
+                        ->orWhere('first_name', 'like', "%{$q}%")
+                        ->orWhere('last_name', 'like', "%{$q}%")
+                        ->orWhere('level', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('last_name')
+            ->paginate(10)
+            ->withQueryString();
+
+        // Metrics for chart: paid vs unpaid students
+        $all = Student::with('feeRecords')->get();
+        $paidCount = 0;
+        $unpaidCount = 0;
+        foreach ($all as $s) {
+            $totalBalance = (float) $s->feeRecords->sum('balance');
+            if ($s->feeRecords->count() > 0 && $totalBalance <= 0) {
+                $paidCount++;
+            } elseif ($totalBalance > 0) {
+                $unpaidCount++;
+            }
+        }
+
+        return view('auth.staff_dashboard', [
+            'students' => $students,
+            'query' => $q,
+            'paidCount' => $paidCount,
+            'unpaidCount' => $unpaidCount,
+        ]);
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 
     /**
@@ -266,6 +320,7 @@ class StaffDashboardController extends Controller
     public function remind(Student $student): RedirectResponse
     {
         $user = Auth::user();
+<<<<<<< HEAD
         if (! $user || ! $user->hasRole('staff')) {
             abort(403, 'Unauthorized');
         }
@@ -279,16 +334,29 @@ class StaffDashboardController extends Controller
             return back()->with('error', 'This student record belongs to locked School Year '.$student->school_year.'. Only records in the active School Year '.$activeYear.' can be modified.');
         }
 
+=======
+        if (!$user || !$user->hasRole('staff')) {
+            abort(403, 'Unauthorized');
+        }
+
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         // Find the application's user row for this student
         $targetUser = User::where('roleable_type', 'App\\Models\\Student')
             ->where('roleable_id', $student->student_id)
             ->first();
 
+<<<<<<< HEAD
         if (! $targetUser) {
             Log::warning('Reminder failed: no user mapped to student', [
                 'student_id' => $student->student_id,
             ]);
 
+=======
+        if (!$targetUser) {
+            Log::warning('Reminder failed: no user mapped to student', [
+                'student_id' => $student->student_id,
+            ]);
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return back()->with('error', 'No user account found for this student.');
         }
 
@@ -297,7 +365,11 @@ class StaffDashboardController extends Controller
             DB::table('notifications')->insert([
                 'user_id' => $targetUser->user_id,
                 'title' => 'Fee Reminder',
+<<<<<<< HEAD
                 'body' => 'Hello '.$student->first_name.', please review your outstanding fees.',
+=======
+                'body' => 'Hello ' . $student->first_name . ', please review your outstanding fees.',
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                 'created_at' => now(),
             ]);
 
@@ -308,6 +380,7 @@ class StaffDashboardController extends Controller
                 'timestamp' => now()->toDateTimeString(),
             ]);
 
+<<<<<<< HEAD
             // Send Real-time SMS if phone number exists
             $guardian = $student->parents->sortByDesc('pivot.is_primary')->first();
             $mobileNumber = $student->mobile_number ?? ($guardian ? $guardian->phone : null);
@@ -324,11 +397,17 @@ class StaffDashboardController extends Controller
             }
 
             return back()->with('success', 'Reminder sent to '.$student->full_name.'.');
+=======
+            return back()->with('success', 'Reminder sent to ' . $student->full_name . '.');
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         } catch (\Throwable $e) {
             Log::error('Failed to create notification', [
                 'error' => $e->getMessage(),
             ]);
+<<<<<<< HEAD
 
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return back()->with('error', 'Failed to send reminder.');
         }
     }
@@ -339,6 +418,7 @@ class StaffDashboardController extends Controller
     public function approve(Student $student): RedirectResponse
     {
         $user = Auth::user();
+<<<<<<< HEAD
         if (! $user || ! $user->hasRole('staff')) {
             abort(403, 'Unauthorized');
         }
@@ -362,6 +442,18 @@ class StaffDashboardController extends Controller
                 $q->where('status', '!=', 'paid')
                     ->orWhereNull('status')
                     ->orWhere('balance', '>', 0);
+=======
+        if (!$user || !$user->hasRole('staff')) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Collect outstanding records first to compute total cleared amount
+        $outstanding = FeeRecord::where('student_id', $student->student_id)
+            ->where(function ($q) {
+                $q->where('status', '!=', 'paid')
+                  ->orWhereNull('status')
+                  ->orWhere('balance', '>', 0);
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             })
             ->get();
 
@@ -376,13 +468,19 @@ class StaffDashboardController extends Controller
             $affected = FeeRecord::where('student_id', $student->student_id)
                 ->where(function ($q) {
                     $q->where('status', '!=', 'paid')
+<<<<<<< HEAD
                         ->orWhereNull('status')
                         ->orWhere('balance', '>', 0);
+=======
+                      ->orWhereNull('status')
+                      ->orWhere('balance', '>', 0);
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                 })
                 ->update(['status' => 'paid', 'balance' => 0]);
         }
 
         if ($affected > 0) {
+<<<<<<< HEAD
             // Log Audit
             FeeUpdateAudit::create([
                 'performed_by_user_id' => $user->user_id,
@@ -393,6 +491,8 @@ class StaffDashboardController extends Controller
                 'semester' => SystemSetting::where('key', 'semester')->value('value'),
             ]);
 
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             // Map student to user for transaction and notification
             $targetUser = User::where('roleable_type', 'App\\Models\\Student')
                 ->where('roleable_id', $student->student_id)
@@ -418,13 +518,19 @@ class StaffDashboardController extends Controller
                     DB::table('notifications')->insert([
                         'user_id' => $targetUser->user_id,
                         'title' => 'Payment Approved',
+<<<<<<< HEAD
                         'body' => 'Hi '.$student->first_name.', your payments have been recorded as paid.',
                         'created_at' => now(),
                         'updated_at' => now(),
+=======
+                        'body' => 'Hi ' . $student->first_name . ', your payments have been recorded as paid.',
+                        'created_at' => now(),
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                     ]);
                 } catch (\Throwable $e) {
                     Log::warning('notification insert failed (approval)', ['error' => $e->getMessage()]);
                 }
+<<<<<<< HEAD
                 try {
                     app(\App\Services\FeeManagementService::class)->recomputeStudentLedger($student);
                 } catch (\Throwable $e) {
@@ -609,5 +715,12 @@ class StaffDashboardController extends Controller
 
             return back()->with('error', 'Failed to process SMS reminders. Please try again.');
         }
+=======
+            }
+
+            return back()->with('success', 'Approved payments for ' . $student->full_name . '.');
+        }
+        return back()->with('info', $student->full_name . ' has no outstanding fees.');
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 }

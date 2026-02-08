@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+<<<<<<< HEAD
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
@@ -12,6 +13,15 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+=======
+use App\Models\Staff;
+use App\Models\User;
+use App\Models\Role;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
@@ -25,8 +35,13 @@ class AdminStaffController extends Controller
         $query = trim($request->input('q', ''));
         $status = $request->input('status', 'all');
 
+<<<<<<< HEAD
         $staffQuery = Staff::with(['user', 'user.role'])
             ->select(['staff_id', 'first_name', 'MI', 'last_name', 'contact_number', 'department', 'position', 'is_active', 'created_at'])
+=======
+        $staffQuery = Staff::with('user')
+            ->select(['staff_id', 'first_name', 'MI', 'last_name', 'contact_number', 'department', 'position', 'salary'])
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             ->when($query !== '', function ($q) use ($query) {
                 $q->where(function ($sub) use ($query) {
                     $sub->where('first_name', 'like', "%{$query}%")
@@ -37,12 +52,20 @@ class AdminStaffController extends Controller
                 });
             })
             ->when($status === 'active', function ($q) {
+<<<<<<< HEAD
                 $q->where('is_active', true);
             })
             ->when($status === 'inactive', function ($q) {
                 $q->where('is_active', false);
             })
             ->orderBy('created_at', 'desc')
+=======
+                // Note: is_active column may not exist, filtering handled in view
+            })
+            ->when($status === 'inactive', function ($q) {
+                // Note: is_active column may not exist, filtering handled in view
+            })
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             ->orderBy('first_name', 'asc')
             ->orderBy('last_name', 'asc');
 
@@ -59,6 +82,7 @@ class AdminStaffController extends Controller
     /**
      * Show the form for creating a new staff account.
      */
+<<<<<<< HEAD
     /**
      * Display the specified staff member's details.
      */
@@ -72,6 +96,8 @@ class AdminStaffController extends Controller
     /**
      * Show the form for creating a new staff account.
      */
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     public function create(): View
     {
         $roles = Role::whereIn('role_name', ['staff', 'admin'])->get();
@@ -97,7 +123,11 @@ class AdminStaffController extends Controller
                 'string',
                 'min:8',
                 'confirmed',
+<<<<<<< HEAD
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
+=======
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             ],
         ], [
             'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
@@ -105,6 +135,7 @@ class AdminStaffController extends Controller
         ]);
 
         if ($validator->fails()) {
+<<<<<<< HEAD
             if ($request->boolean('from_modal')) {
                 return redirect()
                     ->route('admin.students.index')
@@ -113,6 +144,8 @@ class AdminStaffController extends Controller
                     ->withInput();
             }
 
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return redirect()
                 ->route('admin.staff.create')
                 ->withErrors($validator)
@@ -122,6 +155,7 @@ class AdminStaffController extends Controller
         $validated = $validator->validated();
 
         try {
+<<<<<<< HEAD
             DB::transaction(function () use ($validated, $request) {
                 $roleName = strtolower($request->input('role_name', 'staff'));
                 if (! in_array($roleName, ['staff', 'admin'], true)) {
@@ -139,10 +173,22 @@ class AdminStaffController extends Controller
                     'contact_number' => $validated['phone_number'] ?? '',
                     'department' => 'General',
                     'position' => $position,
+=======
+            DB::transaction(function () use ($validated) {
+                Staff::createWithAccount([
+                    'first_name' => $validated['first_name'],
+                    'MI' => $validated['middle_initial'] ?? null,
+                    'last_name' => $validated['last_name'],
+                    'contact_number' => $validated['phone_number'] ?? null,
+                    'department' => null, // Default to null since not in form
+                    'position' => 'Staff', // Default position
+                    'salary' => null, // Default to null since not in form
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                     'is_active' => true,
                 ], [
                     'email' => strtolower($validated['email']),
                     'password' => $validated['password'],
+<<<<<<< HEAD
                     'role_id' => $role->role_id,
                 ]);
 
@@ -165,13 +211,23 @@ class AdminStaffController extends Controller
                     ->with('success', 'Account created successfully.');
             }
 
+=======
+                    'role_id' => 3, // Staff role (ID 3 based on migration order)
+                ]);
+            });
+
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return redirect()
                 ->route('admin.staff.index')
                 ->with('success', 'Staff account created successfully.');
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.staff.create')
+<<<<<<< HEAD
                 ->with('error', 'Failed to create staff account. Please try again. Error: '.$e->getMessage())
+=======
+                ->with('error', 'Failed to create staff account. Please try again. Error: ' . $e->getMessage())
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                 ->withInput();
         }
     }
@@ -196,25 +252,37 @@ class AdminStaffController extends Controller
     public function update(Request $request, Staff $staff): RedirectResponse
     {
         $staff->load('user');
+<<<<<<< HEAD
         $oldValues = $staff->toArray();
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         $validator = Validator::make($request->all(), [
             'first_name' => ['required', 'string', 'max:100'],
             'middle_initial' => ['nullable', 'string', 'max:1'],
             'last_name' => ['required', 'string', 'max:100'],
+<<<<<<< HEAD
             'phone_number' => ['nullable', 'string', 'min:11', 'max:11'],
+=======
+            'phone_number' => ['nullable', 'string', 'min:7', 'max:15'],
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             'email' => ['required', 'string', 'email', 'max:255'],
             'password' => [
                 'nullable',
                 'string',
                 'min:8',
                 'confirmed',
+<<<<<<< HEAD
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
+=======
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             ],
         ], [
             'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
         ]);
 
         if ($validator->fails()) {
+<<<<<<< HEAD
             if ($request->boolean('from_modal')) {
                 return redirect()
                     ->route('admin.students.index')
@@ -223,6 +291,8 @@ class AdminStaffController extends Controller
                     ->withInput();
             }
 
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return redirect()
                 ->route('admin.staff.edit', $staff)
                 ->withErrors($validator)
@@ -236,7 +306,11 @@ class AdminStaffController extends Controller
                 'email' => strtolower($validated['email']),
             ];
 
+<<<<<<< HEAD
             if (! empty($validated['password'])) {
+=======
+            if (!empty($validated['password'])) {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
                 $userData['password'] = $validated['password'];
             }
 
@@ -248,6 +322,7 @@ class AdminStaffController extends Controller
                 // Note: department, position, salary not included in simplified edit form
             ], $userData);
 
+<<<<<<< HEAD
             // Audit Log
             try {
                 AuditService::log(
@@ -266,6 +341,8 @@ class AdminStaffController extends Controller
                     ->with('success', 'Staff account updated successfully.');
             }
 
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             return redirect()
                 ->route('admin.staff.index')
                 ->with('success', 'Staff account updated successfully.');
@@ -278,16 +355,20 @@ class AdminStaffController extends Controller
     }
 
     /**
+<<<<<<< HEAD
      * Reset staff password.
      */
     /**
      * Toggle staff account status.
      */
     /**
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
      * Toggle staff account status.
      */
     public function toggleStatus(Staff $staff): RedirectResponse
     {
+<<<<<<< HEAD
         $oldStatus = $staff->is_active ? 'Active' : 'Inactive';
         try {
             DB::beginTransaction();
@@ -323,10 +404,25 @@ class AdminStaffController extends Controller
             ]);
 
             return back()->with('error', 'Failed to update staff account status.');
+=======
+        try {
+            // Since is_active column may not exist, we'll handle this in the application layer
+            // For now, just return success since we can't actually toggle database status
+            $message = 'Status toggle functionality requires database migration.';
+
+            return redirect()
+                ->route('admin.staff.index')
+                ->with('info', $message);
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.staff.index')
+                ->with('error', 'Failed to update staff account status.');
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         }
     }
 
     /**
+<<<<<<< HEAD
      * Activate a staff account.
      */
     public function activate(Staff $staff): RedirectResponse
@@ -416,5 +512,16 @@ class AdminStaffController extends Controller
                 ->route('admin.staff.show', $staff)
                 ->with('error', 'Failed to reset password. Please try again.');
         }
+=======
+     * Show staff account details with confirmation for actions.
+     */
+    public function show(Staff $staff): View
+    {
+        $staff->load('user');
+
+        return view('auth.admin_staff_show', [
+            'staff' => $staff,
+        ]);
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 }

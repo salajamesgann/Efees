@@ -21,7 +21,11 @@ return new class extends Migration
         DB::table('roles')->insert([
             ['role_name' => 'student', 'description' => 'Student role with access to fee management'],
             ['role_name' => 'admin', 'description' => 'Administrator with full system access'],
+<<<<<<< HEAD
             ['role_name' => 'staff', 'description' => 'Staff member with limited administrative access'],
+=======
+            ['role_name' => 'staff', 'description' => 'Staff member with limited administrative access']
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         ]);
     }
 

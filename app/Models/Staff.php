@@ -31,7 +31,11 @@ class Staff extends Model
     /**
      * Indicates if the model should be timestamped.
      */
+<<<<<<< HEAD
     public $timestamps = true;
+=======
+    public $timestamps = false;
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The attributes that should be mutated to dates.
@@ -41,12 +45,20 @@ class Staff extends Model
     /**
      * The name of the "created at" column.
      */
+<<<<<<< HEAD
     const CREATED_AT = 'created_at';
+=======
+    const CREATED_AT = null;
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The name of the "updated at" column.
      */
+<<<<<<< HEAD
     const UPDATED_AT = 'updated_at';
+=======
+    const UPDATED_AT = null;
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
     /**
      * The attributes that are mass assignable.
@@ -58,19 +70,30 @@ class Staff extends Model
         'last_name',
         'contact_number',
         'position',
+<<<<<<< HEAD
         'department',
         'is_active',
         'created_at',
         'updated_at',
+=======
+        'salary',
+        // Note: is_active, created_at, updated_at are handled conditionally since columns may not exist
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     ];
 
     /**
      * The attributes that should be cast.
      */
     protected $casts = [
+<<<<<<< HEAD
         'is_active' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+=======
+        'salary' => 'decimal:2',
+        // Note: is_active casting removed since column may not exist
+        // Note: created_at and updated_at casting removed since columns may not exist
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     ];
 
     /**
@@ -78,7 +101,11 @@ class Staff extends Model
      */
     public function usesTimestamps(): bool
     {
+<<<<<<< HEAD
         return true;
+=======
+        return false;
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 
     /**
@@ -94,7 +121,11 @@ class Staff extends Model
      */
     public function getFullNameAttribute(): string
     {
+<<<<<<< HEAD
         return trim($this->first_name.' '.($this->MI ? $this->MI.'. ' : '').$this->last_name);
+=======
+        return trim($this->first_name . ' ' . ($this->MI ? $this->MI . '. ' : '') . $this->last_name);
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
     }
 
     /**
@@ -108,7 +139,10 @@ class Staff extends Model
         } else {
             $initials .= strtoupper(substr($this->last_name, 0, 1));
         }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         return $initials;
     }
 
@@ -127,6 +161,7 @@ class Staff extends Model
     {
         // Generate staff ID if not provided
         if (empty($staffData['staff_id'])) {
+<<<<<<< HEAD
             $staffData['staff_id'] = 'STF'.str_pad(static::count() + 1, 4, '0', STR_PAD_LEFT);
         }
 
@@ -139,11 +174,17 @@ class Staff extends Model
         }
         if (! array_key_exists('position', $staffData) || $staffData['position'] === null) {
             $staffData['position'] = 'Staff';
+=======
+            $staffData['staff_id'] = 'STF' . str_pad(static::count() + 1, 4, '0', STR_PAD_LEFT);
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         }
 
         // Set timestamps only if columns exist
         try {
+<<<<<<< HEAD
             $staffData['created_at'] = now();
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             $staffData['updated_at'] = now();
         } catch (\Exception $e) {
             // Columns might not exist, skip timestamp setting

@@ -2,15 +2,25 @@
 
 namespace App\Http\Controllers;
 
+<<<<<<< HEAD
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+=======
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+<<<<<<< HEAD
 use Illuminate\View\View;
+=======
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+use App\Models\Student;
+use App\Models\User;
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
 
 class StudentSettingsController extends Controller
 {
@@ -21,7 +31,11 @@ class StudentSettingsController extends Controller
     {
         $user = Auth::user();
 
+<<<<<<< HEAD
         if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+=======
+        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             abort(403);
         }
 
@@ -61,7 +75,11 @@ class StudentSettingsController extends Controller
     {
         $user = Auth::user();
 
+<<<<<<< HEAD
         if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+=======
+        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             abort(403);
         }
 
@@ -71,7 +89,12 @@ class StudentSettingsController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'middle_initial' => ['nullable', 'string', 'max:1'],
             'last_name' => ['required', 'string', 'max:255'],
+<<<<<<< HEAD
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->user_id.',user_id'],
+=======
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->user_id . ',user_id'],
+            'contact_number' => ['required', 'string', 'min:7', 'max:20'],
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             'address' => ['nullable', 'string', 'max:500'],
             'sex' => ['required', 'string', 'in:Male,Female'],
             'year' => ['required', 'string', 'in:1st Year,2nd Year,3rd Year,4th Year'],
@@ -83,6 +106,10 @@ class StudentSettingsController extends Controller
         $student->first_name = $validated['first_name'];
         $student->middle_initial = $validated['middle_initial'] ?? null;
         $student->last_name = $validated['last_name'];
+<<<<<<< HEAD
+=======
+        $student->contact_number = $validated['contact_number'];
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
         $student->address = $validated['address'] ?? null;
         $student->sex = $validated['sex'];
         $student->year = $validated['year'];
@@ -111,12 +138,20 @@ class StudentSettingsController extends Controller
     {
         $user = Auth::user();
 
+<<<<<<< HEAD
         if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+=======
+        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             abort(403);
         }
 
         $validated = $request->validate([
+<<<<<<< HEAD
             'username' => ['required', 'string', 'max:255', 'unique:users,email,'.$user->user_id.',user_id'],
+=======
+            'username' => ['required', 'string', 'max:255', 'unique:users,email,' . $user->user_id . ',user_id'],
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             'current_password' => ['required', 'current_password'],
             'new_password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
@@ -125,7 +160,11 @@ class StudentSettingsController extends Controller
         $user->email = strtolower($validated['username']);
 
         // Update password if provided
+<<<<<<< HEAD
         if (! empty($validated['new_password'] ?? '')) {
+=======
+        if (!empty($validated['new_password'] ?? '')) {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             $user->password = Hash::make($validated['new_password']);
         }
 
@@ -141,7 +180,11 @@ class StudentSettingsController extends Controller
     {
         $user = Auth::user();
 
+<<<<<<< HEAD
         if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+=======
+        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             abort(403);
         }
 
@@ -174,7 +217,11 @@ class StudentSettingsController extends Controller
     {
         $user = Auth::user();
 
+<<<<<<< HEAD
         if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+=======
+        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             abort(403);
         }
 
@@ -182,7 +229,11 @@ class StudentSettingsController extends Controller
             'payment_type' => ['required', 'string', 'in:credit_card,debit_card,bank_account,paypal'],
             'card_number' => ['nullable', 'string', 'regex:/^\d{4}\s?\d{4}\s?\d{4}\s?\d{4}$/'],
             'expiry_month' => ['nullable', 'integer', 'min:1', 'max:12'],
+<<<<<<< HEAD
             'expiry_year' => ['nullable', 'integer', 'min:'.date('Y'), 'max:'.(date('Y') + 20)],
+=======
+            'expiry_year' => ['nullable', 'integer', 'min:' . date('Y'), 'max:' . (date('Y') + 20)],
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             'cvv' => ['nullable', 'string', 'regex:/^\d{3,4}$/'],
             'account_holder_name' => ['required', 'string', 'max:255'],
             'bank_name' => ['nullable', 'string', 'max:255'],
@@ -218,7 +269,11 @@ class StudentSettingsController extends Controller
     {
         $user = Auth::user();
 
+<<<<<<< HEAD
         if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+=======
+        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             abort(403);
         }
 
@@ -232,7 +287,11 @@ class StudentSettingsController extends Controller
             ->where('user_id', $user->user_id)
             ->first();
 
+<<<<<<< HEAD
         if (! $paymentMethod) {
+=======
+        if (!$paymentMethod) {
+>>>>>>> 189635dfc80db5078042a6c8e90a3ae1ba032141
             abort(403);
         }
 
