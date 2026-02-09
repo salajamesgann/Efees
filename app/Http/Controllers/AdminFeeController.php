@@ -325,17 +325,67 @@ class AdminFeeController extends Controller
                     })();
                     $base = (float) $tf->amount;
                     $chargesTotal = (float) collect($tf->charges ?? [])->sum('amount');
-                    $discountBase = $base + $chargesTotal;
-                    $discountsTotal = 0.0;
-                    foreach ($tf->applicableDiscounts()->get() as $d) {
-                        $t = (string) ($d->type ?? 'percentage');
-                        $v = (float) ($d->value ?? 0.0);
-                        if ($t === 'percentage') {
-                            $discountsTotal += ($discountBase * $v) / 100.0;
+                    
+                    // CORRECTED LOGIC: Calculate Net Payable using only AUTOMATIC discounts
+                    // and respecting scope (tuition_only, charges_only, total) and stackability.
+                    $remainingTuition = $base;
+                    $remainingCharges = $chargesTotal;
+                    $appliedDiscountsTotal = 0.0;
+                    
+                    $automaticDiscounts = $tf->applicableDiscounts()
+                        ->where('is_automatic', true)
+                        ->orderBy('priority', 'desc')
+                        ->get();
+                        
+                    $exclusiveApplied = false;
+                    
+                    foreach ($automaticDiscounts as $d) {
+                        if ($exclusiveApplied) break;
+                        
+                        $rules = $d->eligibility_rules ?? [];
+                        $scope = $rules['apply_scope'] ?? 'total';
+                        $stackable = $rules['is_stackable'] ?? true;
+                        $type = $d->type ?? 'percentage';
+                        $value = (float) $d->value;
+                        
+                        $calcBase = 0.0;
+                        if ($scope === 'tuition_only') {
+                            $calcBase = $remainingTuition;
+                        } elseif ($scope === 'charges_only') {
+                            $calcBase = $remainingCharges;
                         } else {
-                            $discountsTotal += min($v, $discountBase);
+                            $calcBase = $remainingTuition + $remainingCharges;
+                        }
+                        
+                        if ($calcBase <= 0) continue;
+                        
+                        $deduction = ($type === 'percentage') 
+                            ? ($calcBase * $value / 100.0) 
+                            : min($value, $calcBase);
+                            
+                        if ($deduction > 0) {
+                            $appliedDiscountsTotal += $deduction;
+                            
+                            // Update remaining balances
+                            if ($scope === 'tuition_only') {
+                                $remainingTuition = max(0.0, $remainingTuition - $deduction);
+                            } elseif ($scope === 'charges_only') {
+                                $remainingCharges = max(0.0, $remainingCharges - $deduction);
+                            } else {
+                                // For total scope, deduct from tuition first (standard practice)
+                                $tuitionDed = min($remainingTuition, $deduction);
+                                $remainingTuition -= $tuitionDed;
+                                $remainingCharges = max(0.0, $remainingCharges - ($deduction - $tuitionDed));
+                            }
+                            
+                            if (!$stackable) {
+                                $exclusiveApplied = true;
+                            }
                         }
                     }
+
+                    $discountBase = $base + $chargesTotal;
+                    $discountsTotal = $appliedDiscountsTotal;
 
                     return [
                         'id' => $tf->id,
@@ -1365,68 +1415,84 @@ class AdminFeeController extends Controller
         $base = (float) $tuitionFee->amount;
         $chargesTotal = (float) $charges->sum('amount');
 
-        $discounts = collect();
-        if (! empty($tuitionFee->default_discount_ids)) {
-            $discounts = \App\Models\Discount::active()
-                ->whereIn('id', $tuitionFee->default_discount_ids)
-                ->orderBy('priority', 'desc')
-                ->get();
-        }
+        // Fetch AUTOMATIC discounts applicable to this grade
+        // This aligns with the logic in index() for Net Payable
+        $discounts = $tuitionFee->applicableDiscounts()
+            ->where('is_automatic', true)
+            ->orderBy('priority', 'desc')
+            ->get();
 
-        // Respect stacking rules: apply all stackable discounts; for non-stackable, apply only the highest priority per scope
-        $stackable = $discounts->filter(function ($d) {
-            return method_exists($d, 'isStackable') ? $d->isStackable() : true;
-        });
-        $nonStackable = $discounts->filter(function ($d) {
-            return method_exists($d, 'isStackable') ? ! $d->isStackable() : false;
-        });
-        $selectedNonStackable = collect();
-        if ($nonStackable->count() > 0) {
-            $grouped = $nonStackable->groupBy(function ($d) {
-                return method_exists($d, 'getApplyScope') ? $d->getApplyScope() : 'total';
-            });
-            foreach ($grouped as $scope => $items) {
-                $selectedNonStackable = $selectedNonStackable->merge(
-                    collect($items)->sortByDesc('priority')->take(1)
-                );
+        $remainingTuition = $base;
+        $remainingCharges = $chargesTotal;
+        $appliedDiscountsTotal = 0.0;
+        $discountBreakdown = [];
+        
+        $exclusiveApplied = false;
+
+        foreach ($discounts as $d) {
+            if ($exclusiveApplied) break;
+
+            $rules = $d->eligibility_rules ?? [];
+            $scope = $rules['apply_scope'] ?? 'total';
+            $stackable = $rules['is_stackable'] ?? true;
+            $type = $d->type ?? 'percentage';
+            $val = (float) $d->value;
+
+            $calcBase = 0.0;
+            if ($scope === 'tuition_only') {
+                $calcBase = $remainingTuition;
+            } elseif ($scope === 'charges_only') {
+                $calcBase = $remainingCharges;
+            } else {
+                $calcBase = $remainingTuition + $remainingCharges;
+            }
+
+            if ($calcBase <= 0) continue;
+
+            $deduction = ($type === 'percentage') 
+                ? ($calcBase * $val / 100.0) 
+                : min($val, $calcBase);
+            
+            if ($deduction > 0) {
+                $appliedDiscountsTotal += $deduction;
+
+                // Update remaining balances
+                if ($scope === 'tuition_only') {
+                    $remainingTuition = max(0.0, $remainingTuition - $deduction);
+                } elseif ($scope === 'charges_only') {
+                    $remainingCharges = max(0.0, $remainingCharges - $deduction);
+                } else {
+                    // For total scope, deduct from tuition first (standard practice)
+                    $tuitionDed = min($remainingTuition, $deduction);
+                    $remainingTuition -= $tuitionDed;
+                    $remainingCharges = max(0.0, $remainingCharges - ($deduction - $tuitionDed));
+                }
+
+                $discountBreakdown[] = [
+                    'id' => $d->id,
+                    'name' => $d->discount_name,
+                    'type' => $type,
+                    'value' => $val,
+                    'scope' => $scope,
+                    'stackable' => $stackable,
+                    'priority' => (int) ($d->priority ?? 0),
+                    'applied_amount' => $deduction,
+                ];
+
+                if (! $stackable) {
+                    $exclusiveApplied = true;
+                }
             }
         }
-        $appliedDiscounts = $stackable->merge($selectedNonStackable)->unique('id');
 
-        $discountsTotal = 0.0;
-        $discountBreakdown = [];
-        foreach ($appliedDiscounts as $d) {
-            $type = (string) ($d->type ?? 'percentage');
-            $val = (float) ($d->value ?? 0.0);
-            $scope = method_exists($d, 'getApplyScope') ? $d->getApplyScope() : 'total';
-            $scopeBase = $scope === 'tuition_only'
-                ? $base
-                : ($scope === 'charges_only' ? $chargesTotal : ($base + $chargesTotal));
-            $applied = $type === 'percentage'
-                ? ($scopeBase * $val) / 100.0
-                : min($val, $scopeBase);
-            $applied = max(0.0, (float) $applied);
-            $discountsTotal += $applied;
-            $discountBreakdown[] = [
-                'id' => $d->id,
-                'name' => $d->discount_name,
-                'type' => $type,
-                'value' => $val,
-                'scope' => $scope,
-                'stackable' => (method_exists($d, 'isStackable') ? $d->isStackable() : true),
-                'priority' => (int) ($d->priority ?? 0),
-                'applied_amount' => $applied,
-            ];
-        }
-
-        $net = max(0.0, $base + $chargesTotal - $discountsTotal);
+        $net = max(0.0, $base + $chargesTotal - $appliedDiscountsTotal);
 
         return view('admin.fees.tuition.show', [
             'tuitionFee' => $tuitionFee,
             'charges' => $charges,
             'discounts' => $discounts,
             'chargesTotal' => $chargesTotal,
-            'discountsTotal' => $discountsTotal,
+            'discountsTotal' => $appliedDiscountsTotal,
             'discountBreakdown' => $discountBreakdown,
             'netPayable' => $net,
         ]);

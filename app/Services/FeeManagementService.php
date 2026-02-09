@@ -153,9 +153,15 @@ class FeeManagementService
                     ->sum('balance');
 
                 if (\App\Models\FeeRecord::where('student_id', $student->student_id)->where('record_type', '!=', 'tuition_total')->doesntExist()) {
-                    $remainingBalance = max(0.0, (float) $assignment->total_amount - $paidAmount);
+                    $remainingBalance = max(0.0, (float) $assignment->total_amount - $paidAmount + $penaltiesTotal);
                 } else {
-                    $remainingBalance = $ledgerBalance;
+                    // Check if ledger seems to be missing the base tuition (e.g. balance is negative or too low compared to assignment)
+                    // This handles cases where only adjustments (discounts/charges) are in FeeRecords but base tuition isn't.
+                    if ($ledgerBalance < 0 || ($assignment->total_amount > 0 && $ledgerBalance < $assignment->total_amount * 0.1)) {
+                         $remainingBalance = max(0.0, (float) $assignment->total_amount - $paidAmount + $penaltiesTotal);
+                    } else {
+                         $remainingBalance = $ledgerBalance;
+                    }
                 }
 
                 return [

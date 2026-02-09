@@ -153,7 +153,6 @@
 
     <form method="POST" action="{{ route('admin.settings.update') }}" class="bg-white rounded-lg border border-gray-200 p-6">
         @csrf
-        @method('PUT')
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700">Active School Year</label>
             <input type="text" name="school_year" value="{{ old('school_year', optional($settings['school_year'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. 2025-2026" />

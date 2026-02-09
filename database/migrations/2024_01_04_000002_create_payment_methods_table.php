@@ -11,23 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('payment_methods', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->string('payment_type'); // credit_card, debit_card, bank_account, paypal
-            $table->string('card_number')->nullable();
-            $table->integer('expiry_month')->nullable();
-            $table->integer('expiry_year')->nullable();
-            $table->string('cvv')->nullable();
-            $table->string('account_holder_name');
-            $table->string('bank_name')->nullable();
-            $table->string('account_number')->nullable();
-            $table->string('routing_number')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
+        if (! Schema::hasTable('payment_methods')) {
+            Schema::create('payment_methods', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->string('payment_type'); // credit_card, debit_card, bank_account, paypal
+                $table->string('card_number')->nullable();
+                $table->integer('expiry_month')->nullable();
+                $table->integer('expiry_year')->nullable();
+                $table->string('cvv')->nullable();
+                $table->string('account_holder_name');
+                $table->string('bank_name')->nullable();
+                $table->string('account_number')->nullable();
+                $table->string('routing_number')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
 
-            $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
-        });
+                $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     /**

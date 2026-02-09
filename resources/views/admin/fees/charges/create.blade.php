@@ -75,21 +75,12 @@
                 <span class="text-sm font-medium">Student Management</span>
             </a>
             
-            @if (Route::has('admin.parents.index'))
-                <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.parents.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.parents.index') }}">
-                    <div class="w-8 flex justify-center">
-                        <i class="fas fa-user-friends text-lg {{ request()->routeIs('admin.parents.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                    </div>
-                    <span class="text-sm font-medium">Parent Management</span>
-                </a>
-            @endif
-
-            <!-- Staff Management -->
+            <!-- User Management -->
             <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.staff.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.staff.index') }}">
                 <div class="w-8 flex justify-center">
                     <i class="fas fa-chalkboard-teacher text-lg {{ request()->routeIs('admin.staff.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
                 </div>
-                <span class="text-sm font-medium">Staff Management</span>
+                <span class="text-sm font-medium">User Management</span>
             </a>
 
             <!-- Fee Management -->

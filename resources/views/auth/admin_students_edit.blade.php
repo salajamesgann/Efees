@@ -352,7 +352,7 @@
                         <p class="text-sm text-slate-500">No linked parents</p>
                       @endif
                       <div class="mt-2">
-                        <a href="{{ route('admin.parents.index') }}" class="text-xs font-semibold text-blue-600">Manage Parents</a>
+                        <a href="{{ route('admin.staff.index') }}" class="text-xs font-semibold text-blue-600">Manage Parents</a>
                       </div>
                     </div>
                   </div>

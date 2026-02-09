@@ -163,16 +163,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{student}/discounts/{discount}', [\App\Http\Controllers\StudentDiscountController::class, 'destroy'])->name('discounts.destroy');
     });
 
-    // Admin Fee Periods
-    Route::prefix('admin/fees/periods')->name('admin.fees.periods.')->middleware('ensureRole:admin')->group(function () {
-        Route::get('/', [\App\Http\Controllers\AdminFeePeriodController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\AdminFeePeriodController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\AdminFeePeriodController::class, 'store'])->name('store');
-        Route::get('/{period}/edit', [\App\Http\Controllers\AdminFeePeriodController::class, 'edit'])->name('edit');
-        Route::put('/{period}', [\App\Http\Controllers\AdminFeePeriodController::class, 'update'])->name('update');
-        Route::delete('/{period}', [\App\Http\Controllers\AdminFeePeriodController::class, 'destroy'])->name('destroy');
-    });
-
     // Admin Fee Management
     Route::prefix('admin/fees')->name('admin.fees.')->middleware('ensureRole:admin')->group(function () {
         Route::get('/', [AdminFeeController::class, 'index'])->name('index');
@@ -266,7 +256,7 @@ Route::middleware('auth')->group(function () {
     // Admin Settings
     Route::prefix('admin/settings')->name('admin.settings.')->middleware('ensureRole:admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminSettingsController::class, 'index'])->name('index');
-        Route::post('/', [\App\Http\Controllers\AdminSettingsController::class, 'update'])->name('update');
+        Route::match(['put', 'post'], '/', [\App\Http\Controllers\AdminSettingsController::class, 'update'])->name('update');
         Route::post('/reset-demo', [\App\Http\Controllers\AdminSettingsController::class, 'resetDemoData'])->name('reset-demo');
         Route::post('/clear-cache', [\App\Http\Controllers\AdminSettingsController::class, 'clearCache'])->name('clear-cache');
         Route::post('/reset-database', [\App\Http\Controllers\AdminSettingsController::class, 'resetDatabase'])->name('reset-database');
