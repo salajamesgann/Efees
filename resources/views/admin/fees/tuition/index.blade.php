@@ -70,7 +70,7 @@
     @endif
 
     @if(($tuitionFees instanceof \Illuminate\Support\Collection ? $tuitionFees->count() : count($tuitionFees)) > 0)
-        <div class="overflow-x-auto max-h-[60vh] overflow-y-auto rounded-lg border border-slate-200" id="tuition-table-wrap">
+        <div class="overflow-x-auto max-h-[60vh] overflow-y-auto rounded-lg border border-slate-200 custom-scrollbar" id="tuition-table-wrap">
             <table class="min-w-full divide-y divide-slate-200" id="tuition-table">
                 <thead class="bg-slate-50 sticky top-0 z-10">
                     <tr>

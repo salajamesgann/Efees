@@ -38,21 +38,57 @@ class AdminStaffController extends Controller
                 });
             })
             ->when($status === 'active', function ($q) {
-                $q->whereHasMorph('roleable', [Staff::class, ParentContact::class], function ($q, $type) {
-                    if ($type === Staff::class) {
-                        $q->where('is_active', true);
-                    } elseif ($type === ParentContact::class) {
-                        $q->where('account_status', 'Active');
-                    }
+                $q->where(function ($sub) {
+                    $sub->where(function ($s) {
+                        $s->where('roleable_type', Staff::class)
+                          ->whereExists(function ($exists) {
+                              $exists->select(DB::raw(1))
+                                     ->from('staff')
+                                     ->whereColumn('staff.staff_id', 'users.roleable_id')
+                                     ->where('is_active', true);
+                          });
+                    })->orWhere(function ($p) {
+                        $p->where('roleable_type', ParentContact::class)
+                          ->whereExists(function ($exists) {
+                              $exists->select(DB::raw(1))
+                                     ->from('parents')
+                                     ->where(function($q) {
+                                         if (DB::connection()->getDriverName() === 'pgsql') {
+                                             $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
+                                         } else {
+                                             $q->whereColumn('parents.id', 'users.roleable_id');
+                                         }
+                                     })
+                                     ->where('account_status', 'Active');
+                          });
+                    });
                 });
             })
             ->when($status === 'inactive', function ($q) {
-                $q->whereHasMorph('roleable', [Staff::class, ParentContact::class], function ($q, $type) {
-                    if ($type === Staff::class) {
-                        $q->where('is_active', false);
-                    } elseif ($type === ParentContact::class) {
-                        $q->where('account_status', '!=', 'Active');
-                    }
+                $q->where(function ($sub) {
+                    $sub->where(function ($s) {
+                        $s->where('roleable_type', Staff::class)
+                          ->whereExists(function ($exists) {
+                              $exists->select(DB::raw(1))
+                                     ->from('staff')
+                                     ->whereColumn('staff.staff_id', 'users.roleable_id')
+                                     ->where('is_active', false);
+                          });
+                    })->orWhere(function ($p) {
+                        $p->where('roleable_type', ParentContact::class)
+                          ->whereExists(function ($exists) {
+                              $exists->select(DB::raw(1))
+                                     ->from('parents')
+                                     ->where(function($q) {
+                                         if (DB::connection()->getDriverName() === 'pgsql') {
+                                             $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
+                                         } else {
+                                             $q->whereColumn('parents.id', 'users.roleable_id');
+                                         }
+                                     })
+                                     ->where('account_status', '!=', 'Active');
+                          });
+                    });
                 });
             })
             ->orderBy('user_id', 'desc');
@@ -114,45 +150,54 @@ class AdminStaffController extends Controller
                 $role = Role::where('role_name', $roleName)->firstOrFail();
 
                 if ($roleName === 'parent') {
-                    // Create Parent Contact
+                    $email = strtolower($validated['email']);
+                    
+                    // Check if parent user already exists
+                    if (User::where('email', $email)->exists()) {
+                        throw new \Exception('A user with this email already exists.');
+                    }
+                    
+                    // Check if parent already exists by email
+                    $parent = ParentContact::where('email', $email)->first();
+                    
                     $parentData = [
                         'full_name' => trim($validated['first_name'] . ' ' . ($validated['middle_initial'] ?? '') . ' ' . $validated['last_name']),
                         'phone' => $validated['phone_number'] ?? null,
-                        'email' => strtolower($validated['email']),
+                        'email' => $email,
                         'account_status' => 'Active',
                     ];
-                    
-                    $parent = ParentContact::create($parentData);
 
-                    // Sync to Supabase
-                    try {
-                        $svc = app(FeeManagementService::class);
-                        $svc->syncToSupabase('parents', [
-                            'parent_id' => $parent->id,
-                            'full_name' => $parent->full_name,
-                            'phone' => $parent->phone,
-                            'phone_secondary' => null,
-                            'email' => $parent->email,
-                            'address_street' => null,
-                            'address_barangay' => null,
-                            'address_city' => null,
-                            'address_province' => null,
-                            'address_zip' => null,
-                            'account_status' => $parent->account_status,
-                            'updated_at' => now()->toISOString(),
-                        ], 'parent_id', $parent->id);
-                    } catch (\Throwable $e) {
-                        // Continue if sync fails
+                    if (!$parent) {
+                        // Create Parent Contact
+                        $parent = ParentContact::create($parentData);
+
+                        // Sync to Supabase
+                        try {
+                            $svc = app(FeeManagementService::class);
+                            $svc->syncToSupabase('parents', [
+                                'parent_id' => (string) $parent->id,
+                                'full_name' => $parent->full_name,
+                                'phone' => $parent->phone,
+                                'phone_secondary' => null,
+                                'email' => $parent->email,
+                                'account_status' => $parent->account_status,
+                                'updated_at' => now()->toISOString(),
+                            ], 'parent_id', (string) $parent->id);
+                        } catch (\Throwable $e) {
+                            // Continue if sync fails
+                        }
+                    } else {
+                        // Update existing parent info
+                        $parent->update($parentData);
                     }
 
                     // Create User Account
                     User::create([
-                        'name' => $parentData['full_name'],
-                        'email' => strtolower($validated['email']),
+                        'email' => $email,
                         'password' => Hash::make($validated['password']),
                         'role_id' => $role->role_id,
                         'roleable_type' => ParentContact::class,
-                        'roleable_id' => $parent->id,
+                        'roleable_id' => (string) $parent->id,
                     ]);
 
                     // Audit Log
@@ -168,6 +213,13 @@ class AdminStaffController extends Controller
                     }
 
                 } else {
+                    $email = strtolower($validated['email']);
+                    
+                    // Check if staff user already exists
+                    if (User::where('email', $email)->exists()) {
+                        throw new \Exception('A user with this email already exists.');
+                    }
+
                     // Create Staff/Admin
                     $staffData = [
                         'first_name' => $validated['first_name'],
@@ -180,7 +232,6 @@ class AdminStaffController extends Controller
                     ];
 
                     $userData = [
-                        'name' => $validated['first_name'] . ' ' . $validated['last_name'],
                         'email' => strtolower($validated['email']),
                         'password' => $validated['password'],
                         'role_id' => $role->role_id,
@@ -276,7 +327,6 @@ class AdminStaffController extends Controller
 
                 // Update User
                 $userData = [
-                    'name' => $fullName,
                     'email' => strtolower($validated['email']),
                 ];
                 if (!empty($validated['password'])) {
@@ -395,6 +445,11 @@ class AdminStaffController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         try {
+            // Prevent deletion of admin accounts
+            if ($user->role && $user->role->role_name === 'admin') {
+                return redirect()->back()->with('error', 'Admin accounts cannot be deleted for security reasons.');
+            }
+
             DB::transaction(function () use ($user) {
                 $roleable = $user->roleable;
                 

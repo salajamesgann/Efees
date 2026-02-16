@@ -15,16 +15,17 @@
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
         [x-cloak] { display: none !important; }
         
-        /* Custom Scrollbar for Sidebar */
+        /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
+            width: 6px;
+            height: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
+            background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: #cbd5e1;
-            border-radius: 4px;
+            border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
@@ -162,7 +163,7 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 p-4 md:p-8 overflow-y-auto bg-slate-50">
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto bg-slate-50 custom-scrollbar">
             <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Create Additional Charge</h1>

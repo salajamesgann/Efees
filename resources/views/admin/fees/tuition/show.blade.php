@@ -14,11 +14,21 @@
     <style>
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
         [x-cloak] { display: none !important; }
-        /* Custom Scrollbar for Sidebar */
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { bg-transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #94a3b8; }
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }">
@@ -152,7 +162,7 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 p-4 md:p-8 overflow-y-auto bg-slate-50">
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto bg-slate-50 custom-scrollbar">
             <div class="flex items-center justify-between mb-6">
                 <h1 class="text-2xl font-bold">Tuition Configuration</h1>
                 <a href="{{ route('admin.fees.index', ['tab' => 'tuition']) }}" class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600">

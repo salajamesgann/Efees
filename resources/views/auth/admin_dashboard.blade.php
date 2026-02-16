@@ -18,13 +18,27 @@
       position: relative;
       height: 300px;
     }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
   </style>
  </head>
- <body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
+ <body class="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
   <!-- Mobile Header -->
   <div class="md:hidden flex items-center justify-between bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-20">
       <div class="flex items-center gap-3">
-          <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
+          <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
               <i class="fas fa-user-shield text-lg"></i>
           </div>
           <span class="font-bold text-slate-800 text-lg">Efees Admin</span>
@@ -38,7 +52,7 @@
   <div x-show="sidebarOpen" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden" x-cloak></div>
 
   <!-- Sidebar -->
-  <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none">
+  <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 h-screen bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none">
       <div class="flex items-center gap-3 px-8 py-6 border-b border-slate-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
           <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
               <i class="fas fa-user-shield text-lg"></i>
@@ -151,7 +165,7 @@
       </nav>
   </aside>
   <!-- Main content -->
-  <main class="flex-1 p-6 md:p-8 overflow-y-auto">
+  <main class="flex-1 p-6 md:p-8 overflow-y-auto custom-scrollbar">
    <div class="flex justify-between items-center mb-8">
     <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
      Admin Dashboard
@@ -163,7 +177,7 @@
       <p class="text-xs text-gray-600">{{ Auth::user()->email }}</p>
       <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">Admin</span>
      </div>
-     <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-lg">
+     <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
       {{ Auth::user()->student ? strtoupper(substr(Auth::user()->student->first_name, 0, 1) . substr(Auth::user()->student->last_name, 0, 1)) : 'A' }}
      </div>
     </div>
@@ -176,8 +190,8 @@
    @endif
 
    <!-- Filters -->
-   <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-6 mb-8 transition-all duration-300 hover:shadow-xl">
-       <div class="flex items-center gap-2 mb-4 text-slate-800 border-b border-slate-100 pb-2">
+   <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-6">
+       <div class="flex items-center gap-2 mb-4 text-slate-800 border-b border-gray-100 pb-2">
            <i class="fas fa-filter text-blue-600"></i>
            <h3 class="font-bold text-sm uppercase tracking-wide">Filter Dashboard</h3>
        </div>
@@ -243,10 +257,10 @@
 
            <!-- Actions -->
            <div class="flex gap-2">
-               <button onclick="fetchMetrics()" class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group">
+               <button onclick="fetchMetrics()" class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 group">
                    <i class="fas fa-sync-alt group-hover:rotate-180 transition-transform duration-500"></i> Refresh
                </button>
-               <button onclick="window.resetFilters()" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2" title="Reset Filters">
+               <button onclick="window.resetFilters()" class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-2" title="Reset Filters">
                    <i class="fas fa-undo"></i>
                </button>
            </div>
@@ -256,12 +270,8 @@
    <!-- Main Metrics Cards -->
    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
     <!-- Total Fees Collected -->
-    <div onclick="document.getElementById('paymentTrendsChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer block transform transition-transform hover:-translate-y-1">
-        <section class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 flex flex-col justify-center items-center text-center h-full relative overflow-hidden group">
-             <div class="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
-             <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-400">
-                 <i class="fas fa-external-link-alt"></i>
-             </div>
+    <div onclick="document.getElementById('paymentTrendsChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer block">
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col justify-center items-center text-center h-full hover:bg-gray-50 transition-colors">
              <h2 class="text-base md:text-lg font-semibold mb-2 flex items-center gap-2 select-none text-green-600">
               <i class="fas fa-coins text-green-500"></i>
               Total Collected
@@ -288,12 +298,8 @@
     </div>
 
     <!-- Pending Approvals -->
-    <a href="{{ route('admin.payment_approvals.index') }}" class="block transform transition-transform hover:-translate-y-1">
-        <section class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 flex flex-col justify-center items-center text-center h-full relative overflow-hidden group">
-             <div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
-             <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-400">
-                 <i class="fas fa-external-link-alt"></i>
-             </div>
+    <a href="{{ route('admin.payment_approvals.index') }}" class="block">
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col justify-center items-center text-center h-full hover:bg-gray-50 transition-colors">
              <h2 class="text-base md:text-lg font-semibold mb-2 flex items-center gap-2 select-none text-amber-600">
               <i class="fas fa-check-double text-amber-500"></i>
               Pending Approvals
@@ -313,12 +319,8 @@
     </a>
 
     <!-- Pending Payments -->
-    <div onclick="document.getElementById('pendingPaymentsTable').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer block transform transition-transform hover:-translate-y-1">
-        <section class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 flex flex-col justify-center items-center text-center h-full relative overflow-hidden group">
-             <div class="absolute top-0 left-0 w-full h-1 bg-orange-500"></div>
-             <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-400">
-                 <i class="fas fa-external-link-alt"></i>
-             </div>
+    <div onclick="document.getElementById('pendingPaymentsTable').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer block">
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col justify-center items-center text-center h-full hover:bg-gray-50 transition-colors">
              <h2 class="text-base md:text-lg font-semibold mb-2 flex items-center gap-2 select-none text-orange-600">
               <i class="fas fa-exclamation-circle text-orange-500"></i>
               Outstanding Debt
@@ -367,12 +369,8 @@
     </a>
 
     <!-- Reminders Sent -->
-    <a href="{{ route('admin.sms.logs') }}" class="block transform transition-transform hover:-translate-y-1">
-        <section class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 flex flex-col justify-center items-center text-center h-full relative overflow-hidden group">
-             <div class="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
-             <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-400">
-                 <i class="fas fa-external-link-alt"></i>
-             </div>
+    <a href="{{ route('admin.sms.logs') }}" class="block">
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col justify-center items-center text-center h-full hover:bg-gray-50 transition-colors">
              <h2 class="text-base md:text-lg font-semibold mb-2 flex items-center gap-2 select-none text-purple-600">
               <i class="fas fa-comment-dots text-purple-500"></i>
               SMS Sent (Week)
@@ -398,7 +396,7 @@
    <!-- Charts Section -->
    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
     <!-- Payment Status Pie Chart -->
-    <section class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 relative">
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative">
      <div class="flex justify-between items-center mb-6">
          <h2 class="text-xl font-semibold flex items-center gap-2 select-none text-gray-900">
           <i class="fas fa-chart-pie text-blue-500"></i>
@@ -512,7 +510,7 @@
     </section>
 
     <!-- Recent Transactions -->
-    <section class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
      <h2 class="text-base md:text-lg font-semibold mb-4 flex items-center gap-2 select-none text-green-600">
       <i class="fas fa-history text-green-500"></i>
       Recent Transactions

@@ -38,7 +38,7 @@
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-slate-900 text-slate-100">
   <!-- Sidebar -->
-  <aside class="flex flex-col bg-slate-800 text-slate-300 w-full md:w-72 min-h-screen border-r border-slate-700 overflow-y-auto" id="sidebar" style="scrollbar-width: thin; scrollbar-color: #f97316 transparent;">
+  <aside class="flex flex-col bg-slate-800 text-slate-300 w-full md:w-72 min-h-screen border-r border-slate-700 overflow-y-auto custom-scrollbar" id="sidebar" style="scrollbar-width: thin; scrollbar-color: #f97316 transparent;">
     <div class="flex items-center gap-3 px-8 py-6 border-b border-slate-700">
       <div class="w-8 h-8 flex-shrink-0 text-orange-500">
         <svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -98,7 +98,7 @@
   </aside>
 
   <!-- Main content -->
-  <main class="flex-1 p-8 overflow-y-auto bg-slate-900">
+  <main class="flex-1 p-8 overflow-y-auto bg-slate-900 custom-scrollbar">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-3xl font-extrabold select-none text-slate-100" style="letter-spacing: -0.015em;">
         Profile Management

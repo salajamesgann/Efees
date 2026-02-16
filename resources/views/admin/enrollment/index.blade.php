@@ -145,7 +145,7 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-gray-50">
+        <main class="flex-1 overflow-y-auto bg-gray-50 custom-scrollbar">
             <div class="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
                 <!-- Header -->
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -14,6 +14,22 @@
     <style>
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
         [x-cloak] { display: none !important; }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
@@ -21,7 +37,7 @@
     <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/80 z-20 md:hidden" x-cloak></div>
 
     <!-- Sidebar -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-50 w-64 bg-white text-slate-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-auto md:w-72 border-r border-slate-200 flex flex-col overflow-y-auto shadow-2xl md:shadow-none" id="sidebar">
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-50 w-64 bg-white text-slate-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-auto md:w-72 border-r border-slate-200 flex flex-col overflow-y-auto shadow-2xl md:shadow-none custom-scrollbar" id="sidebar">
         <!-- Header -->
         <div class="flex items-center justify-between gap-3 px-8 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
             <div class="flex items-center gap-3">
@@ -149,7 +165,7 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-gray-50">
+        <main class="flex-1 overflow-y-auto bg-gray-50 custom-scrollbar">
             <div class="p-6 md:p-8 max-w-4xl mx-auto">
                 <div class="mb-6 flex items-center gap-4">
                     <a href="{{ route('admin.enrollment.index') }}" class="text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1">

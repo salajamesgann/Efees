@@ -23,7 +23,6 @@ class UnifiedUserManagementTest extends TestCase
                 $table->increments('user_id');
                 $table->string('email');
                 $table->string('password');
-                $table->string('name')->nullable();
                 $table->integer('role_id')->nullable();
                 $table->string('roleable_type')->nullable();
                 $table->string('roleable_id')->nullable();
@@ -92,7 +91,6 @@ class UnifiedUserManagementTest extends TestCase
         ]);
 
         $adminUser = User::create([
-            'name' => 'Super Admin',
             'email' => 'admin@test.com',
             'password' => Hash::make('password'),
             'role_id' => $adminRole->role_id,
@@ -112,7 +110,6 @@ class UnifiedUserManagementTest extends TestCase
         ]);
 
         $staffUser = User::create([
-            'name' => 'John Doe',
             'email' => 'staff@test.com',
             'password' => Hash::make('password'),
             'role_id' => $staffRole->role_id,
@@ -129,7 +126,6 @@ class UnifiedUserManagementTest extends TestCase
         ]);
 
         $parentUser = User::create([
-            'name' => 'Jane Smith',
             'email' => 'parent@test.com',
             'password' => Hash::make('password'),
             'role_id' => $parentRole->role_id,

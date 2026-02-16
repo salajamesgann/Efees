@@ -147,7 +147,7 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-gray-50">
+        <main class="flex-1 overflow-y-auto bg-gray-50 custom-scrollbar">
             <div class="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
                 <div class="flex items-center gap-4">
                     <a href="{{ route('admin.enrollment.index') }}" class="text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1">

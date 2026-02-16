@@ -34,6 +34,36 @@
                 overflow: visible;
             }
         }
+
+        /* Custom Sidebar Scrollbar */
+        .sidebar-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .sidebar-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+
+        /* Custom Main Content Scrollbar */
+        .main-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .main-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .main-scrollbar::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 10px;
+        }
+        .main-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800" x-data="{ sidebarOpen: false }">
@@ -53,7 +83,7 @@
         </div>
         <div x-show="sidebarOpen" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden no-print" x-cloak></div>
         <!-- Sidebar -->
-        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="no-print fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 md:translate-x-0 overflow-y-auto shadow-2xl md:shadow-none md:flex">
+        <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="no-print fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 md:translate-x-0 overflow-y-auto sidebar-scrollbar shadow-2xl md:shadow-none md:flex">
             <div class="flex items-center justify-between gap-3 px-8 py-6 border-b border-gray-200 bg-white sticky top-0 z-10">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
@@ -109,7 +139,7 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 p-4 overflow-y-auto h-screen bg-gray-100 flex items-center justify-center">
+        <main class="flex-1 p-4 overflow-y-auto h-screen bg-gray-100 flex items-center justify-center main-scrollbar">
             <div class="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl receipt-container border border-blue-100">
                 <!-- Header -->
                 <div class="bg-blue-600 p-4 text-center text-white relative">

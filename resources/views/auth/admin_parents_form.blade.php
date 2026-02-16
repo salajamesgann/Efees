@@ -11,9 +11,25 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
-    body { font-family: 'Inter', 'Noto Sans', sans-serif; }
-    [x-cloak] { display: none !important; }
-  </style>
+      body { font-family: 'Inter', 'Noto Sans', sans-serif; }
+      [x-cloak] { display: none !important; }
+      
+      /* Custom Scrollbar */
+      .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+      }
+    </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }">
   <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/80 z-40 md:hidden" x-cloak></div>
@@ -126,7 +142,7 @@
       </button>
     </div>
 
-    <main class="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8">
+    <main class="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8 custom-scrollbar">
       <div class="flex justify-between items-center mb-8">
         <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">{{ $parent ? 'Edit Parent' : 'Add Parent' }}</h1>
         <a href="{{ route('admin.parents.index') }}" class="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm hover:text-blue-600 hover:shadow-md">

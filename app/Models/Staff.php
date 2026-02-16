@@ -141,10 +141,19 @@ class Staff extends Model
         $staff = static::create($staffData);
 
         // Create user account
-        $userData['roleable_type'] = self::class;
-        $userData['roleable_id'] = $staff->staff_id;
-        $userData['password'] = Hash::make($userData['password']);
-        User::create($userData);
+        $userPayload = [
+            'email' => $userData['email'],
+            'password' => Hash::make($userData['password']),
+            'role_id' => $userData['role_id'] ?? null,
+            'roleable_type' => self::class,
+            'roleable_id' => (string) $staff->staff_id,
+        ];
+        
+        if (isset($userData['must_change_password'])) {
+            $userPayload['must_change_password'] = $userData['must_change_password'];
+        }
+
+        User::create($userPayload);
 
         return $staff;
     }
@@ -164,11 +173,23 @@ class Staff extends Model
         $updated = $this->update($staffData);
 
         if ($updated && $userData && $this->user) {
+            $userPayload = [];
+            
+            if (isset($userData['email'])) {
+                $userPayload['email'] = $userData['email'];
+            }
+            
             if (isset($userData['password'])) {
-                $userData['password'] = Hash::make($userData['password']);
+                $userPayload['password'] = Hash::make($userData['password']);
+            }
+            
+            if (isset($userData['role_id'])) {
+                $userPayload['role_id'] = $userData['role_id'];
             }
 
-            $this->user->update($userData);
+            if (!empty($userPayload)) {
+                $this->user->update($userPayload);
+            }
         }
 
         return $updated;

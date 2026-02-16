@@ -11,6 +11,22 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <style>
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-slate-50 font-sans text-slate-900" x-data="{ sidebarOpen: false }">
@@ -154,7 +170,7 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8">
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8 custom-scrollbar">
             <div class="max-w-3xl mx-auto">
                 <h1 class="text-2xl font-bold text-slate-900 mb-6">{{ $template->exists ? 'Edit Template' : 'Create Template' }}</h1>
                 

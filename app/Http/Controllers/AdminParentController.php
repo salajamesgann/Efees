@@ -10,6 +10,7 @@ use App\Services\AuditService;
 use App\Services\FeeManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -55,77 +56,83 @@ class AdminParentController extends Controller
             'address_city' => ['nullable', 'string', 'max:255'],
             'address_province' => ['nullable', 'string', 'max:255'],
             'address_zip' => ['nullable', 'string', 'max:20'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $parent = ParentContact::create(array_merge(
-            [
-                'full_name' => $data['full_name'],
-                'phone' => $data['phone'] ?? null,
-                'phone_secondary' => $data['phone_secondary'] ?? null,
-                'email' => $data['email'] ?? null,
-                'address_street' => $data['address_street'] ?? null,
-                'address_barangay' => $data['address_barangay'] ?? null,
-                'address_city' => $data['address_city'] ?? null,
-                'address_province' => $data['address_province'] ?? null,
-                'address_zip' => $data['address_zip'] ?? null,
-                'account_status' => 'Active',
-            ],
-            []
-        ));
-
         try {
-            AuditService::log('Parent Created', $parent, "Created parent {$parent->full_name}", null, $parent->toArray());
-        } catch (\Throwable $e) {
-        }
+            return DB::transaction(function () use ($request, $data) {
+                $parent = ParentContact::create([
+                    'full_name' => $data['full_name'],
+                    'phone' => $data['phone'] ?? null,
+                    'phone_secondary' => $data['phone_secondary'] ?? null,
+                    'email' => $data['email'] ?? null,
+                    'address_street' => $data['address_street'] ?? null,
+                    'address_barangay' => $data['address_barangay'] ?? null,
+                    'address_city' => $data['address_city'] ?? null,
+                    'address_province' => $data['address_province'] ?? null,
+                    'address_zip' => $data['address_zip'] ?? null,
+                    'account_status' => 'Active',
+                ]);
 
-        try {
-            $svc = app(FeeManagementService::class);
-            $svc->syncToSupabase('parents', [
-                'parent_id' => $parent->id,
-                'full_name' => $parent->full_name,
-                'phone' => $parent->phone,
-                'phone_secondary' => $request->input('phone_secondary'),
-                'email' => $parent->email,
-                'address_street' => $request->input('address_street'),
-                'address_barangay' => $request->input('address_barangay'),
-                'address_city' => $request->input('address_city'),
-                'address_province' => $request->input('address_province'),
-                'address_zip' => $request->input('address_zip'),
-                'account_status' => $parent->account_status,
-                'updated_at' => now()->toISOString(),
-            ], 'parent_id', $parent->id);
-        } catch (\Throwable $e) {
-        }
-
-        $usesNewUserSchema = Schema::hasColumn('users', 'role_id')
-            && Schema::hasColumn('users', 'roleable_type')
-            && Schema::hasColumn('users', 'roleable_id');
-
-        if ($usesNewUserSchema && ! empty($data['email'])) {
-            $role = Role::firstOrCreate(
-                ['role_name' => 'parent'],
-                ['description' => 'Parent']
-            );
-
-            $tempPassword = \Illuminate\Support\Str::random(10);
-            $user = User::create([
-                'email' => strtolower($data['email']),
-                'password' => Hash::make($tempPassword),
-                'must_change_password' => true,
-                'role_id' => $role->role_id,
-                'roleable_type' => ParentContact::class,
-                'roleable_id' => $parent->id,
-            ]);
-            if ($parent->phone) {
                 try {
-                    $message = "Your E-Fees parent account was created.\nEmail: {$user->email}\nTemp Password: {$tempPassword}";
-                    app(\App\Services\SmsService::class)->send($parent->phone, $message, null);
+                    AuditService::log('Parent Created', $parent, "Created parent {$parent->full_name}", null, $parent->toArray());
                 } catch (\Throwable $e) {
                 }
-            }
-        }
 
-        return redirect()->route('admin.parents.index')->with('success', 'Parent created.');
+                try {
+                    $svc = app(FeeManagementService::class);
+                    $svc->syncToSupabase('parents', [
+                        'parent_id' => $parent->id,
+                        'full_name' => $parent->full_name,
+                        'phone' => $parent->phone,
+                        'phone_secondary' => $request->input('phone_secondary'),
+                        'email' => $parent->email,
+                        'address_street' => $request->input('address_street'),
+                        'address_barangay' => $request->input('address_barangay'),
+                        'address_city' => $request->input('address_city'),
+                        'address_province' => $request->input('address_province'),
+                        'address_zip' => $request->input('address_zip'),
+                        'account_status' => $parent->account_status,
+                        'updated_at' => now()->toISOString(),
+                    ], 'parent_id', $parent->id);
+                } catch (\Throwable $e) {
+                }
+
+                $usesNewUserSchema = Schema::hasColumn('users', 'role_id')
+                    && Schema::hasColumn('users', 'roleable_type')
+                    && Schema::hasColumn('users', 'roleable_id');
+
+                if ($usesNewUserSchema && ! empty($data['email'])) {
+                    $role = Role::firstOrCreate(
+                        ['role_name' => 'parent'],
+                        ['description' => 'Parent']
+                    );
+
+                    $password = !empty($data['password']) ? $data['password'] : \Illuminate\Support\Str::random(10);
+                    
+                    $user = User::create([
+                        'email' => strtolower($data['email']),
+                        'password' => Hash::make($password),
+                        'must_change_password' => empty($data['password']),
+                        'role_id' => $role->role_id,
+                        'roleable_type' => ParentContact::class,
+                        'roleable_id' => (string) $parent->id,
+                    ]);
+
+                    if ($parent->phone && empty($data['password'])) {
+                        try {
+                            $message = "Your E-Fees parent account was created.\nEmail: {$user->email}\nTemp Password: {$password}";
+                            app(\App\Services\SmsService::class)->send($parent->phone, $message, null);
+                        } catch (\Throwable $e) {
+                        }
+                    }
+                }
+
+                return redirect()->route('admin.parents.index')->with('success', 'Parent created.');
+            });
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Failed to create parent: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function edit(ParentContact $parent): View
@@ -136,7 +143,7 @@ class AdminParentController extends Controller
     public function update(Request $request, ParentContact $parent): RedirectResponse
     {
         $user = User::where('roleable_type', ParentContact::class)
-            ->where('roleable_id', $parent->id)
+            ->where('roleable_id', (string) $parent->id)
             ->first();
 
         $data = $request->validate([
@@ -157,74 +164,82 @@ class AdminParentController extends Controller
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $old = $parent->getOriginal();
-        $parent->update([
-            'full_name' => $data['full_name'],
-            'phone' => $data['phone'] ?? null,
-            'phone_secondary' => $data['phone_secondary'] ?? null,
-            'email' => $data['email'] ?? null,
-            'address_street' => $data['address_street'] ?? null,
-            'address_barangay' => $data['address_barangay'] ?? null,
-            'address_city' => $data['address_city'] ?? null,
-            'address_province' => $data['address_province'] ?? null,
-            'address_zip' => $data['address_zip'] ?? null,
-        ]);
-
         try {
-            AuditService::log('Parent Updated', $parent, "Updated parent {$parent->full_name}", $old, $parent->toArray());
-        } catch (\Throwable $e) {
-        }
-
-        try {
-            $svc = app(FeeManagementService::class);
-            $svc->syncToSupabase('parents', [
-                'parent_id' => $parent->id,
-                'full_name' => $parent->full_name,
-                'phone' => $parent->phone,
-                'phone_secondary' => $request->input('phone_secondary'),
-                'email' => $parent->email,
-                'address_street' => $request->input('address_street'),
-                'address_barangay' => $request->input('address_barangay'),
-                'address_city' => $request->input('address_city'),
-                'address_province' => $request->input('address_province'),
-                'address_zip' => $request->input('address_zip'),
-                'account_status' => $parent->account_status,
-                'updated_at' => now()->toISOString(),
-            ], 'parent_id', $parent->id);
-        } catch (\Throwable $e) {
-        }
-
-        $usesNewUserSchema = Schema::hasColumn('users', 'role_id')
-            && Schema::hasColumn('users', 'roleable_type')
-            && Schema::hasColumn('users', 'roleable_id');
-        if ($usesNewUserSchema) {
-            $user = User::where('roleable_type', ParentContact::class)
-                ->where('roleable_id', $parent->id)
-                ->first();
-            if ($user) {
-                if (! empty($data['email'])) {
-                    $user->email = strtolower($data['email']);
-                }
-                if (! empty($data['password'])) {
-                    $user->password = Hash::make($data['password']);
-                }
-                $user->save();
-            } elseif (! empty($data['email']) && ! empty($data['password'])) {
-                $role = Role::firstOrCreate(
-                    ['role_name' => 'parent'],
-                    ['description' => 'Parent']
-                );
-                User::create([
-                    'email' => strtolower($data['email']),
-                    'password' => Hash::make($data['password']),
-                    'role_id' => $role->role_id,
-                    'roleable_type' => ParentContact::class,
-                    'roleable_id' => $parent->id,
+            return DB::transaction(function () use ($request, $parent, $data, $user) {
+                $old = $parent->getOriginal();
+                $parent->update([
+                    'full_name' => $data['full_name'],
+                    'phone' => $data['phone'] ?? null,
+                    'phone_secondary' => $data['phone_secondary'] ?? null,
+                    'email' => $data['email'] ?? null,
+                    'address_street' => $data['address_street'] ?? null,
+                    'address_barangay' => $data['address_barangay'] ?? null,
+                    'address_city' => $data['address_city'] ?? null,
+                    'address_province' => $data['address_province'] ?? null,
+                    'address_zip' => $data['address_zip'] ?? null,
                 ]);
-            }
-        }
 
-        return redirect()->route('admin.parents.index')->with('success', 'Parent updated.');
+                try {
+                    AuditService::log('Parent Updated', $parent, "Updated parent {$parent->full_name}", $old, $parent->toArray());
+                } catch (\Throwable $e) {
+                }
+
+                try {
+                    $svc = app(FeeManagementService::class);
+                    $svc->syncToSupabase('parents', [
+                        'parent_id' => $parent->id,
+                        'full_name' => $parent->full_name,
+                        'phone' => $parent->phone,
+                        'phone_secondary' => $request->input('phone_secondary'),
+                        'email' => $parent->email,
+                        'address_street' => $request->input('address_street'),
+                        'address_barangay' => $request->input('address_barangay'),
+                        'address_city' => $request->input('address_city'),
+                        'address_province' => $request->input('address_province'),
+                        'address_zip' => $request->input('address_zip'),
+                        'account_status' => $parent->account_status,
+                        'updated_at' => now()->toISOString(),
+                    ], 'parent_id', $parent->id);
+                } catch (\Throwable $e) {
+                }
+
+                $usesNewUserSchema = Schema::hasColumn('users', 'role_id')
+                    && Schema::hasColumn('users', 'roleable_type')
+                    && Schema::hasColumn('users', 'roleable_id');
+                
+                if ($usesNewUserSchema) {
+                    $user = User::where('roleable_type', ParentContact::class)
+                        ->where('roleable_id', (string) $parent->id)
+                        ->first();
+                    
+                    if ($user) {
+                        if (! empty($data['email'])) {
+                            $user->email = strtolower($data['email']);
+                        }
+                        if (! empty($data['password'])) {
+                            $user->password = Hash::make($data['password']);
+                        }
+                        $user->save();
+                    } elseif (! empty($data['email']) && ! empty($data['password'])) {
+                        $role = Role::firstOrCreate(
+                            ['role_name' => 'parent'],
+                            ['description' => 'Parent']
+                        );
+                        User::create([
+                            'email' => strtolower($data['email']),
+                            'password' => Hash::make($data['password']),
+                            'role_id' => $role->role_id,
+                            'roleable_type' => ParentContact::class,
+                            'roleable_id' => (string) $parent->id,
+                        ]);
+                    }
+                }
+
+                return redirect()->route('admin.parents.index')->with('success', 'Parent updated.');
+            });
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Failed to update parent: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function destroy(ParentContact $parent): RedirectResponse
@@ -232,7 +247,7 @@ class AdminParentController extends Controller
         try {
             DB::transaction(function () use ($parent) {
                 $user = User::where('roleable_type', ParentContact::class)
-                    ->where('roleable_id', $parent->id)
+                    ->where('roleable_id', (string) $parent->id)
                     ->first();
 
                 if ($user) {

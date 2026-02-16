@@ -152,7 +152,7 @@ class AdminSmsController extends Controller
             })
             ->orderBy('sent_at', 'desc')
             ->orderBy('id', 'desc')
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
         $templates = SmsTemplate::orderBy('name')->paginate(15);

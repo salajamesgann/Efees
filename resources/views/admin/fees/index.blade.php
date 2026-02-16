@@ -15,16 +15,17 @@
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
         [x-cloak] { display: none !important; }
         
-        /* Custom Scrollbar for Sidebar */
+        /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
+            width: 6px;
+            height: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
+            background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: #cbd5e1;
-            border-radius: 4px;
+            border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
@@ -164,7 +165,7 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8">
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8 custom-scrollbar">
             <header class="mb-8">
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Fee Management</h1>
             </header>

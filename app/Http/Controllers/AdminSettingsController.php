@@ -26,7 +26,6 @@ class AdminSettingsController extends Controller
         $settings = SystemSetting::whereIn('key', [
             'school_year',
             'semester',
-            'penalty_rate',
             'allow_staff_edit_fees',
             'auto_generate_fees_on_enrollment',
             'notifications_enabled',
@@ -46,7 +45,6 @@ class AdminSettingsController extends Controller
         $data = $request->validate([
             'school_year' => ['nullable', 'string', 'max:50'],
             'semester' => ['nullable', 'string', 'max:50'],
-            'penalty_rate' => ['nullable', 'string', 'max:50'],
             'auto_generate_fees_on_enrollment' => ['nullable', 'in:0,1'],
             'notifications_enabled' => ['nullable', 'in:0,1'],
             'maintenance_mode' => ['nullable', 'in:0,1'],

@@ -74,7 +74,6 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
         'email',
         'password',
         'must_change_password',
@@ -82,6 +81,26 @@ class User extends Authenticatable
         'roleable_type',
         'roleable_id',
     ];
+
+    /**
+     * Get the name from the roleable entity.
+     */
+    public function getNameAttribute()
+    {
+        if ($this->roleable) {
+            if ($this->roleable_type === 'App\\Models\\Student') {
+                return $this->roleable->full_name;
+            }
+            if ($this->roleable_type === 'App\\Models\\Staff') {
+                return $this->roleable->full_name;
+            }
+            if ($this->roleable_type === 'App\\Models\\ParentContact') {
+                return $this->roleable->full_name;
+            }
+        }
+
+        return $this->email;
+    }
 
     /**
      * Get the roleable entity that the user belongs to.

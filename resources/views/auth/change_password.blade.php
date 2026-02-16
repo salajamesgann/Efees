@@ -10,7 +10,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
-<body class="bg-slate-50 font-sans text-slate-900">
+<body class="bg-slate-50 font-sans text-slate-900 custom-scrollbar">
     <div class="min-h-screen flex items-center justify-center p-6">
         <div class="w-full max-w-md bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h1 class="text-2xl font-bold mb-4">Change Password</h1>

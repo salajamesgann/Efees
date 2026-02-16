@@ -105,7 +105,7 @@
                                 </div>
                             </div>
                             <div class="flex flex-col min-w-0 flex-1">
-                                <span class="text-sm font-medium truncate text-gray-900">{{ $child->first_name }}</span>
+                                <span class="text-sm font-medium truncate text-gray-900">{{ $child->first_name }} {{ $child->last_name }}</span>
                                 <span class="text-[10px] text-gray-400 truncate">{{ $child->student_id }}</span>
                             </div>
                             <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200" :class="expanded ? 'rotate-180' : ''"></i>
@@ -164,7 +164,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 p-6 md:p-8 overflow-y-auto">
+    <main class="flex-1 p-6 md:p-8 overflow-y-auto custom-scrollbar">
         
         @hasSection('content')
             @yield('content')

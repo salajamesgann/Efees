@@ -59,7 +59,7 @@
         {{ session('error') }}
     </div>
   @endif
-  <div class="overflow-x-auto">
+  <div class="overflow-x-auto max-h-[60vh] overflow-y-auto custom-scrollbar">
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-50">
         <tr>

@@ -14,14 +14,28 @@
     <style>
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
-<body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
+<body class="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
     <!-- Mobile Sidebar Overlay -->
     <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/80 z-20 md:hidden" style="display: none;"></div>
 
     <!-- Sidebar -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-50 w-72 bg-white text-slate-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-0 border-r border-slate-200 flex flex-col shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]" id="sidebar">
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-50 w-72 h-screen bg-white text-slate-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-0 border-r border-slate-200 flex flex-col shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]" id="sidebar">
         <div class="flex items-center justify-between gap-3 px-8 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
@@ -196,7 +210,7 @@
 
         <!-- Dashboard Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div onclick="document.getElementById('paymentTrendsChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Total Fees Collected</p>
@@ -218,7 +232,7 @@
                     </div>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div onclick="document.getElementById('paymentStatusChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Outstanding Debt</p>
@@ -229,7 +243,7 @@
                     </div>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div onclick="document.getElementById('paymentStatusChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Overdue Balances</p>
@@ -249,6 +263,42 @@
                     <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
                         <i class="fas fa-sms"></i>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Analytics Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Payment Status Overview -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px]">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-blue-500"></i>
+                    Payment Status Overview
+                </h3>
+                <div class="flex-1 relative">
+                    <canvas id="paymentStatusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Collections by Grade/Section -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2 flex flex-col h-[400px]">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-bar text-green-500"></i>
+                    Collections by Grade/Section
+                </h3>
+                <div class="flex-1 relative">
+                    <canvas id="collectionsByGradeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Payment Trends -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-3 flex flex-col h-[400px]">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-line text-orange-500"></i>
+                    Payment Trends
+                </h3>
+                <div class="flex-1 relative">
+                    <canvas id="paymentTrendsChart"></canvas>
                 </div>
             </div>
         </div>
@@ -480,21 +530,154 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const formatCurrency = (amount) => {
-                return '₱' + Number(amount).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
+        document.addEventListener('DOMContentLoaded', function() {
+            // Chart Instances
+            let statusChart, collectionsChart, trendsChart;
+
+            const formatCurrency = (val) => '₱' + Number(val).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const formatNumber = (val) => Number(val).toLocaleString();
+
+            const initCharts = () => {
+                // Payment Status Chart
+                const statusCtx = document.getElementById('paymentStatusChart').getContext('2d');
+                statusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            data: [],
+                            backgroundColor: [],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.label}: ${context.raw} records`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '70%'
+                    }
+                });
+
+                // Collections by Grade Chart
+                const collectionsCtx = document.getElementById('collectionsByGradeChart').getContext('2d');
+                collectionsChart = new Chart(collectionsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Collections',
+                            data: [],
+                            backgroundColor: '#10b981',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Collections: ₱${context.parsed.y.toLocaleString()}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#6b7280' } },
+                            y: { 
+                                beginAtZero: true,
+                                grid: { color: '#e5e7eb' },
+                                ticks: { 
+                                    color: '#6b7280',
+                                    callback: (val) => '₱' + formatNumber(val) 
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Payment Trends Chart
+                const trendsCtx = document.getElementById('paymentTrendsChart').getContext('2d');
+                trendsChart = new Chart(trendsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Monthly Collections',
+                            data: [],
+                            borderColor: '#f97316',
+                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Collections: ₱${context.parsed.y.toLocaleString()}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { color: '#e5e7eb' }, ticks: { color: '#6b7280' } },
+                            y: { 
+                                beginAtZero: true,
+                                grid: { color: '#e5e7eb' },
+                                ticks: { 
+                                    color: '#6b7280',
+                                    callback: (val) => '₱' + formatNumber(val) 
+                                }
+                            }
+                        }
+                    }
                 });
             };
 
-            const formatNumber = (num) => {
-                return Number(num).toLocaleString('en-US');
+            const updateCharts = (data) => {
+                // Update Status Chart
+                statusChart.data.labels = data.statusOverview.map(s => s.label);
+                statusChart.data.datasets[0].data = data.statusOverview.map(s => s.count);
+                statusChart.data.datasets[0].backgroundColor = data.statusOverview.map(s => s.color);
+                statusChart.update();
+
+                // Update Collections Chart
+                collectionsChart.data.labels = data.collectionsByGrade.map(c => c.label);
+                collectionsChart.data.datasets[0].data = data.collectionsByGrade.map(c => c.total);
+                collectionsChart.update();
+
+                // Update Trends Chart
+                trendsChart.data.labels = data.paymentTrends.map(t => t.month);
+                trendsChart.data.datasets[0].data = data.paymentTrends.map(t => t.total);
+                trendsChart.update();
             };
 
             const fetchMetrics = async () => {
                 try {
-                    const response = await fetch('{{ route("admin.reports.metrics") }}', {
+                    // Get current filters from the form
+                    const form = document.querySelector('form[action="{{ route("admin.reports.index") }}"]');
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams(formData);
+
+                    const response = await fetch(`{{ route("admin.reports.metrics") }}?${params.toString()}`, {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
                             'Accept': 'application/json'
@@ -505,21 +688,32 @@
 
                     const data = await response.json();
 
+                    // Update stat cards
                     document.getElementById('stat-total-collected').textContent = formatCurrency(data.totalCollected);
-                    
                     const pendingApprovalsEl = document.getElementById('stat-pending-approvals');
                     if (pendingApprovalsEl) pendingApprovalsEl.textContent = formatCurrency(data.pendingApprovals);
-
                     document.getElementById('stat-pending-payments').textContent = formatCurrency(data.pendingPayments);
                     document.getElementById('stat-overdue-balances').textContent = formatCurrency(data.overdueBalances);
                     document.getElementById('stat-reminders-sent').textContent = formatNumber(data.remindersSent);
+
+                    // Update charts
+                    updateCharts(data);
                 } catch (error) {
                     console.error('Failed to fetch real-time metrics:', error);
                 }
             };
 
-            // Poll every 5 seconds
-            setInterval(fetchMetrics, 5000);
+            // Initialize
+            initCharts();
+            fetchMetrics();
+
+            // Poll every 10 seconds (increased from 5 to be more efficient)
+            setInterval(fetchMetrics, 10000);
+
+            // Update charts immediately when filters change (optional enhancement)
+            document.querySelectorAll('select[name]').forEach(el => {
+                el.addEventListener('change', fetchMetrics);
+            });
         });
     </script>
 </body>

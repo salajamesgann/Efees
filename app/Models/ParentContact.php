@@ -11,6 +11,21 @@ class ParentContact extends Model
 
     protected $table = 'parents';
 
+    /**
+     * The "type" of the primary key ID.
+     * Use int for auto-incrementing ID in 'parents' table.
+     *
+     * @var string
+     */
+    protected $keyType = 'int';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = true;
+
     protected $fillable = [
         'full_name',
         'phone',

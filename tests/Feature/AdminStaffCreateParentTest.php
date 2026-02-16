@@ -82,8 +82,6 @@ class AdminStaffCreateParentTest extends TestCase
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
             'role_id' => $adminRole->role_id,
-            'roleable_type' => Staff::class,
-            'roleable_id' => $adminStaff->staff_id,
         ]);
 
         // 2. Act as Admin

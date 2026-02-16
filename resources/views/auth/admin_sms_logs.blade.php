@@ -13,14 +13,28 @@
     <style>
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
         [x-cloak] { display: none !important; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
-<body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
+<body class="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
     <!-- Mobile Sidebar Overlay -->
     <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/80 z-40 md:hidden" x-cloak></div>
 
     <!-- Sidebar -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none" id="sidebar">
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 h-screen bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none" id="sidebar">
         <!-- Header -->
         <div class="flex items-center justify-between gap-3 px-8 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
             <div class="flex items-center gap-3">
@@ -139,7 +153,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto h-screen" x-data="{ showDetailModal: false, selectedLog: null, activeTab: 'logs' }">
+    <main class="flex-1 overflow-y-auto h-screen custom-scrollbar" x-data="{ showDetailModal: false, selectedLog: null, activeTab: 'logs' }">
         <!-- Header & Stats -->
         <div class="p-6 md:p-8 space-y-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -279,6 +293,7 @@
                     <table class="w-full text-sm text-left">
                         <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
                             <tr>
+                                <th class="px-6 py-4 text-left">ID</th>
                                 <th class="px-6 py-4 w-64">Recipient</th>
                                 <th class="px-6 py-4 w-32">Type</th>
                                 <th class="px-6 py-4">Message</th>
@@ -290,6 +305,11 @@
                         <tbody class="divide-y divide-gray-100" x-data="smsLogsTable({{ json_encode($logs->pluck('id')) }})">
                         @forelse($logs as $log)
                             <tr class="hover:bg-gray-50/80 transition-colors group" data-log-id="{{ $log->id }}">
+                                <td class="px-6 py-4">
+                                    <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                                        &lt;{{ $log->id }}&gt;
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4">
                                     @php
                                         $recipientName = 'Unknown Recipient';

@@ -14,6 +14,22 @@
     <style>
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
         [x-cloak] { display: none !important; }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
@@ -40,7 +56,7 @@
         </div>
 
         <!-- Main content -->
-        <main class="flex-1 p-6 lg:p-8 overflow-y-auto bg-gray-50">
+        <main class="flex-1 p-6 lg:p-8 overflow-y-auto bg-gray-50 custom-scrollbar">
             <div class="max-w-3xl mx-auto space-y-6">
                 <!-- Breadcrumbs -->
                 <nav class="flex text-sm text-slate-500">

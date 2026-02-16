@@ -21,7 +21,9 @@ class StaffPaymentController extends Controller
         if ($request->ajax() || $request->has('action')) {
             if ($request->action === 'fetch_students') {
                 $query = Student::select('student_id', 'first_name', 'last_name', 'level', 'section', 'strand', 'enrollment_status')
-                    ->withSum('feeRecords as total_balance', 'balance')
+                    ->withSum(['feeRecords as total_balance' => function($q) {
+                        $q->select(DB::raw("SUM(balance)"));
+                    }], 'balance')
                     ->with(['payments' => function ($q) {
                         $q->latest()->limit(1);
                     }]);
@@ -48,17 +50,22 @@ class StaffPaymentController extends Controller
                     });
                 }
 
-                $query->whereHas('feeRecords', function ($q) {
-                    $q->where('balance', '>', 0);
-                });
+                // Removed mandatory balance filter so newly created students can be found
+                // $query->whereHas('feeRecords', function ($q) {
+                //     $q->where('balance', '>', 0);
+                // });
 
                 return response()->json($query->orderBy('last_name')->paginate(10));
             }
 
             if ($request->action === 'fetch_fees') {
                 $fees = FeeRecord::where('student_id', $request->student_id)
-                    ->where('balance', '>', 0)
+                    ->where(function ($q) {
+                        $q->where('balance', '>', 0)
+                          ->orWhere('balance', '<', 0);
+                    })
                     ->where('record_type', '!=', 'payment')
+                    ->orderByRaw("CASE WHEN record_type = 'discount' THEN 1 ELSE 0 END ASC")
                     ->orderBy('payment_date', 'asc')
                     ->get()
                     ->map(function ($fee) {
@@ -67,6 +74,7 @@ class StaffPaymentController extends Controller
                             'name' => ucwords(str_replace('_', ' ', $fee->record_type)).($fee->notes ? ' - '.$fee->notes : ''),
                             'balance' => $fee->balance,
                             'amount' => $fee->amount,
+                            'record_type' => $fee->record_type,
                             'date' => $fee->payment_date ? $fee->payment_date->format('Y-m-d') : null,
                         ];
                     });

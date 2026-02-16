@@ -31,12 +31,32 @@ class AdminUserController extends Controller
             })
             ->when($query !== '', function ($q) use ($query) {
                 $operator = DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
-                $q->where('email', $operator, "%{$query}%")
-                    ->orWhereHas('roleable', function ($sq) use ($query, $operator) {
-                        // Dynamically search based on roleable type
-                        $sq->where('first_name', $operator, "%{$query}%")
-                            ->orWhere('last_name', $operator, "%{$query}%");
-                    });
+                $q->where(function ($sub) use ($query, $operator) {
+                    $sub->where('email', $operator, "%{$query}%")
+                        ->orWhere(function ($sq) use ($query, $operator) {
+                            $sq->where(function ($sq1) use ($query, $operator) {
+                                $sq1->whereIn('roleable_type', [Staff::class, Admin::class, Student::class])
+                                    ->whereHasMorph('roleable', [Staff::class, Admin::class, Student::class], function ($q) use ($query, $operator) {
+                                        $q->where('first_name', $operator, "%{$query}%")
+                                          ->orWhere('last_name', $operator, "%{$query}%");
+                                    });
+                            })->orWhere(function ($sq2) use ($query, $operator) {
+                                $sq2->where('roleable_type', ParentContact::class)
+                                    ->whereExists(function ($exists) use ($query, $operator) {
+                                        $exists->select(DB::raw(1))
+                                               ->from('parents')
+                                               ->where(function($q) {
+                                                   if (DB::connection()->getDriverName() === 'pgsql') {
+                                                       $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
+                                                   } else {
+                                                       $q->whereColumn('parents.id', 'users.roleable_id');
+                                                   }
+                                               })
+                                               ->where('full_name', $operator, "%{$query}%");
+                                    });
+                            });
+                        });
+                });
             })
             ->when($roleFilter !== 'all', function ($q) use ($roleFilter) {
                 $q->whereHas('role', function ($rq) use ($roleFilter) {
@@ -114,25 +134,49 @@ class AdminUserController extends Controller
                 );
 
                 if ($roleName === 'parent') {
-                    // Create ParentContact
-                    $parent = ParentContact::create([
+                    $email = strtolower($validated['email']);
+
+                    // Check if parent user already exists
+                    if (User::where('email', $email)->exists()) {
+                        throw new \Exception('A user with this email already exists.');
+                    }
+
+                    // Check if parent already exists by email
+                    $parent = ParentContact::where('email', $email)->first();
+
+                    $parentData = [
                         'full_name' => $validated['full_name'],
-                        'email' => strtolower($validated['email']),
+                        'email' => $email,
                         'phone' => $validated['phone_number'] ?? null,
                         'account_status' => 'Active',
-                    ]);
+                    ];
+
+                    if (!$parent) {
+                        // Create ParentContact
+                        $parent = ParentContact::create($parentData);
+                    } else {
+                        // Update existing parent info
+                        $parent->update($parentData);
+                    }
 
                     // Create User linked to ParentContact
                     User::create([
-                        'email' => strtolower($validated['email']),
+                        'email' => $email,
                         'password' => Hash::make($validated['password']),
                         'role_id' => $role->role_id,
                         'roleable_type' => ParentContact::class,
-                        'roleable_id' => $parent->id,
+                        'roleable_id' => (string) $parent->id,
                     ]);
 
                     $auditSubject = $parent;
                 } else {
+                    $email = strtolower($validated['email']);
+
+                    // Check if staff user already exists
+                    if (User::where('email', $email)->exists()) {
+                        throw new \Exception('A user with this email already exists.');
+                    }
+
                     // Create Staff
                     $position = $roleName === 'admin' ? 'Admin' : 'Staff';
 
@@ -279,6 +323,11 @@ class AdminUserController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         try {
+            // Prevent deletion of admin accounts
+            if ($user->role && $user->role->role_name === 'admin') {
+                return redirect()->back()->with('error', 'Admin accounts cannot be deleted for security reasons.');
+            }
+
             DB::transaction(function () use ($user) {
                 // Delete roleable if exists
                 if ($user->roleable) {

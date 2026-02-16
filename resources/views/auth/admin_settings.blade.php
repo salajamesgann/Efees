@@ -12,9 +12,23 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Inter', 'Noto Sans', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
-<body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
+<body class="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
     <!-- Mobile Header -->
     <div class="md:hidden flex items-center justify-between bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-20">
         <div class="flex items-center gap-3">
@@ -32,7 +46,7 @@
     <div x-show="sidebarOpen" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden" x-cloak></div>
 
     <!-- Sidebar -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none">
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 h-screen bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none">
         <div class="flex items-center gap-3 px-8 py-6 border-b border-slate-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
             <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
                 <i class="fas fa-user-shield text-lg"></i>
@@ -134,7 +148,7 @@
             </form>
         </nav>
     </aside>
-  <main class="flex-1 p-8">
+  <main class="flex-1 p-8 overflow-y-auto custom-scrollbar">
     <h1 class="text-2xl font-semibold mb-6">System Settings</h1>
 
     @if(session('success'))
@@ -160,10 +174,6 @@
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700">Semester</label>
             <input type="text" name="semester" value="{{ old('semester', optional($settings['semester'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. First Semester" />
-        </div>
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Penalty Rate</label>
-            <input type="text" name="penalty_rate" value="{{ old('penalty_rate', optional($settings['penalty_rate'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. 5%" />
         </div>
         
         <div class="mb-6 pt-4 border-t border-gray-200 space-y-4">

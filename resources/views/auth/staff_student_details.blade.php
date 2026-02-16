@@ -56,6 +56,36 @@
         background-color: #ef444433;
         color: #f87171;
       }
+
+      /* Custom Sidebar Scrollbar */
+      .sidebar-scrollbar::-webkit-scrollbar {
+          width: 5px;
+      }
+      .sidebar-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+      }
+      .sidebar-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+      }
+      .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #cbd5e1;
+      }
+
+      /* Custom Main Content Scrollbar */
+      .main-scrollbar::-webkit-scrollbar {
+          width: 8px;
+      }
+      .main-scrollbar::-webkit-scrollbar-track {
+          background: #f1f5f9;
+      }
+      .main-scrollbar::-webkit-scrollbar-thumb {
+          background: #3b82f6;
+          border-radius: 10px;
+      }
+      .main-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #2563eb;
+      }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200" x-data="{ sidebarOpen: false }">
@@ -73,7 +103,7 @@
 </button>
 </div>
 <div x-show="sidebarOpen" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden" x-cloak></div>
-<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 md:translate-x-0 overflow-y-auto shadow-2xl md:shadow-none">
+<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 md:translate-x-0 overflow-y-auto sidebar-scrollbar shadow-2xl md:shadow-none">
 <div class="flex items-center justify-between gap-3 px-8 py-6 border-b border-gray-200 bg-white sticky top-0 z-10">
 <div class="flex items-center gap-3">
 <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
@@ -127,7 +157,7 @@
 </form>
 </div>
 </aside>
-<main class="flex-1 p-8">
+<main class="flex-1 overflow-y-auto main-scrollbar p-8">
 <header class="mb-8">
 <div class="flex justify-between items-center">
 <div>
@@ -556,59 +586,7 @@ Back to Records
     </div>
 </div>
 
-<!-- Quick Actions -->
-<div class="mt-8 bg-white dark:bg-background-dark rounded-xl shadow-sm p-6">
-<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
-<div class="flex flex-wrap gap-4">
-@php
-    $isLockedYearView = ($isLockedYear ?? false);
-@endphp
-@if(! $isLockedYearView)
-    <form method="POST" action="{{ route('staff.remind', $student) }}" class="inline-block">
-    @csrf
-    <button type="submit" class="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200">
-            <i class="fas fa-bell"></i>
-            Send Reminder
-    </button>
-    </form>
-@else
-    <span class="inline-flex items-center gap-2 text-sm text-gray-500">
-        <i class="fas fa-lock text-xs"></i> Reminders disabled for locked school year
-    </span>
-@endif
 
-@if($canEditFees && ! $isLockedYearView)
-<form method="POST" action="{{ route('staff.approve', $student) }}" class="inline-block" onsubmit="return confirm('Approve all outstanding payments for {{ $student->full_name }}?')">
-    @csrf
-    <button type="submit" class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200">
-        <i class="fas fa-check"></i>
-        Approve All Outstanding
-    </button>
-</form>
-
-<form method="POST" action="{{ route('staff.fee_records.store') }}" class="inline-block">
-    @csrf
-    <input type="hidden" name="student_id" value="{{ $student->student_id }}">
-    <input type="hidden" name="record_type" value="adjustment">
-    <div class="flex items-center gap-2">
-        <input type="number" name="amount" step="0.01" min="0" placeholder="Amount" class="w-28 rounded border border-gray-300 px-2 py-2 text-sm">
-        <input type="number" name="balance" step="0.01" min="0" placeholder="Balance" class="w-28 rounded border border-gray-300 px-2 py-2 text-sm">
-        <select name="status" class="rounded border border-gray-300 px-2 py-2 text-sm">
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="overdue">Overdue</option>
-            <option value="cancelled">Cancelled</option>
-        </select>
-        <input type="date" name="payment_date" class="rounded border border-gray-300 px-2 py-2 text-sm">
-        <input type="text" name="notes" placeholder="Adjustment notes" class="w-48 rounded border border-gray-300 px-2 py-2 text-sm">
-        <button type="submit" class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded transition-colors duration-200">
-            Add Adjustment
-        </button>
-    </div>
-</form>
-@endif
-</div>
-</div>
 </main>
 </div>
 <script src="//unpkg.com/alpinejs" defer></script>

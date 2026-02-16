@@ -9,6 +9,23 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <style>
     body { font-family: 'Inter', 'Noto Sans', sans-serif; }
+    
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
     .card-hover {
       transition: all 0.3s ease;
     }
@@ -20,7 +37,7 @@
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-slate-900 text-slate-100">
   <!-- Sidebar -->
-  <aside class="flex flex-col bg-slate-800 text-slate-300 w-full md:w-72 min-h-screen border-r border-slate-700 overflow-y-auto" id="sidebar" style="scrollbar-width: thin; scrollbar-color: #8b5cf6 transparent;">
+  <aside class="flex flex-col bg-slate-800 text-slate-300 w-full md:w-72 min-h-screen border-r border-slate-700 overflow-y-auto custom-scrollbar" id="sidebar">
     <div class="flex items-center gap-3 px-8 py-6 border-b border-slate-700">
       <div class="w-8 h-8 flex-shrink-0 text-indigo-500">
         <svg class="w-full h-full" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -67,7 +84,7 @@
   </aside>
 
   <!-- Main content -->
-  <main class="flex-1 p-6 md:p-8 overflow-y-auto bg-slate-900">
+  <main class="flex-1 p-6 md:p-8 overflow-y-auto bg-slate-900 custom-scrollbar">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-slate-100">Manage Students</h1>
       <a href="{{ route('admin.students.create') }}" class="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200">
@@ -97,7 +114,7 @@
           <button class="px-4 h-10 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg shadow-lg transition-colors duration-200">Search</button>
         </form>
       </div>
-      <div class="overflow-x-auto scrollbar-thin">
+      <div class="overflow-x-auto custom-scrollbar">
         <table class="min-w-full text-sm">
           <thead class="bg-slate-700">
             <tr class="text-left text-slate-300">

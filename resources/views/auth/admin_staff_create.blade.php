@@ -21,6 +21,20 @@
           transform: translateY(-5px);
           box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.2);
       }
+      .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+      }
   </style>
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
@@ -149,17 +163,17 @@
   </aside>
 
   <!-- Main content -->
-  <main class="flex-1 p-8 overflow-y-auto">
+  <main class="flex-1 p-8 overflow-y-auto custom-scrollbar">
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Create Staff Account</h1>
+      <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Create User Account</h1>
       <a href="{{ route('admin.staff.index') }}" class="inline-flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-colors duration-200">
         <i class="fas fa-arrow-left"></i>
-        Back to Staff List
+        Back to User List
       </a>
     </div>
 
     @if ($errors->any())
-      <div class="mb-6 border border-red-200 text-red-800 bg-red-50 rounded-md px-4 py-3">
+      <div class="mb-6 border border-red-200 text-red-800 bg-red-50 rounded-lg px-4 py-3">
         <ul class="list-disc list-inside">
           @foreach ($errors->all() as $error)
             <li>{{ $error }}</li>
@@ -168,10 +182,24 @@
       </div>
     @endif
 
+    @if(session('success'))
+        <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <i class="fas fa-check-circle"></i>
+            {{ session('success') }}
+        </div>
+    @endif
+    
+    @if(session('error'))
+        <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <i class="fas fa-exclamation-circle"></i>
+            {{ session('error') }}
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('admin.staff.store') }}" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 card-hover">
       @csrf
 
-      <h2 class="text-xl font-semibold mb-6 text-blue-600">Staff Information</h2>
+      <h2 class="text-xl font-semibold mb-6 text-blue-600">User Information</h2>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div>

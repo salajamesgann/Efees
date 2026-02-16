@@ -592,7 +592,7 @@ class AdminStudentController extends Controller
                         'must_change_password' => true,
                         'role_id' => $parentRole->role_id,
                         'roleable_type' => \App\Models\ParentContact::class,
-                        'roleable_id' => $parentContact->id,
+                        'roleable_id' => (string) $parentContact->id,
                     ]);
                 }
 
@@ -836,7 +836,7 @@ class AdminStudentController extends Controller
                         'must_change_password' => true,
                         'role_id' => $parentRole->role_id,
                         'roleable_type' => \App\Models\ParentContact::class,
-                        'roleable_id' => $parentContact->id,
+                        'roleable_id' => (string) $parentContact->id,
                     ]);
 
                     // Send SMS if needed (could check request->boolean('send_sms') here too)

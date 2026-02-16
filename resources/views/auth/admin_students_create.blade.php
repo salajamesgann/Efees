@@ -21,6 +21,20 @@
             transform: translateY(-5px);
             box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.2);
         }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }">
@@ -153,7 +167,7 @@
       </div>
 
       <!-- Main content -->
-      <main class="flex-1 p-8 overflow-y-auto bg-slate-50">
+      <main class="flex-1 p-8 overflow-y-auto bg-slate-50 custom-scrollbar">
         <div class="flex justify-between items-center mb-8">
           <div>
             <h1 class="text-2xl font-bold tracking-tight text-slate-900">Create Student</h1>

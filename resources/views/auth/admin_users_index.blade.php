@@ -14,6 +14,21 @@
   <style>
       body { font-family: 'Inter', 'Noto Sans', sans-serif; }
       [x-cloak] { display: none !important; }
+      
+      .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+      }
   </style>
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false, roleModalOpen: false, selectedRole: '' }">
@@ -39,7 +54,7 @@
       </div>
 
       <!-- Main content -->
-      <main class="flex-1 p-6 lg:p-8 overflow-y-auto bg-gray-50">
+      <main class="flex-1 p-6 lg:p-8 overflow-y-auto bg-gray-50 custom-scrollbar">
         <div class="max-w-7xl mx-auto space-y-6">
             <!-- Page Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -138,13 +153,15 @@
                                             <a href="{{ route('admin.users.edit', $user) }}" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <form action="{{ route('admin.users.destroy', $user) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');" class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                                                    <i class="fas fa-trash-alt"></i>
-                                                </button>
-                                            </form>
+                                            @if($user->role && $user->role->role_name !== 'admin')
+                                                <form action="{{ route('admin.users.destroy', $user) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');" class="inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

@@ -29,13 +29,15 @@ class StaffSmsController extends Controller
         $section = $request->get('section');
         $strand = $request->get('strand');
 
-        // Students with pending balance
+        // Students - show those with balance by default, but allow finding others via search
         $students = Student::with(['feeRecords' => function ($q) {
             $q->where('balance', '>', 0);
         }, 'parents'])
-            ->whereHas('feeRecords', function ($q) {
+        ->when(!$search, function ($q) {
+            $q->whereHas('feeRecords', function ($q) {
                 $q->where('balance', '>', 0);
-            })
+            });
+        })
             ->when($search, function ($q) use ($search) {
                 $operator = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
                 $q->where(function ($subq) use ($search, $operator) {

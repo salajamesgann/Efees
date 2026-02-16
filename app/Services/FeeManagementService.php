@@ -378,15 +378,13 @@ class FeeManagementService
 
         $totals = $this->computeTotalsForStudent($student);
 
-        // Check if we have individual fee records (excluding the summary one and payments)
-        // Payments are credit entries, they don't replace the need for debit entries (tuition_total or individual fees)
-        $hasIndividualRecords = FeeRecord::where('student_id', $student->student_id)
-            ->whereNotIn('record_type', ['tuition_total', 'payment'])
+        // Check if we have individual tuition records that replace the summary record
+        $hasTuitionRecords = FeeRecord::where('student_id', $student->student_id)
+            ->whereIn('record_type', ['tuition_installment', 'tuition_base'])
             ->exists();
 
-        if ($hasIndividualRecords) {
-            // If individual records exist, we should NOT have a summary 'tuition_total' record
-            // as it causes double counting and confusion. Remove it if it exists.
+        if ($hasTuitionRecords) {
+            // If actual tuition installments exist, we should NOT have a summary 'tuition_total' record
             FeeRecord::where('student_id', $student->student_id)
                 ->where('record_type', 'tuition_total')
                 ->delete();
@@ -397,19 +395,29 @@ class FeeManagementService
             return;
         }
 
-        // Fallback: Only create/update summary record if NO individual records exist
+        // Summary record logic: If no individual tuition records exist, create/update tuition_total.
+        // This will exist alongside adjustments (discounts/charges).
         $paidAmount = $totals['paidAmount'];
 
-        $balance = max(0.0, $totals['totalAmount'] - $paidAmount);
-        $status = $balance > 0 ? 'pending' : 'paid';
+        // We want the summary record to represent the base tuition + standard charges - standard discounts.
+        // Specific adjustments (type 'adjustment') are separate records in the ledger.
+        $theoreticalTotal = (float) $totals['totalAmount'];
+        
+        // Subtract the amount already covered by adjustment records to avoid double counting
+        $adjustmentSum = (float) FeeRecord::where('student_id', $student->student_id)
+            ->where('record_type', 'adjustment')
+            ->sum('balance');
+            
+        $baseBalance = max(0.0, $theoreticalTotal - $adjustmentSum - $paidAmount);
+        $status = $baseBalance > 0 ? 'pending' : 'paid';
 
         $record = FeeRecord::firstOrNew([
             'student_id' => $student->student_id,
             'record_type' => 'tuition_total',
         ]);
 
-        $record->amount = $totals['totalAmount'];
-        $record->balance = $balance;
+        $record->amount = max(0.0, $theoreticalTotal - $adjustmentSum);
+        $record->balance = $baseBalance;
         $record->status = $status;
         $record->notes = 'System recalculated';
 
