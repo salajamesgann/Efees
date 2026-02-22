@@ -12,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('staff')) {
+            return;
+        }
+
         // First, let's check if the old STAFF table exists and migrate data
         if (Schema::hasTable('STAFF')) {
             // Create new staff table with Laravel conventions

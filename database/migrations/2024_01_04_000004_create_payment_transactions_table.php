@@ -11,20 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('payment_transactions', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('student_id');
-            $table->decimal('amount', 10, 2);
-            $table->string('type'); // payment, refund, fee_assessment
-            $table->text('note')->nullable();
-            $table->unsignedBigInteger('staff_user_id')->nullable(); // Who processed the transaction
-            $table->timestamps();
+        if (! Schema::hasTable('payment_transactions')) {
+            Schema::create('payment_transactions', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->unsignedBigInteger('student_id');
+                $table->decimal('amount', 10, 2);
+                $table->string('type');
+                $table->text('note')->nullable();
+                $table->unsignedBigInteger('staff_user_id')->nullable();
+                $table->timestamps();
 
-            $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
-            $table->foreign('student_id')->references('student_id')->on('students')->onDelete('cascade');
-            $table->foreign('staff_user_id')->references('user_id')->on('users')->onDelete('set null');
-        });
+                $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
+                $table->foreign('student_id')->references('student_id')->on('students')->onDelete('cascade');
+                $table->foreign('staff_user_id')->references('user_id')->on('users')->onDelete('set null');
+            });
+        }
     }
 
     /**
