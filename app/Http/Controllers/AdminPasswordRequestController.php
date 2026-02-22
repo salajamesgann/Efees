@@ -3,16 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\PasswordResetRequest;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
-use Illuminate\Http\RedirectResponse;
 
 class AdminPasswordRequestController extends Controller
 {
     public function index(): View
     {
         $requests = PasswordResetRequest::orderBy('created_at', 'desc')->paginate(10);
+
         return view('auth.admin_password_requests', compact('requests'));
     }
 
@@ -23,7 +23,8 @@ class AdminPasswordRequestController extends Controller
 
         if ($status === Password::RESET_LINK_SENT) {
             $request->update(['status' => 'approved']);
-            return back()->with('success', 'Reset link sent successfully to ' . $request->email);
+
+            return back()->with('success', 'Reset link sent successfully to '.$request->email);
         }
 
         return back()->withErrors(['email' => __($status)]);
@@ -32,12 +33,14 @@ class AdminPasswordRequestController extends Controller
     public function reject(PasswordResetRequest $request): RedirectResponse
     {
         $request->update(['status' => 'rejected']);
+
         return back()->with('success', 'Request rejected.');
     }
-    
+
     public function destroy(PasswordResetRequest $request): RedirectResponse
     {
         $request->delete();
+
         return back()->with('success', 'Request deleted.');
     }
 }

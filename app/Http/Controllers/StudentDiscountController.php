@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Discount;
 use App\Models\Student;
+use App\Models\SystemSetting;
 use App\Services\AuditService;
 use App\Services\FeeManagementService;
-use App\Models\SystemSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

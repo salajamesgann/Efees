@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Role;
 use App\Models\PasswordResetRequest;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
@@ -29,7 +29,7 @@ class ParentPasswordResetTest extends TestCase
 
         // Fake the Password broker to ensure no actual email is sent by the default flow
         // effectively, though our controller bypasses it for parents.
-        // We actually want to assert Password::sendResetLink was NOT called or 
+        // We actually want to assert Password::sendResetLink was NOT called or
         // that the flow diverted before it.
         // However, since we are testing the controller response and DB side effects:
 
@@ -70,7 +70,7 @@ class ParentPasswordResetTest extends TestCase
 
         // Assert redirect back with success status (default Laravel behavior)
         $response->assertSessionHas('success', trans(Password::RESET_LINK_SENT));
-        
+
         // Assert NO request created in DB
         $this->assertDatabaseMissing('password_reset_requests', [
             'email' => 'admin@example.com',

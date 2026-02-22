@@ -118,7 +118,7 @@ class Staff extends Model
     public static function createWithAccount(array $staffData, array $userData): self
     {
         // Generate UUID if not provided
-        if (!isset($staffData['staff_id'])) {
+        if (! isset($staffData['staff_id'])) {
             $staffData['staff_id'] = (string) \Illuminate\Support\Str::uuid();
         }
 
@@ -148,7 +148,7 @@ class Staff extends Model
             'roleable_type' => self::class,
             'roleable_id' => (string) $staff->staff_id,
         ];
-        
+
         if (isset($userData['must_change_password'])) {
             $userPayload['must_change_password'] = $userData['must_change_password'];
         }
@@ -174,20 +174,20 @@ class Staff extends Model
 
         if ($updated && $userData && $this->user) {
             $userPayload = [];
-            
+
             if (isset($userData['email'])) {
                 $userPayload['email'] = $userData['email'];
             }
-            
+
             if (isset($userData['password'])) {
                 $userPayload['password'] = Hash::make($userData['password']);
             }
-            
+
             if (isset($userData['role_id'])) {
                 $userPayload['role_id'] = $userData['role_id'];
             }
 
-            if (!empty($userPayload)) {
+            if (! empty($userPayload)) {
                 $this->user->update($userPayload);
             }
         }

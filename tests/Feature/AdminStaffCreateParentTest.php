@@ -24,7 +24,7 @@ class AdminStaffCreateParentTest extends TestCase
             $table->string('roleable_type')->nullable();
             $table->string('roleable_id')->nullable();
             $table->rememberToken();
-            //$table->timestamps(); // Matches User model $timestamps = false;
+            // $table->timestamps(); // Matches User model $timestamps = false;
         });
 
         Schema::create('roles', function ($table) {

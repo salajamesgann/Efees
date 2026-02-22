@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasColumn('fee_records', 'created_at')) {
+        if (! Schema::hasColumn('fee_records', 'created_at')) {
             Schema::table('fee_records', function (Blueprint $table) {
                 $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'))->after('student_id');
             });
         }
-        if (!Schema::hasColumn('fee_records', 'updated_at')) {
+        if (! Schema::hasColumn('fee_records', 'updated_at')) {
             Schema::table('fee_records', function (Blueprint $table) {
                 $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP'))->after('created_at');
             });

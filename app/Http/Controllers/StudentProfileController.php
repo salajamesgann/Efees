@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Student;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use App\Models\Student;
-use App\Models\User;
 
 class StudentProfileController extends Controller
 {
@@ -21,7 +21,7 @@ class StudentProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+        if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
             abort(403);
         }
 
@@ -48,7 +48,7 @@ class StudentProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+        if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
             abort(403);
         }
 
@@ -67,7 +67,7 @@ class StudentProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
+        if (! $user || ($user->roleable_type ?? '') !== 'App\\Models\\Student') {
             abort(403);
         }
 
@@ -77,7 +77,7 @@ class StudentProfileController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'middle_initial' => ['nullable', 'string', 'max:1'],
             'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->user_id . ',user_id'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->user_id.',user_id'],
             'contact_number' => ['required', 'string', 'min:7', 'max:20'],
             'sex' => ['required', 'string', 'in:Male,Female'],
             'level' => ['required', 'string', 'max:255'],
@@ -106,7 +106,7 @@ class StudentProfileController extends Controller
 
         // Update user's email
         $user->email = strtolower($validated['email']);
-        if (!empty($validated['new_password'] ?? '')) {
+        if (! empty($validated['new_password'] ?? '')) {
             $user->password = Hash::make($validated['new_password']);
         }
         $user->save();

@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('payment_transactions')) {
+        if (! Schema::hasTable('payment_transactions')) {
             Schema::create('payment_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('user_id');
@@ -22,8 +22,8 @@ return new class extends Migration
                 $table->timestamps();
 
                 $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
-                // student_id is string in students table, so we can't easily foreign key it if it's not consistent, 
-                // but usually it references students.student_id. 
+                // student_id is string in students table, so we can't easily foreign key it if it's not consistent,
+                // but usually it references students.student_id.
                 // Given loose coupling in code, index is good.
                 $table->index('student_id');
                 $table->index('user_id');

@@ -108,8 +108,8 @@ class AdminParentController extends Controller
                         ['description' => 'Parent']
                     );
 
-                    $password = !empty($data['password']) ? $data['password'] : \Illuminate\Support\Str::random(10);
-                    
+                    $password = ! empty($data['password']) ? $data['password'] : \Illuminate\Support\Str::random(10);
+
                     $user = User::create([
                         'email' => strtolower($data['email']),
                         'password' => Hash::make($password),
@@ -131,7 +131,7 @@ class AdminParentController extends Controller
                 return redirect()->route('admin.parents.index')->with('success', 'Parent created.');
             });
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Failed to create parent: ' . $e->getMessage())->withInput();
+            return redirect()->back()->with('error', 'Failed to create parent: '.$e->getMessage())->withInput();
         }
     }
 
@@ -206,12 +206,12 @@ class AdminParentController extends Controller
                 $usesNewUserSchema = Schema::hasColumn('users', 'role_id')
                     && Schema::hasColumn('users', 'roleable_type')
                     && Schema::hasColumn('users', 'roleable_id');
-                
+
                 if ($usesNewUserSchema) {
                     $user = User::where('roleable_type', ParentContact::class)
                         ->where('roleable_id', (string) $parent->id)
                         ->first();
-                    
+
                     if ($user) {
                         if (! empty($data['email'])) {
                             $user->email = strtolower($data['email']);
@@ -238,7 +238,7 @@ class AdminParentController extends Controller
                 return redirect()->route('admin.parents.index')->with('success', 'Parent updated.');
             });
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Failed to update parent: ' . $e->getMessage())->withInput();
+            return redirect()->back()->with('error', 'Failed to update parent: '.$e->getMessage())->withInput();
         }
     }
 
@@ -261,7 +261,7 @@ class AdminParentController extends Controller
 
             return redirect()->route('admin.parents.index')->with('success', 'Parent deleted.');
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Failed to delete parent: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to delete parent: '.$e->getMessage());
         }
     }
 

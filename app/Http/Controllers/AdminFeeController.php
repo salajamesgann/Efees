@@ -325,29 +325,31 @@ class AdminFeeController extends Controller
                     })();
                     $base = (float) $tf->amount;
                     $chargesTotal = (float) collect($tf->charges ?? [])->sum('amount');
-                    
+
                     // CORRECTED LOGIC: Calculate Net Payable using only AUTOMATIC discounts
                     // and respecting scope (tuition_only, charges_only, total) and stackability.
                     $remainingTuition = $base;
                     $remainingCharges = $chargesTotal;
                     $appliedDiscountsTotal = 0.0;
-                    
+
                     $automaticDiscounts = $tf->applicableDiscounts()
                         ->where('is_automatic', true)
                         ->orderBy('priority', 'desc')
                         ->get();
-                        
+
                     $exclusiveApplied = false;
-                    
+
                     foreach ($automaticDiscounts as $d) {
-                        if ($exclusiveApplied) break;
-                        
+                        if ($exclusiveApplied) {
+                            break;
+                        }
+
                         $rules = $d->eligibility_rules ?? [];
                         $scope = $rules['apply_scope'] ?? 'total';
                         $stackable = $rules['is_stackable'] ?? true;
                         $type = $d->type ?? 'percentage';
                         $value = (float) $d->value;
-                        
+
                         $calcBase = 0.0;
                         if ($scope === 'tuition_only') {
                             $calcBase = $remainingTuition;
@@ -356,16 +358,18 @@ class AdminFeeController extends Controller
                         } else {
                             $calcBase = $remainingTuition + $remainingCharges;
                         }
-                        
-                        if ($calcBase <= 0) continue;
-                        
-                        $deduction = ($type === 'percentage') 
-                            ? ($calcBase * $value / 100.0) 
+
+                        if ($calcBase <= 0) {
+                            continue;
+                        }
+
+                        $deduction = ($type === 'percentage')
+                            ? ($calcBase * $value / 100.0)
                             : min($value, $calcBase);
-                            
+
                         if ($deduction > 0) {
                             $appliedDiscountsTotal += $deduction;
-                            
+
                             // Update remaining balances
                             if ($scope === 'tuition_only') {
                                 $remainingTuition = max(0.0, $remainingTuition - $deduction);
@@ -377,8 +381,8 @@ class AdminFeeController extends Controller
                                 $remainingTuition -= $tuitionDed;
                                 $remainingCharges = max(0.0, $remainingCharges - ($deduction - $tuitionDed));
                             }
-                            
-                            if (!$stackable) {
+
+                            if (! $stackable) {
                                 $exclusiveApplied = true;
                             }
                         }
@@ -1426,11 +1430,13 @@ class AdminFeeController extends Controller
         $remainingCharges = $chargesTotal;
         $appliedDiscountsTotal = 0.0;
         $discountBreakdown = [];
-        
+
         $exclusiveApplied = false;
 
         foreach ($discounts as $d) {
-            if ($exclusiveApplied) break;
+            if ($exclusiveApplied) {
+                break;
+            }
 
             $rules = $d->eligibility_rules ?? [];
             $scope = $rules['apply_scope'] ?? 'total';
@@ -1447,12 +1453,14 @@ class AdminFeeController extends Controller
                 $calcBase = $remainingTuition + $remainingCharges;
             }
 
-            if ($calcBase <= 0) continue;
+            if ($calcBase <= 0) {
+                continue;
+            }
 
-            $deduction = ($type === 'percentage') 
-                ? ($calcBase * $val / 100.0) 
+            $deduction = ($type === 'percentage')
+                ? ($calcBase * $val / 100.0)
                 : min($val, $calcBase);
-            
+
             if ($deduction > 0) {
                 $appliedDiscountsTotal += $deduction;
 
@@ -1926,7 +1934,7 @@ class AdminFeeController extends Controller
             } catch (\Throwable $e) {
             }
 
-            return redirect()->route('admin.fees.index', ['tab' => 'charges'])
+            return redirect()->route('admin.fees.edit-charge', $charge)
                 ->with('success', 'Additional charge updated successfully.');
         } catch (\Exception $e) {
             if ($request->expectsJson()) {

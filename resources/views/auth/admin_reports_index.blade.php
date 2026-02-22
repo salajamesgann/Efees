@@ -236,7 +236,7 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Outstanding Debt</p>
-                        <h3 id="stat-pending-payments" class="text-2xl font-bold text-gray-900 mt-1">₱{{ number_format($pendingPayments, 2) }}</h3>
+                        <h3 id="stat-pending-payments" class="text-2xl font-bold text-gray-900 mt-1">₱{{ number_format($pendingOutstanding, 2) }}</h3>
                     </div>
                     <div class="p-2 bg-orange-50 rounded-lg text-orange-600">
                         <i class="fas fa-file-invoice-dollar"></i>
@@ -538,16 +538,26 @@
             const formatNumber = (val) => Number(val).toLocaleString();
 
             const initCharts = () => {
+                const defaultGrades = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+                const defaultMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const defaultGradeTotals = defaultGrades.map(() => 0);
+                const defaultMonthTotals = defaultMonths.map(() => 0);
+                const initialPaid = Number(@json((float) $totalCollected));
+                const initialPending = Number(@json((float) $pendingOutstanding));
                 // Payment Status Chart
                 const statusCtx = document.getElementById('paymentStatusChart').getContext('2d');
                 statusChart = new Chart(statusCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: [],
+                        labels: ['Paid', 'Pending'],
                         datasets: [{
-                            data: [],
-                            backgroundColor: [],
-                            borderWidth: 0
+                            data: [initialPaid, initialPending],
+                            backgroundColor: [
+                                '#10b981',
+                                '#f97316'
+                            ],
+                            borderWidth: 0,
+                            cutout: '70%'
                         }]
                     },
                     options: {
@@ -558,7 +568,9 @@
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        return ` ${context.label}: ${context.raw} records`;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? Math.round((context.parsed / total) * 100) : 0;
+                                        return `${context.label}: ₱${context.parsed.toLocaleString()} (${percentage}%)`;
                                     }
                                 }
                             }
@@ -572,12 +584,20 @@
                 collectionsChart = new Chart(collectionsCtx, {
                     type: 'bar',
                     data: {
-                        labels: [],
+                        labels: defaultGrades,
                         datasets: [{
-                            label: 'Collections',
-                            data: [],
-                            backgroundColor: '#10b981',
-                            borderRadius: 6
+                            label: 'Amount Collected (₱)',
+                            data: defaultGradeTotals,
+                            backgroundColor: [
+                                '#3b82f6',
+                                '#10b981',
+                                '#f59e0b',
+                                '#ef4444',
+                                '#8b5cf6',
+                                '#06b6d4'
+                            ],
+                            borderRadius: 6,
+                            borderSkipped: false
                         }]
                     },
                     options: {
@@ -594,9 +614,18 @@
                             }
                         },
                         scales: {
-                            x: { grid: { display: false }, ticks: { color: '#6b7280' } },
+                            x: {
+                                grid: {
+                                    color: '#e5e7eb'
+                                },
+                                ticks: {
+                                    color: '#6b7280'
+                                }
+                            },
                             y: { 
-                                beginAtZero: true,
+                                beginAtZero: false,
+                                min: 100,
+                                max: 10000,
                                 grid: { color: '#e5e7eb' },
                                 ticks: { 
                                     color: '#6b7280',
@@ -612,16 +641,19 @@
                 trendsChart = new Chart(trendsCtx, {
                     type: 'line',
                     data: {
-                        labels: [],
+                        labels: defaultMonths,
                         datasets: [{
                             label: 'Monthly Collections',
-                            data: [],
+                            data: defaultMonthTotals,
                             borderColor: '#f97316',
                             backgroundColor: 'rgba(249, 115, 22, 0.1)',
                             fill: true,
                             tension: 0.4,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
+                            pointBackgroundColor: '#f97316',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                            pointHoverRadius: 8
                         }]
                     },
                     options: {
@@ -640,33 +672,61 @@
                         scales: {
                             x: { grid: { color: '#e5e7eb' }, ticks: { color: '#6b7280' } },
                             y: { 
-                                beginAtZero: true,
+                                beginAtZero: false,
+                                min: 100,
+                                max: 10000,
                                 grid: { color: '#e5e7eb' },
                                 ticks: { 
                                     color: '#6b7280',
                                     callback: (val) => '₱' + formatNumber(val) 
                                 }
                             }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
                         }
                     }
                 });
             };
 
             const updateCharts = (data) => {
+                const defaultGrades = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+                const defaultMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
                 // Update Status Chart
-                statusChart.data.labels = data.statusOverview.map(s => s.label);
-                statusChart.data.datasets[0].data = data.statusOverview.map(s => s.count);
-                statusChart.data.datasets[0].backgroundColor = data.statusOverview.map(s => s.color);
+                statusChart.data.labels = ['Paid', 'Pending'];
+                statusChart.data.datasets[0].data = [
+                    Number(data.totalCollected || 0),
+                    Number(data.pendingOutstanding || 0)
+                ];
+                statusChart.data.datasets[0].backgroundColor = ['#10b981', '#f97316'];
                 statusChart.update();
 
                 // Update Collections Chart
-                collectionsChart.data.labels = data.collectionsByGrade.map(c => c.label);
-                collectionsChart.data.datasets[0].data = data.collectionsByGrade.map(c => c.total);
+                if (data.collectionsByGrade && data.collectionsByGrade.length) {
+                    collectionsChart.data.labels = data.collectionsByGrade.map(c => c.label);
+                    collectionsChart.data.datasets[0].data = data.collectionsByGrade.map(c => c.total);
+                } else {
+                    collectionsChart.data.labels = defaultGrades;
+                    collectionsChart.data.datasets[0].data = defaultGrades.map(() => 0);
+                }
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+                while (collectionsChart.data.datasets[0].backgroundColor.length < data.collectionsByGrade.length) {
+                    collectionsChart.data.datasets[0].backgroundColor.push(
+                        colors[collectionsChart.data.datasets[0].backgroundColor.length % colors.length]
+                    );
+                }
                 collectionsChart.update();
 
                 // Update Trends Chart
-                trendsChart.data.labels = data.paymentTrends.map(t => t.month);
-                trendsChart.data.datasets[0].data = data.paymentTrends.map(t => t.total);
+                if (data.paymentTrends && data.paymentTrends.length) {
+                    trendsChart.data.labels = data.paymentTrends.map(t => t.month);
+                    trendsChart.data.datasets[0].data = data.paymentTrends.map(t => t.total);
+                } else {
+                    trendsChart.data.labels = defaultMonths;
+                    trendsChart.data.datasets[0].data = defaultMonths.map(() => 0);
+                }
                 trendsChart.update();
             };
 
@@ -692,7 +752,7 @@
                     document.getElementById('stat-total-collected').textContent = formatCurrency(data.totalCollected);
                     const pendingApprovalsEl = document.getElementById('stat-pending-approvals');
                     if (pendingApprovalsEl) pendingApprovalsEl.textContent = formatCurrency(data.pendingApprovals);
-                    document.getElementById('stat-pending-payments').textContent = formatCurrency(data.pendingPayments);
+                    document.getElementById('stat-pending-payments').textContent = formatCurrency(data.pendingOutstanding);
                     document.getElementById('stat-overdue-balances').textContent = formatCurrency(data.overdueBalances);
                     document.getElementById('stat-reminders-sent').textContent = formatNumber(data.remindersSent);
 

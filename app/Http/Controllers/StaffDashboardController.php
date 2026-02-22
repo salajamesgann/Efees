@@ -11,7 +11,6 @@ use App\Services\FeeManagementService;
 use App\Services\SmsGatewayService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -37,7 +36,7 @@ class StaffDashboardController extends Controller
         }
 
         $activeYear = SystemSetting::where('key', 'school_year')->value('value');
-        
+
         // Notifications
         $notifications = DB::table('notifications')
             ->where('user_id', $user->user_id)
@@ -51,10 +50,10 @@ class StaffDashboardController extends Controller
         // Search
         if ($request->filled('q')) {
             $term = $request->input('q');
-            $query->where(function($q) use ($term) {
+            $query->where(function ($q) use ($term) {
                 $q->where('first_name', 'like', "%{$term}%")
-                  ->orWhere('last_name', 'like', "%{$term}%")
-                  ->orWhere('student_id', 'like', "%{$term}%");
+                    ->orWhere('last_name', 'like', "%{$term}%")
+                    ->orWhere('student_id', 'like', "%{$term}%");
             });
         }
 
@@ -128,7 +127,7 @@ class StaffDashboardController extends Controller
                 'latestTransaction' => $latestTransaction,
             ];
         });
-        
+
         // Filter by status (Post-query filter - only filters current page, implies pagination might look weird but better than crashing)
         if ($request->filled('status')) {
             $statusFilter = $request->input('status');
@@ -161,7 +160,7 @@ class StaffDashboardController extends Controller
             'partial' => (int) ($statsResult->partial ?? 0),
             'unpaid' => (int) ($statsResult->unpaid ?? 0),
         ];
-        
+
         return view('auth.staff_dashboard', [
             'studentRecords' => $students,
             'activeYear' => $activeYear,
@@ -180,7 +179,8 @@ class StaffDashboardController extends Controller
         ]);
     }
 
-    public function list() {
+    public function list()
+    {
         return redirect()->route('staff_dashboard');
     }
 
@@ -289,6 +289,7 @@ class StaffDashboardController extends Controller
             Log::error('Failed to create notification', [
                 'error' => $e->getMessage(),
             ]);
+
             return back()->with('error', 'Failed to send reminder.');
         }
     }

@@ -182,6 +182,27 @@
                     </a>
                 </div>
             </header>
+            @if(session('success'))
+                <div class="mb-6 bg-green-50 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-sm flex justify-between items-center">
+                    <p>{{ session('success') }}</p>
+                    <button onclick="this.parentElement.remove()" class="text-green-700 hover:text-green-900"><i class="fas fa-times"></i></button>
+                </div>
+            @endif
+            @if(session('error'))
+                <div class="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm flex justify-between items-center">
+                    <p>{{ session('error') }}</p>
+                    <button onclick="this.parentElement.remove()" class="text-red-700 hover:text-red-900"><i class="fas fa-times"></i></button>
+                </div>
+            @endif
+            @if($errors->any())
+                <div class="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm">
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <form method="POST" action="{{ route('admin.fees.update-charge', $additionalCharge->id) }}" class="p-6 space-y-6">
@@ -254,6 +275,19 @@
                                  <option value="required" {{ old('required_or_optional', $additionalCharge->required_or_optional) == 'required' ? 'selected' : '' }}>Required</option>
                                  <option value="optional" {{ old('required_or_optional', $additionalCharge->required_or_optional) == 'optional' ? 'selected' : '' }}>Optional</option>
                              </select>
+                        </div>
+                        <div class="flex items-center space-x-6">
+                            <div class="flex items-center">
+                                <input type="checkbox" name="allow_installment" id="allow_installment" value="1" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {{ old('allow_installment', $additionalCharge->allow_installment) ? 'checked' : '' }}>
+                                <label for="allow_installment" class="ml-2 block text-sm text-gray-900">Allow Installment</label>
+                            </div>
+                            <div class="flex items-center">
+                                <label for="status" class="mr-3 block text-sm text-gray-700">Status</label>
+                                <select name="status" id="status" class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                    <option value="active" {{ old('status', $additionalCharge->status ?? 'active') == 'active' ? 'selected' : '' }}>Active</option>
+                                    <option value="inactive" {{ old('status', $additionalCharge->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 

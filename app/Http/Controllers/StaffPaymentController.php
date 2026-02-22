@@ -21,8 +21,8 @@ class StaffPaymentController extends Controller
         if ($request->ajax() || $request->has('action')) {
             if ($request->action === 'fetch_students') {
                 $query = Student::select('student_id', 'first_name', 'last_name', 'level', 'section', 'strand', 'enrollment_status')
-                    ->withSum(['feeRecords as total_balance' => function($q) {
-                        $q->select(DB::raw("SUM(balance)"));
+                    ->withSum(['feeRecords as total_balance' => function ($q) {
+                        $q->select(DB::raw('SUM(balance)'));
                     }], 'balance')
                     ->with(['payments' => function ($q) {
                         $q->latest()->limit(1);
@@ -62,7 +62,7 @@ class StaffPaymentController extends Controller
                 $fees = FeeRecord::where('student_id', $request->student_id)
                     ->where(function ($q) {
                         $q->where('balance', '>', 0)
-                          ->orWhere('balance', '<', 0);
+                            ->orWhere('balance', '<', 0);
                     })
                     ->where('record_type', '!=', 'payment')
                     ->orderByRaw("CASE WHEN record_type = 'discount' THEN 1 ELSE 0 END ASC")

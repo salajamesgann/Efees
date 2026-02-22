@@ -652,10 +652,12 @@
           }
         },
         y: {
-         beginAtZero: true,
+         beginAtZero: false,
          grid: {
           color: '#e5e7eb'
           },
+         min: 100,
+         max: 10000,
          ticks: {
           color: '#6b7280',
           callback: function(value) {
@@ -714,10 +716,12 @@
          }
         },
         y: {
-         beginAtZero: true,
+         beginAtZero: false,
          grid: {
           color: '#e5e7eb'
          },
+         min: 100,
+         max: 10000,
          ticks: {
           color: '#6b7280',
           callback: function(value) {

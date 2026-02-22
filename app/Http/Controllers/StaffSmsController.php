@@ -33,11 +33,11 @@ class StaffSmsController extends Controller
         $students = Student::with(['feeRecords' => function ($q) {
             $q->where('balance', '>', 0);
         }, 'parents'])
-        ->when(!$search, function ($q) {
-            $q->whereHas('feeRecords', function ($q) {
-                $q->where('balance', '>', 0);
-            });
-        })
+            ->when(! $search, function ($q) {
+                $q->whereHas('feeRecords', function ($q) {
+                    $q->where('balance', '>', 0);
+                });
+            })
             ->when($search, function ($q) use ($search) {
                 $operator = \Illuminate\Support\Facades\DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
                 $q->where(function ($subq) use ($search, $operator) {
@@ -100,7 +100,7 @@ class StaffSmsController extends Controller
             if (! $student) {
                 continue;
             }
-            
+
             $mobileNumber = null;
             $guardianName = 'Parent/Guardian';
 

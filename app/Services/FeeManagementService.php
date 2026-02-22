@@ -158,9 +158,9 @@ class FeeManagementService
                     // Check if ledger seems to be missing the base tuition (e.g. balance is negative or too low compared to assignment)
                     // This handles cases where only adjustments (discounts/charges) are in FeeRecords but base tuition isn't.
                     if ($ledgerBalance < 0 || ($assignment->total_amount > 0 && $ledgerBalance < $assignment->total_amount * 0.1)) {
-                         $remainingBalance = max(0.0, (float) $assignment->total_amount - $paidAmount + $penaltiesTotal);
+                        $remainingBalance = max(0.0, (float) $assignment->total_amount - $paidAmount + $penaltiesTotal);
                     } else {
-                         $remainingBalance = $ledgerBalance;
+                        $remainingBalance = $ledgerBalance;
                     }
                 }
 
@@ -402,12 +402,12 @@ class FeeManagementService
         // We want the summary record to represent the base tuition + standard charges - standard discounts.
         // Specific adjustments (type 'adjustment') are separate records in the ledger.
         $theoreticalTotal = (float) $totals['totalAmount'];
-        
+
         // Subtract the amount already covered by adjustment records to avoid double counting
         $adjustmentSum = (float) FeeRecord::where('student_id', $student->student_id)
             ->where('record_type', 'adjustment')
             ->sum('balance');
-            
+
         $baseBalance = max(0.0, $theoreticalTotal - $adjustmentSum - $paidAmount);
         $status = $baseBalance > 0 ? 'pending' : 'paid';
 
@@ -421,9 +421,10 @@ class FeeManagementService
         $record->status = $status;
         $record->notes = 'System recalculated';
 
-        // Ensure payment_date is set so it appears in dashboard
-        if (! $record->payment_date) {
-            $record->payment_date = now()->addDays(30);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('fee_records', 'payment_date')) {
+            if (! $record->payment_date) {
+                $record->payment_date = now()->addDays(30);
+            }
         }
 
         $record->save();

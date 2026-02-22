@@ -38,21 +38,21 @@ class AdminUserController extends Controller
                                 $sq1->whereIn('roleable_type', [Staff::class, Admin::class, Student::class])
                                     ->whereHasMorph('roleable', [Staff::class, Admin::class, Student::class], function ($q) use ($query, $operator) {
                                         $q->where('first_name', $operator, "%{$query}%")
-                                          ->orWhere('last_name', $operator, "%{$query}%");
+                                            ->orWhere('last_name', $operator, "%{$query}%");
                                     });
                             })->orWhere(function ($sq2) use ($query, $operator) {
                                 $sq2->where('roleable_type', ParentContact::class)
                                     ->whereExists(function ($exists) use ($query, $operator) {
                                         $exists->select(DB::raw(1))
-                                               ->from('parents')
-                                               ->where(function($q) {
-                                                   if (DB::connection()->getDriverName() === 'pgsql') {
-                                                       $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
-                                                   } else {
-                                                       $q->whereColumn('parents.id', 'users.roleable_id');
-                                                   }
-                                               })
-                                               ->where('full_name', $operator, "%{$query}%");
+                                            ->from('parents')
+                                            ->where(function ($q) {
+                                                if (DB::connection()->getDriverName() === 'pgsql') {
+                                                    $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
+                                                } else {
+                                                    $q->whereColumn('parents.id', 'users.roleable_id');
+                                                }
+                                            })
+                                            ->where('full_name', $operator, "%{$query}%");
                                     });
                             });
                         });
@@ -151,7 +151,7 @@ class AdminUserController extends Controller
                         'account_status' => 'Active',
                     ];
 
-                    if (!$parent) {
+                    if (! $parent) {
                         // Create ParentContact
                         $parent = ParentContact::create($parentData);
                     } else {

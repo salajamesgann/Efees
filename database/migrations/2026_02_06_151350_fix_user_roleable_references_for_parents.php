@@ -1,9 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -20,7 +18,7 @@ return new class extends Migration
             // Find matching parent contact by email
             // The email in users table should match the email in parents table
             // or we can try to match by name if email is missing in parents (less reliable)
-            
+
             $parent = DB::table('parents')
                 ->where('email', $user->email)
                 ->first();
@@ -34,7 +32,7 @@ return new class extends Migration
                         'updated_at' => now(),
                     ]);
             } else {
-                // If no parent found, we might have a problem. 
+                // If no parent found, we might have a problem.
                 // However, since we migrated data based on phone, maybe some emails were lost?
                 // Let's try to match by name if possible, but user table doesn't have name.
                 // We'll leave it for now. These users might be orphaned.

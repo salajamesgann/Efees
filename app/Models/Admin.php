@@ -72,6 +72,7 @@ class Admin extends Model
         } else {
             $initials .= strtoupper(substr($this->last_name, 0, 1));
         }
+
         return $initials;
     }
 }

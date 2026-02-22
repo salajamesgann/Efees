@@ -165,7 +165,12 @@
 
                             <div>
                                 <label for="password" class="block text-sm font-medium text-slate-700 mb-1">Password <span class="text-red-500">*</span></label>
-                                <input type="password" name="password" id="password" class="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500" required>
+                                <div class="relative">
+                                    <input type="password" name="password" id="password" class="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500 pr-10" required>
+                                    <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600" onclick="togglePasswordVisibility('password', this)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
                                 <p class="text-xs text-slate-500 mt-1">Must contain 8+ chars, uppercase, lowercase, number, special char.</p>
                                 @error('password')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -174,7 +179,12 @@
 
                             <div>
                                 <label for="password_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirm Password <span class="text-red-500">*</span></label>
-                                <input type="password" name="password_confirmation" id="password_confirmation" class="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500" required>
+                                <div class="relative">
+                                    <input type="password" name="password_confirmation" id="password_confirmation" class="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500 pr-10" required>
+                                    <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600" onclick="togglePasswordVisibility('password_confirmation', this)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -187,5 +197,25 @@
             </div>
         </main>
     </div>
+<script>
+    function togglePasswordVisibility(inputId, button) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        var icon = button.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        } else {
+            input.type = 'password';
+            if (icon) {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    }
+</script>
 </body>
 </html>

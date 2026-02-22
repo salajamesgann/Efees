@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Admin;
 use App\Models\FeeRecord;
 use App\Models\ParentContact;
-use App\Models\Role;
 use App\Models\Section;
 use App\Models\Staff;
 use App\Models\Student;
@@ -17,10 +16,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AuthLoginController extends Controller
@@ -353,7 +350,7 @@ class AuthLoginController extends Controller
         $schoolYears = \App\Models\Student::distinct()->whereNotNull('school_year')->orderBy('school_year', 'desc')->pluck('school_year');
 
         // Ensure activeSy is in the list (in case no students are enrolled in it yet)
-        if ($activeSy && !$schoolYears->contains($activeSy)) {
+        if ($activeSy && ! $schoolYears->contains($activeSy)) {
             $schoolYears->prepend($activeSy);
         }
 
@@ -607,6 +604,7 @@ class AuthLoginController extends Controller
             $allLevels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
             $collectionsByGrade = collect($allLevels)->map(function ($lvl) use ($rawGrades) {
                 $found = $rawGrades->firstWhere('label', $lvl);
+
                 return [
                     'label' => $lvl,
                     'total' => $found ? (float) $found->total : 0.0,
@@ -633,9 +631,9 @@ class AuthLoginController extends Controller
         for ($m = 1; $m <= 12; $m++) {
             $monthNum = str_pad($m, 2, '0', STR_PAD_LEFT);
             $monthName = \Carbon\Carbon::createFromDate(now()->year, $m, 1)->format('M');
-            
+
             $found = $rawTrends->firstWhere('month_num', $monthNum);
-            
+
             $paymentTrends->push([
                 'month' => $monthName,
                 'total' => $found ? (float) $found->total : 0.0,

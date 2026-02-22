@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -23,7 +22,6 @@ class ForgotPasswordController extends Controller
     /**
      * Handle an incoming password reset link request.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      *
      * @throws \Illuminate\Validation\ValidationException
@@ -38,7 +36,7 @@ class ForgotPasswordController extends Controller
         if ($user) {
             // Identify if user is a parent
             $isParent = false;
-            
+
             // Check by role name if available
             if ($user->role && strtolower($user->role->role_name) === 'parent') {
                 $isParent = true;
@@ -55,7 +53,7 @@ class ForgotPasswordController extends Controller
                     ->first();
 
                 if ($existingRequest) {
-                     return back()->with('success', 'A password reset request is already pending for this email.');
+                    return back()->with('success', 'A password reset request is already pending for this email.');
                 }
 
                 \App\Models\PasswordResetRequest::create([
@@ -84,7 +82,6 @@ class ForgotPasswordController extends Controller
      *
      * If no token is present, display the link request form.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  string|null  $token
      * @return \Illuminate\Contracts\View\View
      */
@@ -98,7 +95,6 @@ class ForgotPasswordController extends Controller
     /**
      * Handle an incoming new password request.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      *
      * @throws \Illuminate\Validation\ValidationException
@@ -118,7 +114,7 @@ class ForgotPasswordController extends Controller
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
                 $user->forceFill([
-                    'password' => Hash::make($password)
+                    'password' => Hash::make($password),
                 ])->setRememberToken(Str::random(60));
 
                 $user->save();

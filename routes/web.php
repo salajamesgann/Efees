@@ -7,7 +7,6 @@ use App\Http\Controllers\AuthLoginController;
 use App\Http\Controllers\StaffDashboardController;
 use App\Http\Controllers\StudentProfileController;
 use App\Http\Controllers\StudentSettingsController;
-use App\Http\Controllers\AdminStaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {

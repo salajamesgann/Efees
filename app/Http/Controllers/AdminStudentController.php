@@ -112,12 +112,12 @@ class AdminStudentController extends Controller
 
         // School Year Logic
         $schoolYears = Student::distinct()->whereNotNull('school_year')->orderBy('school_year', 'desc')->pluck('school_year');
-        
+
         // Active School Year from Settings
         $activeSy = SystemSetting::getActiveSchoolYear();
 
         // Ensure Active SY is in the list if set
-        if ($activeSy && !$schoolYears->contains($activeSy)) {
+        if ($activeSy && ! $schoolYears->contains($activeSy)) {
             $schoolYears->prepend($activeSy);
         }
 
@@ -132,7 +132,7 @@ class AdminStudentController extends Controller
 
         // Default to Active School Year, fallback to first in list
         $defaultSy = ($activeSy && $schoolYears->contains($activeSy)) ? $activeSy : $schoolYears->first();
-        
+
         $currentSchoolYear = $request->query('school_year', $defaultSy);
         $isReadOnly = ($activeSy && $currentSchoolYear !== $activeSy);
 

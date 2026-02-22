@@ -229,6 +229,12 @@
                 <input type="hidden" name="subject_fees" id="edit_subject_fees" value="">
                 <input type="hidden" name="selected_charge_ids" id="edit_selected_charge_ids" value="">
                 <input type="hidden" name="selected_discount_ids" id="edit_selected_discount_ids" value="">
+                <input
+                    type="hidden"
+                    name="amount"
+                    id="edit_total_amount_input"
+                    value="{{ number_format((float) ($tuitionFee->amount ?? 0), 2, '.', '') }}"
+                >
 
                 <!-- Section 1: Basic Information -->
                 <div class="p-6 border-b border-gray-200">

@@ -18,7 +18,7 @@ class UnifiedUserManagementTest extends TestCase
 
         // Manual Schema Setup to avoid broken migrations
         // Users Table
-        if (!Schema::hasTable('users')) {
+        if (! Schema::hasTable('users')) {
             Schema::create('users', function ($table) {
                 $table->increments('user_id');
                 $table->string('email');
@@ -31,7 +31,7 @@ class UnifiedUserManagementTest extends TestCase
         }
 
         // Roles Table
-        if (!Schema::hasTable('roles')) {
+        if (! Schema::hasTable('roles')) {
             Schema::create('roles', function ($table) {
                 $table->increments('role_id');
                 $table->string('role_name');
@@ -40,7 +40,7 @@ class UnifiedUserManagementTest extends TestCase
         }
 
         // Staff Table
-        if (!Schema::hasTable('staff')) {
+        if (! Schema::hasTable('staff')) {
             Schema::create('staff', function ($table) {
                 $table->string('staff_id')->primary();
                 $table->string('first_name');
@@ -55,7 +55,7 @@ class UnifiedUserManagementTest extends TestCase
         }
 
         // Parents Table
-        if (!Schema::hasTable('parents')) {
+        if (! Schema::hasTable('parents')) {
             Schema::create('parents', function ($table) {
                 $table->increments('id');
                 $table->string('full_name');
@@ -139,7 +139,7 @@ class UnifiedUserManagementTest extends TestCase
         // 6. Assertions
         $response->assertStatus(200);
         $response->assertSee('User Management');
-        
+
         // Check for Staff presence and details
         $response->assertSee('John Doe');
         $response->assertSee('Academics'); // Department
@@ -148,7 +148,7 @@ class UnifiedUserManagementTest extends TestCase
 
         // Check for Parent presence and details
         $response->assertSee('Jane Smith');
-        $response->assertSee('P-' . $parentUser->user_id); // Parent ID format
+        $response->assertSee('P-'.$parentUser->user_id); // Parent ID format
         $response->assertSee('09987654321'); // Phone
         $response->assertSee('Guardian Account'); // New label
     }

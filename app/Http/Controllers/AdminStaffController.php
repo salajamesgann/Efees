@@ -10,7 +10,6 @@ use App\Services\AuditService;
 use App\Services\FeeManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -28,7 +27,7 @@ class AdminStaffController extends Controller
         $status = $request->input('status', 'all');
 
         $usersQuery = User::with(['role', 'roleable'])
-            ->whereHas('role', function($q) {
+            ->whereHas('role', function ($q) {
                 $q->whereIn('role_name', ['staff', 'admin', 'parent']);
             })
             ->when($query !== '', function ($q) use ($query) {
@@ -41,26 +40,26 @@ class AdminStaffController extends Controller
                 $q->where(function ($sub) {
                     $sub->where(function ($s) {
                         $s->where('roleable_type', Staff::class)
-                          ->whereExists(function ($exists) {
-                              $exists->select(DB::raw(1))
-                                     ->from('staff')
-                                     ->whereColumn('staff.staff_id', 'users.roleable_id')
-                                     ->where('is_active', true);
-                          });
+                            ->whereExists(function ($exists) {
+                                $exists->select(DB::raw(1))
+                                    ->from('staff')
+                                    ->whereColumn('staff.staff_id', 'users.roleable_id')
+                                    ->where('is_active', true);
+                            });
                     })->orWhere(function ($p) {
                         $p->where('roleable_type', ParentContact::class)
-                          ->whereExists(function ($exists) {
-                              $exists->select(DB::raw(1))
-                                     ->from('parents')
-                                     ->where(function($q) {
-                                         if (DB::connection()->getDriverName() === 'pgsql') {
-                                             $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
-                                         } else {
-                                             $q->whereColumn('parents.id', 'users.roleable_id');
-                                         }
-                                     })
-                                     ->where('account_status', 'Active');
-                          });
+                            ->whereExists(function ($exists) {
+                                $exists->select(DB::raw(1))
+                                    ->from('parents')
+                                    ->where(function ($q) {
+                                        if (DB::connection()->getDriverName() === 'pgsql') {
+                                            $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
+                                        } else {
+                                            $q->whereColumn('parents.id', 'users.roleable_id');
+                                        }
+                                    })
+                                    ->where('account_status', 'Active');
+                            });
                     });
                 });
             })
@@ -68,26 +67,26 @@ class AdminStaffController extends Controller
                 $q->where(function ($sub) {
                     $sub->where(function ($s) {
                         $s->where('roleable_type', Staff::class)
-                          ->whereExists(function ($exists) {
-                              $exists->select(DB::raw(1))
-                                     ->from('staff')
-                                     ->whereColumn('staff.staff_id', 'users.roleable_id')
-                                     ->where('is_active', false);
-                          });
+                            ->whereExists(function ($exists) {
+                                $exists->select(DB::raw(1))
+                                    ->from('staff')
+                                    ->whereColumn('staff.staff_id', 'users.roleable_id')
+                                    ->where('is_active', false);
+                            });
                     })->orWhere(function ($p) {
                         $p->where('roleable_type', ParentContact::class)
-                          ->whereExists(function ($exists) {
-                              $exists->select(DB::raw(1))
-                                     ->from('parents')
-                                     ->where(function($q) {
-                                         if (DB::connection()->getDriverName() === 'pgsql') {
-                                             $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
-                                         } else {
-                                             $q->whereColumn('parents.id', 'users.roleable_id');
-                                         }
-                                     })
-                                     ->where('account_status', '!=', 'Active');
-                          });
+                            ->whereExists(function ($exists) {
+                                $exists->select(DB::raw(1))
+                                    ->from('parents')
+                                    ->where(function ($q) {
+                                        if (DB::connection()->getDriverName() === 'pgsql') {
+                                            $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
+                                        } else {
+                                            $q->whereColumn('parents.id', 'users.roleable_id');
+                                        }
+                                    })
+                                    ->where('account_status', '!=', 'Active');
+                            });
                     });
                 });
             })
@@ -108,6 +107,7 @@ class AdminStaffController extends Controller
     public function create(): View
     {
         $roles = Role::whereIn('role_name', ['staff', 'admin', 'parent'])->get();
+
         return view('auth.admin_staff_create', compact('roles'));
     }
 
@@ -151,23 +151,23 @@ class AdminStaffController extends Controller
 
                 if ($roleName === 'parent') {
                     $email = strtolower($validated['email']);
-                    
+
                     // Check if parent user already exists
                     if (User::where('email', $email)->exists()) {
                         throw new \Exception('A user with this email already exists.');
                     }
-                    
+
                     // Check if parent already exists by email
                     $parent = ParentContact::where('email', $email)->first();
-                    
+
                     $parentData = [
-                        'full_name' => trim($validated['first_name'] . ' ' . ($validated['middle_initial'] ?? '') . ' ' . $validated['last_name']),
+                        'full_name' => trim($validated['first_name'].' '.($validated['middle_initial'] ?? '').' '.$validated['last_name']),
                         'phone' => $validated['phone_number'] ?? null,
                         'email' => $email,
                         'account_status' => 'Active',
                     ];
 
-                    if (!$parent) {
+                    if (! $parent) {
                         // Create Parent Contact
                         $parent = ParentContact::create($parentData);
 
@@ -214,7 +214,7 @@ class AdminStaffController extends Controller
 
                 } else {
                     $email = strtolower($validated['email']);
-                    
+
                     // Check if staff user already exists
                     if (User::where('email', $email)->exists()) {
                         throw new \Exception('A user with this email already exists.');
@@ -255,7 +255,7 @@ class AdminStaffController extends Controller
 
             return redirect()
                 ->route('admin.staff.index')
-                ->with('success', ucfirst($roleName) . ' account created successfully.');
+                ->with('success', ucfirst($roleName).' account created successfully.');
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.staff.create')
@@ -270,6 +270,7 @@ class AdminStaffController extends Controller
     public function show(User $user): View
     {
         $user->load(['role', 'roleable']);
+
         // For compatibility with view, we might need to pass specific vars
         // But better to update view to use $user
         return view('auth.admin_staff_show', compact('user'));
@@ -302,7 +303,7 @@ class AdminStaffController extends Controller
             'middle_initial' => ['nullable', 'string', 'max:5'],
             'last_name' => ['required', 'string', 'max:255'],
             'phone_number' => ['nullable', 'string', 'max:20'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->user_id . ',user_id'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->user_id.',user_id'],
             'password' => [
                 'nullable',
                 'string',
@@ -320,16 +321,16 @@ class AdminStaffController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($request, $user, $roleable, $validator) {
+            DB::transaction(function () use ($user, $roleable, $validator) {
                 $validated = $validator->validated();
-                $fullName = $validated['first_name'] . ' ' . ($validated['middle_initial'] ?? '') . ' ' . $validated['last_name'];
+                $fullName = $validated['first_name'].' '.($validated['middle_initial'] ?? '').' '.$validated['last_name'];
                 $fullName = trim(str_replace('  ', ' ', $fullName));
 
                 // Update User
                 $userData = [
                     'email' => strtolower($validated['email']),
                 ];
-                if (!empty($validated['password'])) {
+                if (! empty($validated['password'])) {
                     $userData['password'] = Hash::make($validated['password']);
                 }
                 $user->update($userData);
@@ -371,13 +372,13 @@ class AdminStaffController extends Controller
         try {
             $user->load('roleable');
             $roleable = $user->roleable;
-            
-            if (!$roleable) {
+
+            if (! $roleable) {
                 return back()->with('error', 'Role profile not found.');
             }
 
             if ($user->roleable_type === Staff::class) {
-                $roleable->update(['is_active' => !$roleable->is_active]);
+                $roleable->update(['is_active' => ! $roleable->is_active]);
                 $status = $roleable->is_active ? 'activated' : 'deactivated';
             } elseif ($user->roleable_type === ParentContact::class) {
                 $newStatus = $roleable->account_status === 'Active' ? 'Inactive' : 'Active';
@@ -452,7 +453,7 @@ class AdminStaffController extends Controller
 
             DB::transaction(function () use ($user) {
                 $roleable = $user->roleable;
-                
+
                 // Audit Log
                 try {
                     AuditService::log(

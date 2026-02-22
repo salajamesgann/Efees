@@ -40,16 +40,18 @@ class AdminReportsController extends Controller
 
         // Base student query for filtering dashboard stats
         $statsStudentQuery = Student::query()
-            ->when($selectedYear, fn($q) => $q->where('school_year', $selectedYear))
-            ->when($selectedLevel, fn($q) => $q->where('level', $selectedLevel))
-            ->when($selectedSection, fn($q) => $q->where('section', $selectedSection));
+            ->when($selectedYear, fn ($q) => $q->where('school_year', $selectedYear))
+            ->when($selectedLevel, fn ($q) => $q->where('level', $selectedLevel))
+            ->when($selectedSection, fn ($q) => $q->where('section', $selectedSection));
 
         $statsStudentIds = $statsStudentQuery->pluck('student_id');
 
         // Dashboard Stats (Filtered)
         $totalCollected = Payment::whereIn('student_id', $statsStudentIds)->sum('amount_paid');
         $pendingApprovals = Payment::whereIn('student_id', $statsStudentIds)->where('status', 'pending')->sum('amount_paid');
-        $pendingPayments = FeeRecord::whereIn('student_id', $statsStudentIds)->pending()->sum('balance');
+        $pendingOutstanding = FeeRecord::whereIn('student_id', $statsStudentIds)
+            ->where('balance', '>', 0)
+            ->sum('balance');
         $overdueBalances = FeeRecord::whereIn('student_id', $statsStudentIds)->overdue()->sum('balance');
         $remindersSent = SmsLog::whereIn('student_id', $statsStudentIds)->where('status', 'sent')->count();
 
@@ -72,7 +74,7 @@ class AdminReportsController extends Controller
                 } elseif ($status === 'overdue') {
                     $q->where('status', 'overdue');
                 } elseif ($status === 'partial') {
-                    $q->where('status', 'pending')->where('balance', '>', 0);
+                    $q->whereIn('status', ['partial', 'pending'])->where('balance', '>', 0);
                 }
             });
         }
@@ -92,7 +94,7 @@ class AdminReportsController extends Controller
 
         return view('auth.admin_reports_index', compact(
             'schoolYears', 'levels', 'sections',
-            'totalCollected', 'pendingApprovals', 'pendingPayments', 'overdueBalances', 'remindersSent',
+            'totalCollected', 'pendingApprovals', 'pendingOutstanding', 'overdueBalances', 'remindersSent',
             'students', 'recentSmsLogs', 'scheduledReports', 'generatedReports'
         ));
     }
@@ -244,16 +246,21 @@ class AdminReportsController extends Controller
 
         // Base student query for filtering
         $studentQuery = Student::query()
-            ->when($year, fn($q) => $q->where('school_year', $year))
-            ->when($level, fn($q) => $q->where('level', $level))
-            ->when($section, fn($q) => $q->where('section', $section));
+            ->when($year, fn ($q) => $q->where('school_year', $year))
+            ->when($level, fn ($q) => $q->where('level', $level))
+            ->when($section, fn ($q) => $q->where('section', $section));
 
         $studentIds = $studentQuery->pluck('student_id');
 
         // Core metrics
         $totalCollected = Payment::whereIn('student_id', $studentIds)->where('status', 'approved')->sum('amount_paid');
         $pendingApprovals = Payment::whereIn('student_id', $studentIds)->where('status', 'pending')->sum('amount_paid');
-        $pendingPayments = FeeRecord::whereIn('student_id', $studentIds)->pending()->sum('balance');
+        $pendingPayments = FeeRecord::whereIn('student_id', $studentIds)
+            ->whereIn('status', ['pending', 'partial'])
+            ->sum('balance');
+        $pendingOutstanding = FeeRecord::whereIn('student_id', $studentIds)
+            ->where('balance', '>', 0)
+            ->sum('balance');
         $overdueBalances = FeeRecord::whereIn('student_id', $studentIds)->overdue()->sum('balance');
         $remindersSent = SmsLog::whereIn('student_id', $studentIds)->where('status', 'sent')->count();
 
@@ -279,6 +286,7 @@ class AdminReportsController extends Controller
             $allLevels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
             $collectionsByGrade = collect($allLevels)->map(function ($lvl) use ($rawGrades) {
                 $found = $rawGrades->firstWhere('label', $lvl);
+
                 return [
                     'label' => $lvl,
                     'total' => $found ? (float) $found->total : 0.0,
@@ -286,29 +294,51 @@ class AdminReportsController extends Controller
             });
         }
 
-        // 2. Payment Trends (Monthly)
-        $paymentTrends = \Illuminate\Support\Facades\DB::table('payments')
+        // 2. Payment Trends (Monthly, Jan-Dec)
+        $rawTrends = \Illuminate\Support\Facades\DB::table('payments')
             ->whereIn('student_id', $studentIds)
             ->where('status', 'approved')
-            ->select(
-                \Illuminate\Support\Facades\DB::raw("DATE_FORMAT(payment_date, '%Y-%m') as month"),
-                \Illuminate\Support\Facades\DB::raw('SUM(amount_paid) as total')
-            )
-            ->groupBy('month')
-            ->orderBy('month')
+            ->selectRaw('EXTRACT(MONTH FROM payment_date) as month_num, SUM(amount_paid) as total')
+            ->groupBy('month_num')
+            ->orderBy('month_num')
             ->get();
+
+        $paymentTrends = collect();
+        for ($m = 1; $m <= 12; $m++) {
+            $found = $rawTrends->firstWhere('month_num', $m);
+
+            $paymentTrends->push([
+                'month' => \Carbon\Carbon::createFromDate(null, $m, 1)->format('M'),
+                'total' => $found ? (float) $found->total : 0.0,
+            ]);
+        }
 
         // 3. Payment Status Overview
         $statusOverview = [
-            ['label' => 'Paid', 'count' => (int) FeeRecord::whereIn('student_id', $studentIds)->where('status', 'paid')->count(), 'color' => '#10b981'],
-            ['label' => 'Pending', 'count' => (int) FeeRecord::whereIn('student_id', $studentIds)->where('status', 'pending')->count(), 'color' => '#f59e0b'],
-            ['label' => 'Overdue', 'count' => (int) FeeRecord::whereIn('student_id', $studentIds)->where('status', 'overdue')->count(), 'color' => '#ef4444'],
+            [
+                'label' => 'Paid',
+                'count' => (int) FeeRecord::whereIn('student_id', $studentIds)->where('status', 'paid')->count(),
+                'color' => '#10b981',
+            ],
+            [
+                'label' => 'Pending',
+                'count' => (int) FeeRecord::whereIn('student_id', $studentIds)
+                    ->whereIn('status', ['pending', 'partial'])
+                    ->count(),
+                'color' => '#f59e0b',
+            ],
+            [
+                'label' => 'Overdue',
+                'count' => (int) FeeRecord::whereIn('student_id', $studentIds)->where('status', 'overdue')->count(),
+                'color' => '#ef4444',
+            ],
         ];
 
         return response()->json([
             'totalCollected' => (float) $totalCollected,
             'pendingApprovals' => (float) $pendingApprovals,
             'pendingPayments' => (float) $pendingPayments,
+            'pendingOutstanding' => (float) $pendingOutstanding,
             'overdueBalances' => (float) $overdueBalances,
             'remindersSent' => (int) $remindersSent,
             'collectionsByGrade' => $collectionsByGrade,

@@ -21,7 +21,7 @@ return new class extends Migration
                 // If phone is missing, we might skip or use name? Phone is usually unique identifier.
                 $phone = $guardian->contact_number;
                 $name = $guardian->parent_guardian_name;
-                
+
                 if (empty($phone)) {
                     continue; // Cannot migrate without phone (key identifier)
                 }
@@ -30,7 +30,7 @@ return new class extends Migration
 
                 $parentId = null;
 
-                if (!$parent) {
+                if (! $parent) {
                     // Create new parent
                     $parentId = DB::table('parents')->insertGetId([
                         'full_name' => $name,
@@ -51,7 +51,7 @@ return new class extends Migration
                     ->where('student_id', $guardian->student_id)
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     DB::table('parent_student')->insert([
                         'parent_id' => $parentId,
                         'student_id' => $guardian->student_id,
@@ -66,7 +66,7 @@ return new class extends Migration
 
         // 2. Drop the legacy table
         Schema::dropIfExists('parents_guardians');
-        
+
         // 3. Drop other unused tables
         Schema::dropIfExists('payment_gateways');
     }
