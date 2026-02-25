@@ -138,6 +138,27 @@ class User extends Authenticatable
         return $this->email;
     }
 
+    public function getIsActiveAttribute()
+    {
+        if ($this->roleable) {
+            if ($this->roleable_type === 'App\\Models\\Staff') {
+                return (bool) ($this->roleable->is_active ?? true);
+            }
+            if ($this->roleable_type === 'App\\Models\\ParentContact') {
+                return ($this->roleable->account_status ?? 'Active') === 'Active';
+            }
+            if ($this->roleable_type === 'App\\Models\\Student') {
+                if (property_exists($this->roleable, 'deleted_at') && $this->roleable->deleted_at) {
+                    return false;
+                }
+                $status = $this->roleable->enrollment_status ?? 'Enrolled';
+                return strtolower($status) === 'enrolled';
+            }
+        }
+
+        return true;
+    }
+
     /**
      * Get the student's initials if user is a student.
      */

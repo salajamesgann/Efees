@@ -298,7 +298,7 @@ class AdminReportsController extends Controller
         $rawTrends = \Illuminate\Support\Facades\DB::table('payments')
             ->whereIn('student_id', $studentIds)
             ->where('status', 'approved')
-            ->selectRaw('EXTRACT(MONTH FROM payment_date) as month_num, SUM(amount_paid) as total')
+            ->selectRaw('EXTRACT(MONTH FROM COALESCE(paid_at, created_at)) as month_num, SUM(amount_paid) as total')
             ->groupBy('month_num')
             ->orderBy('month_num')
             ->get();

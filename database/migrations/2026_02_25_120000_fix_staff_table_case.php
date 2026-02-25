@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Ensure the 'staff' table exists on PostgreSQL, migrating from legacy 'STAFF' if necessary.
      */
     public function up(): void
     {
@@ -16,9 +16,7 @@ return new class extends Migration
             return;
         }
 
-        // First, let's check if the old STAFF table exists and migrate data
         if (Schema::hasTable('STAFF')) {
-            // Create new staff table with Laravel conventions
             Schema::create('staff', function (Blueprint $table) {
                 $table->string('staff_id', 20)->primary();
                 $table->string('first_name', 100);
@@ -30,33 +28,29 @@ return new class extends Migration
                 $table->string('department', 100)->nullable();
                 $table->decimal('salary', 10, 2)->nullable();
                 $table->boolean('is_active')->default(true);
-                $table->timestamp('created_at')->nullable();
-                $table->timestamp('updated_at')->nullable();
+                $table->timestamps();
             });
 
-            // Migrate data from old STAFF table if it exists
-            $oldStaffData = DB::table('STAFF')->get();
-            foreach ($oldStaffData as $oldStaff) {
+            $legacy = DB::table('STAFF')->get();
+            foreach ($legacy as $row) {
                 DB::table('staff')->insert([
-                    'staff_id' => $oldStaff->staff_id,
-                    'first_name' => $oldStaff->first_name,
-                    'MI' => $oldStaff->MI,
-                    'last_name' => $oldStaff->last_name,
-                    'contact_number' => $oldStaff->contact_number,
-                    'email' => null, // We'll need to add this field
-                    'position' => $oldStaff->position,
-                    'department' => $oldStaff->department,
-                    'salary' => $oldStaff->salary,
+                    'staff_id' => $row->staff_id,
+                    'first_name' => $row->first_name ?? '',
+                    'MI' => $row->MI ?? null,
+                    'last_name' => $row->last_name ?? '',
+                    'contact_number' => $row->contact_number ?? '',
+                    'email' => null,
+                    'position' => $row->position ?? null,
+                    'department' => $row->department ?? null,
+                    'salary' => $row->salary ?? null,
                     'is_active' => true,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
 
-            // Drop old table after migration
             Schema::dropIfExists('STAFF');
         } else {
-            // Create staff table if it doesn't exist
             Schema::create('staff', function (Blueprint $table) {
                 $table->string('staff_id', 20)->primary();
                 $table->string('first_name', 100);
@@ -74,12 +68,11 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Drop the 'staff' table on rollback.
      */
     public function down(): void
     {
-        // If we need to rollback, we'll need to recreate the old table structure
-        // For now, we'll just drop the new table
         Schema::dropIfExists('staff');
     }
 };
+

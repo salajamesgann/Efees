@@ -44,6 +44,12 @@ class AuthLoginController extends Controller
             $request->session()->regenerate();
 
             $user = Auth::user();
+            if (! $user->is_active) {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Your account is inactive.',
+                ])->onlyInput('email');
+            }
             $roleName = optional($user->role)->role_name;
 
             // Fallback: Check roleable_type if role_name is missing

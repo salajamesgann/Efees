@@ -218,6 +218,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/{user}/edit', [\App\Http\Controllers\AdminUserController::class, 'edit'])->name('edit');
         Route::put('/{user}', [\App\Http\Controllers\AdminUserController::class, 'update'])->name('update');
         Route::delete('/{user}', [\App\Http\Controllers\AdminUserController::class, 'destroy'])->name('destroy');
+        Route::post('/{user}/toggle', [\App\Http\Controllers\AdminUserController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{user}/activate', [\App\Http\Controllers\AdminUserController::class, 'activate'])->name('activate');
     });
 
     // Admin SMS Management

@@ -135,18 +135,18 @@
                 </div>
 
                 <!-- Mobile Menu Button -->
-                <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg text-slate-400 hover:bg-slate-800 transition-colors">
-                    <i class="fas fa-bars text-xl"></i>
+                <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg text-slate-400 hover:bg-slate-800 transition-colors relative z-50">
+                    <i id="menu-icon" class="fas fa-bars text-xl"></i>
+                    <i id="close-icon" class="fas fa-times text-xl hidden"></i>
                 </button>
             </div>
         </div>
-    </nav>
 
-        <!-- Mobile Menu -->
+        <!-- Mobile Menu Overlay -->
         <div id="mobile-menu" class="hidden md:hidden bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 absolute w-full left-0 top-20 shadow-2xl transition-all duration-300 transform origin-top">
             <div class="px-4 py-6 space-y-4">
-                <a href="#features" class="block text-slate-300 hover:text-white font-medium hover:pl-2 transition-all">Features</a>
-                <a href="#how-it-works" class="block text-slate-300 hover:text-white font-medium hover:pl-2 transition-all">How it Works</a>
+                <a href="#features" class="mobile-link block text-slate-300 hover:text-white font-medium hover:pl-2 transition-all">Features</a>
+                <a href="#how-it-works" class="mobile-link block text-slate-300 hover:text-white font-medium hover:pl-2 transition-all">How it Works</a>
                 <hr class="border-slate-800 my-2">
                 @if (Route::has('login'))
                     <a href="{{ route('login') }}" class="block w-full text-center py-3 rounded-xl bg-brand-600 text-white font-bold shadow-lg shadow-brand-500/20 hover:bg-brand-500 transition-all">
@@ -543,15 +543,44 @@
     <script>
         const btn = document.getElementById('mobile-menu-btn');
         const menu = document.getElementById('mobile-menu');
+        const menuIcon = document.getElementById('menu-icon');
+        const closeIcon = document.getElementById('close-icon');
+        const mobileLinks = document.querySelectorAll('.mobile-link');
 
-        btn.addEventListener('click', () => {
-            menu.classList.toggle('hidden');
+        function toggleMenu() {
+            const isHidden = menu.classList.toggle('hidden');
+            menuIcon.classList.toggle('hidden', !isHidden);
+            closeIcon.classList.toggle('hidden', isHidden);
+            
+            // Add scale/fade transition
+            if (!isHidden) {
+                menu.style.opacity = '0';
+                menu.style.transform = 'scaleY(0.95)';
+                setTimeout(() => {
+                    menu.style.opacity = '1';
+                    menu.style.transform = 'scaleY(1)';
+                }, 10);
+            }
+        }
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleMenu();
+        });
+
+        // Close menu when clicking a link
+        mobileLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (!menu.classList.contains('hidden')) {
+                    toggleMenu();
+                }
+            });
         });
 
         // Close menu when clicking outside
         document.addEventListener('click', (e) => {
-            if (!menu.contains(e.target) && !btn.contains(e.target)) {
-                menu.classList.add('hidden');
+            if (!menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) {
+                toggleMenu();
             }
         });
     </script>

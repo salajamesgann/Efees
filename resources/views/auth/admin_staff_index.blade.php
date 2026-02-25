@@ -255,12 +255,7 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             @php
-                                                $isActive = false;
-                                                if ($user->role->role_name === 'staff' && $user->roleable) {
-                                                    $isActive = $user->roleable->is_active;
-                                                } elseif ($user->role->role_name === 'parent' && $user->roleable) {
-                                                    $isActive = $user->roleable->account_status === 'Active';
-                                                }
+                                                $isActive = $user->is_active;
                                             @endphp
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                                 {{ $isActive ? 'Active' : 'Inactive' }}
@@ -269,6 +264,14 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <a href="{{ route('admin.staff.show', $user) }}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
                                             <a href="{{ route('admin.staff.edit', $user) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                                            <form action="{{ route('admin.staff.toggle-status', $user) }}" method="POST" class="inline mr-3">
+                                                @csrf
+                                                @if($isActive)
+                                                    <button type="submit" class="text-red-600 hover:text-red-900">Deactivate</button>
+                                                @else
+                                                    <button type="submit" class="text-green-600 hover:text-green-900">Activate</button>
+                                                @endif
+                                            </form>
                                             @if($user->role && $user->role->role_name !== 'admin')
                                                 <form action="{{ route('admin.staff.destroy', $user) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this user account? This action cannot be undone.');">
                                                     @csrf

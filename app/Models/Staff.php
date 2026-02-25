@@ -117,9 +117,13 @@ class Staff extends Model
      */
     public static function createWithAccount(array $staffData, array $userData): self
     {
-        // Generate UUID if not provided
+        // Generate short, prefixed ID if not provided (fits varchar(20))
         if (! isset($staffData['staff_id'])) {
-            $staffData['staff_id'] = (string) \Illuminate\Support\Str::uuid();
+            $prefix = 'STF';
+            do {
+                $candidate = $prefix.strtoupper(\Illuminate\Support\Str::random(7)); // e.g., STFABC123
+            } while (static::where('staff_id', $candidate)->exists());
+            $staffData['staff_id'] = $candidate;
         }
 
         // Set timestamps only if columns exist

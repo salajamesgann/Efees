@@ -24,6 +24,7 @@ class AdminUserController extends Controller
     {
         $query = trim($request->input('q', ''));
         $roleFilter = $request->input('role', 'all');
+        $statusFilter = $request->input('status', 'all');
 
         $usersQuery = User::with(['role', 'roleable'])
             ->whereHas('role', function ($q) {
@@ -63,6 +64,40 @@ class AdminUserController extends Controller
                     $rq->where('role_name', $roleFilter);
                 });
             })
+            ->when($statusFilter !== 'all', function ($q) use ($statusFilter) {
+                $q->where(function ($sub) use ($statusFilter) {
+                    $isActive = $statusFilter === 'active';
+                    $sub->where(function ($s) use ($isActive) {
+                        $s->where('roleable_type', Staff::class)
+                            ->whereExists(function ($exists) use ($isActive) {
+                                $exists->select(DB::raw(1))
+                                    ->from('staff')
+                                    ->whereColumn('staff.staff_id', 'users.roleable_id')
+                                    ->where('is_active', $isActive);
+                            });
+                    })->orWhere(function ($p) use ($isActive) {
+                        $p->where('roleable_type', ParentContact::class)
+                            ->whereExists(function ($exists) use ($isActive) {
+                                $exists->select(DB::raw(1))
+                                    ->from('parents')
+                                    ->where(function ($q) {
+                                        if (DB::connection()->getDriverName() === 'pgsql') {
+                                            $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
+                                        } else {
+                                            $q->whereColumn('parents.id', 'users.roleable_id');
+                                        }
+                                    })
+                                    ->where(function ($w) use ($isActive) {
+                                        if ($isActive) {
+                                            $w->where('account_status', 'Active');
+                                        } else {
+                                            $w->where('account_status', '!=', 'Active');
+                                        }
+                                    });
+                            });
+                    });
+                });
+            })
             ->orderBy('user_id', 'desc');
 
         $users = $usersQuery->paginate(15)->withQueryString();
@@ -72,6 +107,7 @@ class AdminUserController extends Controller
             'users' => $users,
             'query' => $query,
             'roleFilter' => $roleFilter,
+            'statusFilter' => $statusFilter,
             'roles' => $roles,
         ]);
     }
@@ -363,6 +399,48 @@ class AdminUserController extends Controller
             return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to delete user: '.$e->getMessage());
+        }
+    }
+
+    public function toggleStatus(User $user): RedirectResponse
+    {
+        try {
+            $user->load('roleable');
+            $roleable = $user->roleable;
+            if (! $roleable) {
+                return back()->with('error', 'Role profile not found.');
+            }
+            if ($user->roleable_type === Staff::class) {
+                $roleable->update(['is_active' => ! (bool) $roleable->is_active]);
+                $status = $roleable->is_active ? 'activated' : 'deactivated';
+            } elseif ($user->roleable_type === ParentContact::class) {
+                $newStatus = ($roleable->account_status ?? 'Active') === 'Active' ? 'Inactive' : 'Active';
+                $roleable->update(['account_status' => $newStatus]);
+                $status = $newStatus === 'Active' ? 'activated' : 'deactivated';
+            } else {
+                return back()->with('error', 'Cannot toggle status for this user type.');
+            }
+            return back()->with('success', "Account has been {$status} successfully.");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update status.');
+        }
+    }
+
+    public function activate(User $user): RedirectResponse
+    {
+        try {
+            $user->load('roleable');
+            $roleable = $user->roleable;
+            if ($user->roleable_type === Staff::class) {
+                $roleable->update(['is_active' => true]);
+            } elseif ($user->roleable_type === ParentContact::class) {
+                $roleable->update(['account_status' => 'Active']);
+            } else {
+                return back()->with('error', 'Cannot activate this user type.');
+            }
+            return back()->with('success', 'Account has been activated successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to activate account.');
         }
     }
 }

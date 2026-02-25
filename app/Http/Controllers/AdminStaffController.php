@@ -374,7 +374,38 @@ class AdminStaffController extends Controller
             $roleable = $user->roleable;
 
             if (! $roleable) {
-                return back()->with('error', 'Role profile not found.');
+                if ($user->roleable_type === Staff::class) {
+                    $current = DB::table('staff')
+                        ->where('staff_id', $user->roleable_id)
+                        ->value('is_active');
+                    $new = $current === null ? true : ! (bool) $current;
+                    DB::table('staff')
+                        ->where('staff_id', $user->roleable_id)
+                        ->update(['is_active' => $new, 'updated_at' => now()]);
+                    $status = $new ? 'activated' : 'deactivated';
+                    return back()->with('success', "Account has been {$status} successfully.");
+                } elseif ($user->roleable_type === ParentContact::class) {
+                    // Handle string roleable_id referencing integer parents.id on pgsql
+                    $pid = is_numeric($user->roleable_id) ? (int) $user->roleable_id : null;
+                    if ($pid === null) {
+                        // Attempt cast via whereRaw if needed
+                        $current = DB::table('parents')
+                            ->whereRaw('CAST(parents.id AS VARCHAR) = ?', [$user->roleable_id])
+                            ->value('account_status');
+                        $newStatus = ($current ?? 'Inactive') === 'Active' ? 'Inactive' : 'Active';
+                        DB::table('parents')
+                            ->whereRaw('CAST(parents.id AS VARCHAR) = ?', [$user->roleable_id])
+                            ->update(['account_status' => $newStatus, 'updated_at' => now()]);
+                    } else {
+                        $current = DB::table('parents')->where('id', $pid)->value('account_status');
+                        $newStatus = ($current ?? 'Inactive') === 'Active' ? 'Inactive' : 'Active';
+                        DB::table('parents')->where('id', $pid)->update(['account_status' => $newStatus, 'updated_at' => now()]);
+                    }
+                    $status = ($newStatus === 'Active') ? 'activated' : 'deactivated';
+                    return back()->with('success', "Account has been {$status} successfully.");
+                } else {
+                    return back()->with('error', 'Role profile not found.');
+                }
             }
 
             if ($user->roleable_type === Staff::class) {

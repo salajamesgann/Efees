@@ -83,6 +83,13 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="w-full md:w-48">
+                        <select name="status" class="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500" onchange="this.form.submit()">
+                            <option value="all" {{ ($statusFilter ?? 'all') == 'all' ? 'selected' : '' }}>All Status</option>
+                            <option value="active" {{ ($statusFilter ?? 'all') == 'active' ? 'selected' : '' }}>Active</option>
+                            <option value="inactive" {{ ($statusFilter ?? 'all') == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                        </select>
+                    </div>
                     <button type="submit" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors">
                         Filter
                     </button>
@@ -143,16 +150,33 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                            Active
-                                        </span>
+                                        @if($user->is_active)
+                                            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                                Active
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-100">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                                Inactive
+                                            </span>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 text-right">
                                         <div class="flex items-center justify-end gap-2">
                                             <a href="{{ route('admin.users.edit', $user) }}" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            <form action="{{ route('admin.users.toggle-status', $user) }}" method="POST" class="inline">
+                                                @csrf
+                                                <button type="submit" class="p-2 {{ $user->is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50' }} hover:opacity-80 rounded-lg transition-colors" title="{{ $user->is_active ? 'Deactivate' : 'Activate' }}">
+                                                    @if($user->is_active)
+                                                        <i class="fas fa-user-slash"></i>
+                                                    @else
+                                                        <i class="fas fa-user-check"></i>
+                                                    @endif
+                                                </button>
+                                            </form>
                                             @if($user->role && $user->role->role_name !== 'admin')
                                                 <form action="{{ route('admin.users.destroy', $user) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');" class="inline">
                                                     @csrf
