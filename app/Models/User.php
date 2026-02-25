@@ -152,6 +152,7 @@ class User extends Authenticatable
                     return false;
                 }
                 $status = $this->roleable->enrollment_status ?? 'Enrolled';
+
                 return strtolower($status) === 'enrolled';
             }
         }

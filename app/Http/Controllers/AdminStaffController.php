@@ -383,6 +383,7 @@ class AdminStaffController extends Controller
                         ->where('staff_id', $user->roleable_id)
                         ->update(['is_active' => $new, 'updated_at' => now()]);
                     $status = $new ? 'activated' : 'deactivated';
+
                     return back()->with('success', "Account has been {$status} successfully.");
                 } elseif ($user->roleable_type === ParentContact::class) {
                     // Handle string roleable_id referencing integer parents.id on pgsql
@@ -402,6 +403,7 @@ class AdminStaffController extends Controller
                         DB::table('parents')->where('id', $pid)->update(['account_status' => $newStatus, 'updated_at' => now()]);
                     }
                     $status = ($newStatus === 'Active') ? 'activated' : 'deactivated';
+
                     return back()->with('success', "Account has been {$status} successfully.");
                 } else {
                     return back()->with('error', 'Role profile not found.');

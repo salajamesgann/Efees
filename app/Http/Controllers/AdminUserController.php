@@ -420,6 +420,7 @@ class AdminUserController extends Controller
             } else {
                 return back()->with('error', 'Cannot toggle status for this user type.');
             }
+
             return back()->with('success', "Account has been {$status} successfully.");
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to update status.');
@@ -438,6 +439,7 @@ class AdminUserController extends Controller
             } else {
                 return back()->with('error', 'Cannot activate this user type.');
             }
+
             return back()->with('success', 'Account has been activated successfully.');
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to activate account.');

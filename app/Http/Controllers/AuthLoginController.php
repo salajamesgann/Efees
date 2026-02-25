@@ -46,6 +46,7 @@ class AuthLoginController extends Controller
             $user = Auth::user();
             if (! $user->is_active) {
                 Auth::logout();
+
                 return back()->withErrors([
                     'email' => 'Your account is inactive.',
                 ])->onlyInput('email');
