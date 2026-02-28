@@ -183,7 +183,7 @@ class AuthLoginController extends Controller
 
                 return [
                     'student_id' => $child->student_id,
-                    'full_name' => $child->full_name,
+                    'full_name' => trim($child->first_name.' '.($child->middle_name ?? '').' '.$child->last_name),
                     'first_name' => $child->first_name,
                     'last_name' => $child->last_name,
                     'level' => $child->level,
@@ -392,7 +392,7 @@ class AuthLoginController extends Controller
             $pendingApprovals = \App\Models\Payment::where('status', 'pending')->sum('amount_paid');
 
             // 2. Pending Outstanding (Outstanding Debt - Matching Reports)
-            $pendingOutstanding = \App\Models\FeeRecord::where('balance', '>', 0)->sum('balance');
+            $pendingOutstanding = max(0.0, (float) \App\Models\FeeRecord::active()->sum('balance'));
 
             // Expected Collection (Total Fees Assigned)
             // Note: This is an estimate. For strict accuracy, sum of all FeeRecords amounts?
@@ -566,9 +566,9 @@ class AuthLoginController extends Controller
         }
 
         // 2. Pending Outstanding (Outstanding Debt)
-        $pendingOutstanding = \App\Models\FeeRecord::whereIn('student_id', $studentIds)
-            ->where('balance', '>', 0)
-            ->sum('balance');
+        $pendingOutstanding = max(0.0, (float) \App\Models\FeeRecord::active()
+            ->whereIn('student_id', $studentIds)
+            ->sum('balance'));
 
         // Calculate expected collection based on fee records total amount if possible,
         // or simplistic approximation: collected + outstanding.

@@ -149,7 +149,7 @@ class StaffDashboardController extends Controller
                 SELECT 
                     s.student_id,
                     COALESCE((SELECT SUM(balance) FROM fee_records fr WHERE fr.student_id = s.student_id AND fr.status != 'cancelled'), 0) as balance,
-                    COALESCE((SELECT SUM(amount_paid) FROM payments p WHERE p.student_id = s.student_id AND (p.status = 'approved' OR p.status IS NULL)), 0) as paid
+                    COALESCE((SELECT SUM(amount_paid) FROM payments p WHERE p.student_id = s.student_id AND (p.status IN ('approved','paid') OR p.status IS NULL)), 0) as paid
                 FROM students s
                 WHERE s.deleted_at IS NULL
             ) as totals

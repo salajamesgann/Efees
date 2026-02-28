@@ -10,6 +10,7 @@ use App\Models\SystemSetting;
 use App\Services\AuditService;
 use App\Services\FeeManagementService;
 use App\Services\PayMongoService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -162,6 +163,11 @@ class ParentPaymentController extends Controller
                 'success_url' => route('parent.pay.success'),
                 'cancel_url' => route('parent.pay.cancel'),
                 'description' => "Payment for Student ID: {$studentId}",
+                'metadata' => [
+                    'student_id' => $studentId,
+                    'amount_paid' => $data['amount_paid'],
+                    'method' => $data['method'],
+                ],
             ]);
 
             $sessionId = $session['data']['id'];
@@ -192,73 +198,57 @@ class ParentPaymentController extends Controller
     {
         $sessionId = session('paymongo_checkout_id');
         $studentId = session('payment_student_id');
+        $amountPaid = session('payment_amount');
+        $method = session('payment_method');
+
+        // Debug logging
+        Log::info('PayMongo Success Callback Started', [
+            'session_id' => $sessionId,
+            'student_id' => $studentId,
+            'amount' => $amountPaid,
+            'method' => $method,
+        ]);
 
         if (! $sessionId || ! $studentId) {
+            Log::error('Payment session missing', [
+                'session_id' => $sessionId,
+                'student_id' => $studentId,
+            ]);
+
             return redirect()->route('parent.pay')->with('error', 'Payment session expired or invalid.');
         }
 
         try {
             // Verify status with PayMongo API
+            Log::info('Retrieving PayMongo session', ['session_id' => $sessionId]);
             $sessionData = $this->payMongoService->retrieveCheckoutSession($sessionId);
-            $paymentStatus = $sessionData['data']['attributes']['payment_status'] ?? 'unpaid';
+            Log::info('PayMongo session data', ['data' => $sessionData]);
 
-            if ($paymentStatus === 'paid') {
+            // Check multiple possible status values
+            $paymentStatus = $sessionData['data']['attributes']['payment_status'] ?? 'unpaid';
+            $paymentIntentData = $sessionData['data']['attributes']['payment_intent'] ?? [];
+            $paymentIntentStatus = is_array($paymentIntentData) && isset($paymentIntentData['attributes']['status']) 
+                ? $paymentIntentData['attributes']['status'] 
+                : '';
+
+            Log::info('Payment status detected', [
+                'payment_status' => $paymentStatus,
+                'payment_intent_status' => $paymentIntentStatus,
+            ]);
+
+            // Accept multiple paid statuses
+            if (in_array($paymentStatus, ['paid', 'succeeded', 'completed']) || in_array($paymentIntentStatus, ['succeeded', 'paid'])) {
+                Log::info('Payment confirmed as paid', [
+                    'status' => $paymentStatus,
+                    'intent_status' => $paymentIntentStatus,
+                    'amount' => $amountPaid,
+                ]);
+
                 $amountPaid = session('payment_amount');
                 $method = session('payment_method');
                 $reference = 'PAYMONGO-'.$sessionId;
 
-                // Process Payment in Transaction
-                DB::transaction(function () use ($studentId, $amountPaid, $method, $reference) {
-                    if ($reference && \App\Models\Payment::where('reference_number', $reference)->exists()) {
-                        $reference = $reference.'-'.substr(md5(uniqid()), 0, 4);
-                    }
-                    // 1. Create Payment Record
-                    $payment = Payment::create([
-                        'student_id' => $studentId,
-                        'amount_paid' => $amountPaid,
-                        'method' => $method,
-                        'reference_number' => $reference,
-                        'remarks' => 'Online Payment via PayMongo',
-                        'paid_at' => now(),
-                    ]);
-
-                    // 2. Generate Receipt
-                    PaymentReceipt::create([
-                        'payment_id' => $payment->id,
-                        'file_url' => 'receipt://'.$payment->id,
-                    ]);
-
-                    // 3. Create Ledger Entry (FeeRecord)
-                    FeeRecord::create([
-                        'student_id' => $studentId,
-                        'record_type' => 'payment',
-                        'amount' => $amountPaid,
-                        'balance' => 0,
-                        'status' => 'paid',
-                        'payment_method' => $method,
-                        'reference_number' => $reference,
-                        'notes' => 'Online Payment via PayMongo',
-                        'payment_date' => now(),
-                    ]);
-
-                    // 4. Distribute payment to unpaid installments
-                    $this->distributePayment($studentId, $amountPaid);
-
-                    // 5. Audit Log
-                    try {
-                        AuditService::log('Online Payment Success', $payment, "Paid via PayMongo ({$method})", null, $payment->toArray());
-                    } catch (\Throwable $e) {
-                    }
-                });
-
-                // Recompute Total Ledger Balance
-                $student = \App\Models\Student::where('student_id', $studentId)->first();
-                if ($student) {
-                    try {
-                        app(FeeManagementService::class)->recomputeStudentLedger($student);
-                    } catch (\Throwable $e) {
-                    }
-                }
+                $this->processSuccessfulPayment($studentId, (float) $amountPaid, (string) $method, $reference);
 
                 // Send Notifications
                 try {
@@ -305,9 +295,127 @@ class ParentPaymentController extends Controller
         }
     }
 
-    /**
-     * Handle Cancel Redirect from PayMongo
-     */
+    public function webhook(Request $request): JsonResponse
+    {
+        $payload = $request->getContent();
+        $signature = $request->header('paymongo-signature') ?? $request->header('Paymongo-Signature');
+        $secret = (string) config('services.paymongo.webhook_secret', '');
+
+        if ($secret !== '' && $signature) {
+            $parts = collect(explode(',', $signature))->mapWithKeys(function ($item) {
+                $kv = explode('=', trim($item), 2);
+                return count($kv) === 2 ? [$kv[0] => $kv[1]] : [];
+            });
+            $timestamp = (string) ($parts['t'] ?? '');
+            $hash = (string) ($parts['v1'] ?? '');
+            if ($timestamp === '' || $hash === '') {
+                return response()->json(['ok' => false], 400);
+            }
+            $expected = hash_hmac('sha256', $timestamp.'.'.$payload, $secret);
+            if (! hash_equals($expected, $hash)) {
+                return response()->json(['ok' => false], 400);
+            }
+        }
+
+        $body = $request->json()->all();
+        $eventType = (string) data_get($body, 'data.attributes.type', '');
+        $eventData = data_get($body, 'data.attributes.data', []);
+        $attributes = data_get($eventData, 'attributes', []);
+        $metadata = data_get($attributes, 'metadata', []);
+
+        $studentId = (string) data_get($metadata, 'student_id', '');
+        if ($studentId === '') {
+            $description = (string) data_get($attributes, 'description', '');
+            if (preg_match('/Student ID:\s*([A-Za-z0-9\-]+)/', $description, $matches)) {
+                $studentId = $matches[1];
+            }
+        }
+
+        $amountPaid = (float) data_get($metadata, 'amount_paid', 0);
+        if ($amountPaid <= 0) {
+            $lineItems = data_get($attributes, 'line_items', []);
+            $sum = 0.0;
+            foreach ($lineItems as $item) {
+                $sum += (float) data_get($item, 'amount', 0);
+            }
+            if ($sum > 0) {
+                $amountPaid = $sum / 100;
+            }
+        }
+
+        $method = (string) data_get($metadata, 'method', 'gcash');
+        $sessionId = (string) data_get($eventData, 'id', '');
+        $reference = $sessionId !== '' ? 'PAYMONGO-'.$sessionId : '';
+
+        if ($eventType !== '' && str_contains($eventType, 'payment.paid') && $studentId !== '' && $amountPaid > 0 && $reference !== '') {
+            $this->processSuccessfulPayment($studentId, $amountPaid, $method, $reference);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function processSuccessfulPayment(string $studentId, float $amountPaid, string $method, string $reference): void
+    {
+        DB::transaction(function () use ($studentId, $amountPaid, $method, $reference) {
+            $payment = Payment::where('reference_number', $reference)->first();
+
+            if (! $payment) {
+                $payment = Payment::create([
+                    'student_id' => $studentId,
+                    'amount_paid' => $amountPaid,
+                    'method' => $method,
+                    'reference_number' => $reference,
+                    'remarks' => 'Online Payment via PayMongo',
+                    'paid_at' => now(),
+                    'status' => 'approved',
+                ]);
+            } elseif ($payment->status !== 'approved') {
+                $payment->status = 'approved';
+                $payment->paid_at = $payment->paid_at ?? now();
+                $payment->save();
+            }
+
+            PaymentReceipt::firstOrCreate(
+                ['payment_id' => $payment->id],
+                ['file_url' => 'receipt://'.$payment->id]
+            );
+
+            $ledgerExists = FeeRecord::where('student_id', $studentId)
+                ->where('record_type', 'payment')
+                ->where('reference_number', $reference)
+                ->exists();
+
+            if (! $ledgerExists) {
+                FeeRecord::create([
+                    'student_id' => $studentId,
+                    'record_type' => 'payment',
+                    'amount' => $amountPaid,
+                    'balance' => 0,
+                    'status' => 'paid',
+                    'payment_method' => $method,
+                    'reference_number' => $reference,
+                    'notes' => 'Online Payment via PayMongo',
+                    'payment_date' => now(),
+                ]);
+
+                $this->distributePayment($studentId, $amountPaid);
+            }
+
+            try {
+                AuditService::log('Online Payment Success', $payment, "Paid via PayMongo ({$method})", null, $payment->toArray());
+            } catch (\Throwable $e) {
+            }
+        });
+
+        $student = \App\Models\Student::where('student_id', $studentId)->first();
+        if ($student) {
+            try {
+                app(FeeManagementService::class)->recomputeStudentLedger($student);
+            } catch (\Throwable $e) {
+            }
+        }
+    }
+
     public function cancel(): RedirectResponse
     {
         return redirect()->route('parent.pay')->with('info', 'Payment cancelled by user.');

@@ -146,9 +146,10 @@ class Student extends Model
      */
     public function getCurrentBalanceAttribute()
     {
-        return $this->feeRecords()
-            ->where('status', '!=', 'cancelled')
-            ->sum('balance');
+        $svc = app(\App\Services\FeeManagementService::class);
+        $totals = $svc->computeTotalsForStudent($this);
+
+        return (float) ($totals['remainingBalance'] ?? 0.0);
     }
 
     /**
@@ -156,7 +157,20 @@ class Student extends Model
      */
     public function getTotalPaidAttribute()
     {
-        return $this->payments()->sum('amount_paid');
+        return $this->payments()
+            ->where(function ($q) {
+                $q->whereIn('status', ['approved', 'paid'])
+                    ->orWhereNull('status');
+            })
+            ->sum('amount_paid');
+    }
+
+    /**
+     * Get the student's full name.
+     */
+    public function getFullNameAttribute()
+    {
+        return trim($this->first_name.' '.($this->middle_name ?? '').' '.$this->last_name);
     }
 
     /**

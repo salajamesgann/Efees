@@ -128,6 +128,14 @@
                 <span class="text-sm font-medium">SMS Control</span>
             </a>
 
+            <!-- Requests -->
+            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.requests.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.requests.index') }}">
+                <div class="w-8 flex justify-center">
+                    <i class="fas fa-key text-lg {{ request()->routeIs('admin.requests.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+                </div>
+                <span class="text-sm font-medium">Requests</span>
+            </a>
+
             <!-- Settings -->
             <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.settings.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.settings.index') }}">
                 <div class="w-8 flex justify-center">
@@ -237,10 +245,6 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Lockout Minutes</label>
                     <input type="number" min="1" max="1440" name="lockout_minutes" value="{{ old('lockout_minutes', optional($settings['lockout_minutes'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. 15" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Password Expiry Days</label>
-                    <input type="number" min="7" max="365" name="password_expiry_days" value="{{ old('password_expiry_days', optional($settings['password_expiry_days'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. 90" />
                 </div>
             </div>
         </div>

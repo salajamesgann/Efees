@@ -340,7 +340,7 @@
                                                 </div>
                                                 <div class="flex items-center gap-3">
                                                      <span class="text-sm font-bold text-green-600">-₱{{ number_format($discount->pivot->applied_amount ?? 0, 2) }}</span>
-                                                     <form action="{{ route('admin.enrollment.discounts.destroy', ['student' => $student, 'discount' => $discount]) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this discount?');">
+                                                     <form action="{{ route('admin.enrollment.discounts.destroy', ['student' => $student, 'discount' => $discount]) }}" method="POST" onsubmit="return confirmDeleteDiscount('{{ $discount->discount_name }}');">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit" class="text-gray-400 hover:text-red-500 transition-colors p-1" title="Remove Discount">
@@ -495,5 +495,11 @@
             </div>
         </main>
     </div>
+
+    <script>
+        function confirmDeleteDiscount(discountName) {
+            return confirm(`Are you sure you want to remove the "${discountName}" discount?\n\nThis action cannot be undone and will recalculate the student's total fees.`);
+        }
+    </script>
 </body>
 </html>

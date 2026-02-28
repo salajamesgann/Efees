@@ -240,10 +240,10 @@
                                 <div>
                                     <h3 class="font-bold text-lg text-gray-900">{{ $child['full_name'] }}</h3>
                                     <p class="text-sm text-gray-500">
-                                        {{ $child['level'] ?? 'N/A' }} • {{ $child['section'] ?? 'N/A' }}
+                                        {{ $child['full_name'] }} • {{ $child['level'] ?? 'N/A' }} • {{ $child['section'] ?? 'N/A' }}
                                     </p>
                                 </div>
-                                <div class="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm border border-blue-200">
+                                <div class="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 font-bold text-sm border border-gray-200">
                                     {{ substr($child['first_name'], 0, 1) }}{{ substr($child['last_name'], 0, 1) }}
                                 </div>
                             </div>

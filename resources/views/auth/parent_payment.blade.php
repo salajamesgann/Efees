@@ -42,7 +42,7 @@
                                 <option value="">Select a student</option>
                                 @foreach($students as $s)
                                     <option value="{{ $s->student_id }}" {{ (old('student_id') == $s->student_id || (isset($selectedStudentId) && $selectedStudentId == $s->student_id)) ? 'selected' : '' }}>
-                                        {{ $s->full_name }} ({{ $s->level }})
+                                        {{ $s->full_name }} ({{ $s->level }} • {{ $s->section }})
                                     </option>
                                 @endforeach
                             </select>

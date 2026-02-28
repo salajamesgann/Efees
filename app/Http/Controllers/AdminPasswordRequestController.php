@@ -4,16 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Models\PasswordResetRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
 
 class AdminPasswordRequestController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $requests = PasswordResetRequest::orderBy('created_at', 'desc')->paginate(10);
+        $query = PasswordResetRequest::query();
 
-        return view('auth.admin_password_requests', compact('requests'));
+        // Search by email
+        if ($search = $request->input('search')) {
+            $query->where('email', 'like', '%'.$search.'%');
+        }
+
+        // Filter by status
+        if ($status = $request->input('status')) {
+            $query->where('status', $status);
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')->paginate(10);
+
+        return view('auth.admin_password_requests', compact('requests'))
+            ->with('request', $request); // Pass request to view for form values
     }
 
     public function approve(PasswordResetRequest $request): RedirectResponse

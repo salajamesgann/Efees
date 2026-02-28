@@ -136,7 +136,7 @@ class FeeManagementService
 
                 $paidAmount = (float) \App\Models\Payment::where('student_id', $student->student_id)
                     ->where(function ($q) {
-                        $q->where('status', 'approved')
+                        $q->whereIn('status', ['approved', 'paid'])
                             ->orWhereNull('status');
                     })
                     ->sum('amount_paid');
@@ -152,13 +152,15 @@ class FeeManagementService
                     ->where('record_type', '!=', 'tuition_total')
                     ->sum('balance');
 
+                $expectedBalance = max(0.0, (float) $assignment->total_amount - $paidAmount + $penaltiesTotal);
+
                 if (\App\Models\FeeRecord::where('student_id', $student->student_id)->where('record_type', '!=', 'tuition_total')->doesntExist()) {
-                    $remainingBalance = max(0.0, (float) $assignment->total_amount - $paidAmount + $penaltiesTotal);
+                    $remainingBalance = $expectedBalance;
                 } else {
-                    // Check if ledger seems to be missing the base tuition (e.g. balance is negative or too low compared to assignment)
-                    // This handles cases where only adjustments (discounts/charges) are in FeeRecords but base tuition isn't.
                     if ($ledgerBalance < 0 || ($assignment->total_amount > 0 && $ledgerBalance < $assignment->total_amount * 0.1)) {
-                        $remainingBalance = max(0.0, (float) $assignment->total_amount - $paidAmount + $penaltiesTotal);
+                        $remainingBalance = $expectedBalance;
+                    } elseif ($ledgerBalance > $expectedBalance + 0.01) {
+                        $remainingBalance = $expectedBalance;
                     } else {
                         $remainingBalance = $ledgerBalance;
                     }
@@ -270,7 +272,7 @@ class FeeManagementService
         // Calculate Real-time Payments and Balance from Ledger/Payments
         $paidAmount = (float) \App\Models\Payment::where('student_id', $student->student_id)
             ->where(function ($q) {
-                $q->where('status', 'approved')
+                $q->whereIn('status', ['approved', 'paid'])
                     ->orWhereNull('status');
             })
             ->sum('amount_paid');
@@ -291,11 +293,16 @@ class FeeManagementService
             ->where('record_type', '!=', 'tuition_total')
             ->sum('balance');
 
-        // If no fee records exist yet (fresh student), balance is totalAmount
+        $expectedBalance = max(0.0, $totalAmount - $paidAmount);
+
         if (\App\Models\FeeRecord::where('student_id', $student->student_id)->where('record_type', '!=', 'tuition_total')->doesntExist()) {
-            $remainingBalance = max(0.0, $totalAmount - $paidAmount);
+            $remainingBalance = $expectedBalance;
         } else {
-            $remainingBalance = $ledgerBalance;
+            if ($ledgerBalance > $expectedBalance + 0.01) {
+                $remainingBalance = $expectedBalance;
+            } else {
+                $remainingBalance = $ledgerBalance;
+            }
         }
 
         return [

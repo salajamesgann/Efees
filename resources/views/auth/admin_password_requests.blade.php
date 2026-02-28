@@ -173,6 +173,46 @@
                     </div>
                 </div>
 
+                <!-- Search and Filter Section -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <form method="GET" action="{{ route('admin.requests.index') }}" class="flex flex-col sm:flex-row gap-4">
+                        <!-- Search Bar -->
+                        <div class="flex-1">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-slate-400"></i>
+                                </div>
+                                <input type="text" 
+                                       name="search" 
+                                       value="{{ request()->input('search') }}" 
+                                       placeholder="Search by email..." 
+                                       class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                        
+                        <!-- Status Filter -->
+                        <div class="sm:w-48">
+                            <select name="status" 
+                                    class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Status</option>
+                                <option value="pending" {{ request()->input('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                                <option value="approved" {{ request()->input('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                                <option value="rejected" {{ request()->input('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Search Button -->
+                        <div class="flex gap-2">
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium transition-colors">
+                                <i class="fas fa-search mr-2"></i>Search
+                            </button>
+                            <a href="{{ route('admin.requests.index') }}" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 text-sm font-medium transition-colors">
+                                <i class="fas fa-times mr-2"></i>Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
                 @if(session('success'))
                     <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
                         <i class="fas fa-check-circle"></i>

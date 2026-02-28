@@ -170,16 +170,13 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 p-6 md:p-8 overflow-y-auto custom-scrollbar" x-data="{ showScheduleModal: false }">
+        <main class="flex-1 p-6 md:p-8 overflow-y-auto custom-scrollbar">
         <div class="flex items-center justify-between mb-8">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
                 <p class="text-gray-500 mt-1">Monitor fees, collections, and student financial status.</p>
             </div>
             <div class="flex gap-3">
-                <button @click="showScheduleModal = true" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium flex items-center gap-2">
-                    <i class="fas fa-clock"></i> Schedule Report
-                </button>
                 <form method="POST" action="{{ route('admin.reports.export.csv') }}">
                     @csrf
                     <!-- Pass current filters to export -->
@@ -499,35 +496,6 @@
             </div>
         </div>
     </main>
-
-    <!-- Schedule Modal -->
-    <div x-show="showScheduleModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6" @click.away="showScheduleModal = false">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-900">Schedule Automatic Report</h3>
-                <button @click="showScheduleModal = false" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
-            </div>
-            <form method="POST" action="{{ route('admin.reports.schedule') }}">
-                @csrf
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
-                    <select name="frequency" class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-                <div class="bg-blue-50 p-3 rounded-lg text-sm text-blue-700 mb-6">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Report will include all student data filtered by the current parameters.
-                </div>
-                <div class="flex justify-end gap-3">
-                    <button type="button" @click="showScheduleModal = false" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Schedule Report</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

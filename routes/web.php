@@ -31,6 +31,8 @@ Route::post('forgot-password', [App\Http\Controllers\ForgotPasswordController::c
 Route::get('reset-password/{token}', [App\Http\Controllers\ForgotPasswordController::class, 'showResetForm'])->name('password.reset');
 Route::post('reset-password', [App\Http\Controllers\ForgotPasswordController::class, 'reset'])->name('password.update');
 
+Route::post('/webhooks/paymongo', [\App\Http\Controllers\ParentPaymentController::class, 'webhook'])->name('webhooks.paymongo');
+
 // Protected Routes
 Route::middleware('auth')->group(function () {
     Route::get('/change-password', [AuthLoginController::class, 'changePassword'])->name('auth.password.change');

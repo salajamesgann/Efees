@@ -49,6 +49,8 @@ class PayMongoService
      */
     public function retrieveCheckoutSession(string $sessionId)
     {
+        Log::info('PayMongo API Call: Retrieve Session', ['session_id' => $sessionId]);
+
         $response = Http::withBasicAuth($this->secretKey, '')
             ->withHeaders([
                 'Content-Type' => 'application/json',
@@ -56,11 +58,20 @@ class PayMongoService
             ])
             ->get("{$this->baseUrl}/checkout_sessions/{$sessionId}");
 
+        Log::info('PayMongo API Response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'failed' => $response->failed(),
+        ]);
+
         if ($response->failed()) {
             Log::error('PayMongo Retrieve Session Failed: '.$response->body());
             throw new \Exception('Failed to retrieve payment session.');
         }
 
-        return $response->json();
+        $result = $response->json();
+        Log::info('PayMongo Parsed Response', ['data' => $result]);
+
+        return $result;
     }
 }

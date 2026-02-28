@@ -6,62 +6,10 @@ use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AdminStaffCreateParentTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Manual Schema Setup to avoid broken migrations
-        Schema::create('users', function ($table) {
-            $table->increments('user_id');
-            $table->string('email');
-            $table->string('password');
-            $table->integer('role_id')->nullable();
-            $table->string('roleable_type')->nullable();
-            $table->string('roleable_id')->nullable();
-            $table->rememberToken();
-            // $table->timestamps(); // Matches User model $timestamps = false;
-        });
-
-        Schema::create('roles', function ($table) {
-            $table->increments('role_id');
-            $table->string('role_name');
-            $table->string('description')->nullable();
-        });
-
-        Schema::create('staff', function ($table) {
-            $table->string('staff_id')->primary();
-            $table->string('first_name');
-            $table->string('MI')->nullable();
-            $table->string('last_name');
-            $table->string('contact_number')->nullable();
-            $table->string('department')->nullable();
-            $table->string('position')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
-
-        Schema::create('parents', function ($table) {
-            $table->increments('id');
-            $table->string('full_name');
-            $table->string('phone')->nullable();
-            $table->string('phone_secondary')->nullable();
-            $table->string('email')->nullable();
-            $table->string('address_street')->nullable();
-            $table->string('address_barangay')->nullable();
-            $table->string('address_city')->nullable();
-            $table->string('address_province')->nullable();
-            $table->string('address_zip')->nullable();
-            $table->string('account_status')->default('Active');
-            $table->timestamp('archived_at')->nullable();
-            $table->timestamps();
-        });
-    }
-
     public function test_admin_can_create_parent_account_via_staff_creation_form()
     {
         // 1. Create Admin User

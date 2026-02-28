@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Ledger - {{ $student->full_name }}</title>
+    <title>Student Ledger - {{ $student->first_name }} {{ $student->last_name }}</title>
     <style>
         @media print {
             @page { margin: 1.5cm; }
@@ -55,7 +55,7 @@
         </tr>
         <tr>
             <td class="label-cell">Name:</td>
-            <td class="value-cell" colspan="6">{{ $student->full_name }}</td>
+            <td class="value-cell" colspan="6">{{ $student->first_name }} {{ $student->last_name }}</td>
         </tr>
         <tr>
             <td class="label-cell">Grade &amp; Section:</td>

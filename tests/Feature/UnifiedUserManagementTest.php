@@ -7,73 +7,10 @@ use App\Models\Role;
 use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class UnifiedUserManagementTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Manual Schema Setup to avoid broken migrations
-        // Users Table
-        if (! Schema::hasTable('users')) {
-            Schema::create('users', function ($table) {
-                $table->increments('user_id');
-                $table->string('email');
-                $table->string('password');
-                $table->integer('role_id')->nullable();
-                $table->string('roleable_type')->nullable();
-                $table->string('roleable_id')->nullable();
-                $table->rememberToken();
-            });
-        }
-
-        // Roles Table
-        if (! Schema::hasTable('roles')) {
-            Schema::create('roles', function ($table) {
-                $table->increments('role_id');
-                $table->string('role_name');
-                $table->string('description')->nullable();
-            });
-        }
-
-        // Staff Table
-        if (! Schema::hasTable('staff')) {
-            Schema::create('staff', function ($table) {
-                $table->string('staff_id')->primary();
-                $table->string('first_name');
-                $table->string('MI')->nullable();
-                $table->string('last_name');
-                $table->string('contact_number')->nullable();
-                $table->string('department')->nullable();
-                $table->string('position')->nullable();
-                $table->boolean('is_active')->default(true);
-                $table->timestamps();
-            });
-        }
-
-        // Parents Table
-        if (! Schema::hasTable('parents')) {
-            Schema::create('parents', function ($table) {
-                $table->increments('id');
-                $table->string('full_name');
-                $table->string('phone')->nullable();
-                $table->string('phone_secondary')->nullable();
-                $table->string('email')->nullable();
-                $table->string('address_street')->nullable();
-                $table->string('address_barangay')->nullable();
-                $table->string('address_city')->nullable();
-                $table->string('address_province')->nullable();
-                $table->string('address_zip')->nullable();
-                $table->string('account_status')->default('Active');
-                $table->timestamp('archived_at')->nullable();
-                $table->timestamps();
-            });
-        }
-    }
-
     public function test_admin_can_view_unified_user_list_containing_staff_and_parents()
     {
         // 1. Create Roles

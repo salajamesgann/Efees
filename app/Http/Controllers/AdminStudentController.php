@@ -490,7 +490,7 @@ class AdminStudentController extends Controller
             // New Parent Fields
             'parent_guardian_name' => ['required_if:parent_mode,new', 'nullable', 'string', 'max:255'],
             'parent_contact_number' => ['required_if:parent_mode,new', 'nullable', 'string', 'min:11', 'max:11', 'unique:parents,phone'],
-            'parent_email' => ['nullable', 'email', 'max:255'],
+            'parent_email' => ['required_if:parent_mode,new', 'nullable', 'email', 'max:255'],
             'parent_password' => ['required_if:parent_mode,new', 'nullable', 'string', 'min:6'],
             'parent_address' => ['nullable', 'string', 'max:500'],
             'relationship' => ['required', 'string', 'max:50'],
@@ -581,13 +581,13 @@ class AdminStudentController extends Controller
                 $parentPassword = $validated['parent_password'];
                 $parentRole = \App\Models\Role::firstOrCreate(['role_name' => 'parent'], ['description' => 'Parent']);
 
-                // Username is phone (or email if phone missing, but phone is required)
-                $username = $parentPhone;
+                // Username is email if provided, otherwise phone (but email is preferred for login)
+                $username = ! empty($parentEmail) ? $parentEmail : $parentPhone;
 
                 // Check if user exists (shouldn't if validation passed, but safety check)
                 if (! \App\Models\User::where('email', $username)->exists()) {
                     \App\Models\User::create([
-                        'email' => $username, // Using phone as username/email field for login
+                        'email' => $username, // Using email as username/email field for login
                         'password' => Hash::make($parentPassword),
                         'must_change_password' => true,
                         'role_id' => $parentRole->role_id,
@@ -722,7 +722,7 @@ class AdminStudentController extends Controller
                     }
                 },
             ],
-            'parent_email' => ['nullable', 'email', 'max:255'],
+            'parent_email' => ['required_if:parent_mode,new', 'nullable', 'email', 'max:255'],
             'parent_password' => ['nullable', 'required_if:parent_mode,new', 'string', 'min:6'],
             'parent_address' => ['nullable', 'string', 'max:500'],
             'is_primary_contact' => ['nullable', 'boolean'],
@@ -827,7 +827,9 @@ class AdminStudentController extends Controller
                 // Create User Account
                 $parentPassword = $validated['parent_password'] ?? \Illuminate\Support\Str::random(10);
                 $parentRole = \App\Models\Role::firstOrCreate(['role_name' => 'parent'], ['description' => 'Parent']);
-                $username = $validated['parent_contact_number'];
+                $parentEmail = $validated['parent_email'] ?? null;
+                $parentPhone = $validated['parent_contact_number'];
+                $username = ! empty($parentEmail) ? $parentEmail : $parentPhone;
 
                 if (! \App\Models\User::where('email', $username)->exists()) {
                     \App\Models\User::create([
