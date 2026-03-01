@@ -238,8 +238,12 @@ class AdminStaffController extends Controller
                             // Create password reset token
                             $token = Password::createToken($user);
                             
-                            // Generate reset URL
+                            // Generate reset URL with production domain
                             $resetUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
+                            
+                            // Fix for production: Replace local URL with production URL
+                            $resetUrl = str_replace('http://127.0.0.1:8000', 'https://efees.site', $resetUrl);
+                            $resetUrl = str_replace('http://localhost', 'https://efees.site', $resetUrl);
                             
                             // Send email with reset link
                             Mail::send('auth.emails.parent-account-created', [
