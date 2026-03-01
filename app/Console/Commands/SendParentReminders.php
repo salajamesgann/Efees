@@ -131,7 +131,10 @@ class SendParentReminders extends Command
             $emailEnabled = $prefs->email_notifications ?? false;
 
             foreach ($parent->students as $student) {
-                $balance = $student->feeRecords()->sum('balance');
+                // Use Net Payable (totalAmount - paidAmount)
+                $svc = app(\App\Services\FeeManagementService::class);
+                $totals = $svc->computeTotalsForStudent($student);
+                $balance = max(0.0, ((float) ($totals['totalAmount'] ?? 0)) - ((float) ($totals['paidAmount'] ?? 0)));
 
                 if ($balance > 0) {
                     // Create In-App Notification

@@ -128,17 +128,33 @@ class Student extends Model
      */
     public function getCurrentFeeAssignment($schoolYear = null, $semester = null)
     {
-        $query = $this->feeAssignments();
+        $query = $this->feeAssignments()->with('tuitionFee')->orderByDesc('created_at');
 
-        if ($schoolYear) {
-            $query->where('school_year', $schoolYear);
+        $sy = $schoolYear ?: ($this->school_year ?? null);
+        if ($sy) {
+            $query->where('school_year', $sy);
         }
 
         if ($semester) {
             $query->where('semester', $semester);
         }
 
-        return $query->first();
+        // Prefer assignments whose tuition fee matches student's current grade
+        $query->where(function ($q) {
+            $q->whereHas('tuitionFee', function ($tq) {
+                $tq->where('grade_level', $this->level);
+            })->orWhereNull('tuition_fee_id');
+        });
+
+        $assignment = $query->first();
+
+        // If no tuition fee exists for this grade/year, ignore any stale assignment
+        $hasTuition = \App\Models\TuitionFee::active()->forGrade($this->level)->where('school_year', $sy)->exists();
+        if (! $hasTuition) {
+            return null;
+        }
+
+        return $assignment;
     }
 
     /**

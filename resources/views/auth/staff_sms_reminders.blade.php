@@ -241,7 +241,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-gray-500">{{ $student->strand ?? 'N/A' }}</td>
-                                    <td class="px-6 py-4 font-bold text-red-600">₱{{ number_format($student->feeRecords->sum('balance'), 2) }}</td>
+                                    <td class="px-6 py-4 font-bold text-red-600">₱{{ number_format(($netById[$student->student_id] ?? $student->feeRecords->sum('balance')), 2) }}</td>
                                     @php
                                         $mobileNumber = 'N/A';
                                         if ($student->parents && $student->parents->isNotEmpty()) {

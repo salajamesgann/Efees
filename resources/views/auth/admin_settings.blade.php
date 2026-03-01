@@ -209,30 +209,6 @@
                            {{ (optional($settings['notifications_enabled'] ?? null)->value == '1') ? 'checked' : '' }} />
                 </div>
             </div>
-
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-700">Maintenance mode</p>
-                    <p class="text-xs text-gray-500 mt-1">When enabled, non-admin users are limited to view-only access.</p>
-                </div>
-                <div>
-                    <input type="checkbox" id="maintenance_mode" name="maintenance_mode" value="1"
-                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                           {{ (optional($settings['maintenance_mode'] ?? null)->value == '1') ? 'checked' : '' }} />
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-700">Allow staff to edit fee records</p>
-                    <p class="text-xs text-gray-500 mt-1">When disabled, staff accounts can only view fee information and cannot approve or modify fees.</p>
-                </div>
-                <div>
-                    <input type="checkbox" id="allow_staff_edit_fees" name="allow_staff_edit_fees" value="1"
-                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                           {{ (optional($settings['allow_staff_edit_fees'] ?? null)->value == '1') ? 'checked' : '' }} />
-                </div>
-            </div>
         </div>
 
         <div class="mb-6 pt-4 border-t border-gray-200 space-y-4">
@@ -285,6 +261,8 @@
             </button>
         </form>
     </section>
+
+    <!-- Maintenance tools removed per request -->
 </main>
 </body>
 </html>

@@ -17,6 +17,7 @@ class FeeManagementService
     public function computeTotalsForStudent(Student $student): array
     {
         \App\Models\Discount::ensureSiblingDefaults();
+        \App\Models\Discount::ensureAcademicScholarExclusive();
 
         $tuitionFee = TuitionFee::active()->forGrade($student->level)->first();
 
@@ -34,7 +35,53 @@ class FeeManagementService
                     ->first();
             }
 
+            // If still no assignment exists, create one now to keep totals and ledger consistent
+            if (! $assignment) {
+                try {
+                    $assignment = FeeAssignment::assignForStudent(
+                        $student->student_id,
+                        $student->school_year ?? ($tuitionFee->school_year ?: 'N/A'),
+                        $tuitionFee->semester ?? 'N/A'
+                    );
+                } catch (\Throwable $e) {
+                    // Fall through to theoretical calculation if creation fails
+                    $assignment = null;
+                }
+            }
+
             if ($assignment) {
+                // Ensure additional charges are attached to assignment (fallback for older tuition records)
+                try {
+                    if ($assignment->additionalCharges()->count() === 0 && $assignment->tuitionFee) {
+                        $tf = $assignment->tuitionFee;
+                        $chargeIds = [];
+                        if (! empty($tf->default_charge_ids)) {
+                            $chargeIds = (array) $tf->default_charge_ids;
+                        } else {
+                            // Map tuition_fee_charges -> additional_charges by name/amount
+                            $tfCharges = $tf->charges()->get(['name','amount']);
+                            if ($tfCharges->isNotEmpty()) {
+                                $names = $tfCharges->pluck('name')->filter()->values()->all();
+                                $candidates = \App\Models\AdditionalCharge::active()
+                                    ->whereIn('charge_name', $names)
+                                    ->get();
+                                foreach ($tfCharges as $c) {
+                                    $match = $candidates->first(function ($cand) use ($c) {
+                                        return strcasecmp((string) $cand->charge_name, (string) $c->name) === 0
+                                            && abs((float) $cand->amount - (float) $c->amount) < 0.01;
+                                    });
+                                    if ($match) {
+                                        $chargeIds[] = $match->id;
+                                    }
+                                }
+                            }
+                        }
+                        if (! empty($chargeIds)) {
+                            $assignment->additionalCharges()->syncWithoutDetaching($chargeIds);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                }
                 $existingDiscounts = $assignment->discounts()->get();
                 $manualDiscountIds = $existingDiscounts->filter(function ($discount) {
                     return ! $discount->is_automatic;
@@ -47,15 +94,25 @@ class FeeManagementService
 
                 $defaultDiscounts = collect();
                 if ($assignment->tuitionFee && ! empty($assignment->tuitionFee->default_discount_ids)) {
+                    // Only consider defaults that are also automatic; exclude Academic Scholar by name
                     $defaultDiscounts = Discount::active()
                         ->whereIn('id', $assignment->tuitionFee->default_discount_ids)
-                        ->get();
+                        ->get()
+                        ->filter(function ($d) {
+                            $name = strtolower(trim((string) $d->discount_name));
+                            return $d->is_automatic && strpos($name, 'academic scholar') === false;
+                        });
                 }
 
                 $eligibleDiscounts = $automaticDiscounts->merge($defaultDiscounts)
                     ->unique('id')
                     ->filter(function ($discount) use ($student) {
                         return $discount->isEligibleForStudent($student) && $discount->isCurrentlyValid();
+                    })
+                    ->reject(function ($d) {
+                        // Ensure Academic Scholar variants are never auto-attached
+                        $name = strtolower(trim((string) $d->discount_name));
+                        return strpos($name, 'academic scholar') !== false;
                     });
 
                 foreach ($eligibleDiscounts as $discount) {
@@ -134,6 +191,38 @@ class FeeManagementService
                     }
                 }
 
+                // Ensure ledger 'tuition_total' reflects assignment total; skip if installment records exist
+                try {
+                    $hasInstallments = \App\Models\FeeRecord::where('student_id', $student->student_id)
+                        ->whereIn('record_type', ['tuition_installment', 'tuition_base'])
+                        ->exists();
+                    if (! $hasInstallments) {
+                        $currentTotal = (float) $assignment->total_amount;
+                        $paidAmount = (float) \App\Models\Payment::where('student_id', $student->student_id)
+                            ->where(function ($q) {
+                                $q->whereIn('status', ['approved', 'paid'])
+                                    ->orWhereNull('status');
+                            })
+                            ->sum('amount_paid');
+                        $record = \App\Models\FeeRecord::firstOrNew([
+                            'student_id' => $student->student_id,
+                            'record_type' => 'tuition_total',
+                        ]);
+                        $expectedBalance = max(0.0, $currentTotal - $paidAmount);
+                        if (abs(((float) ($record->amount ?? 0)) - $currentTotal) > 0.009 || abs(((float) ($record->balance ?? 0)) - $expectedBalance) > 0.009) {
+                            $record->amount = $currentTotal;
+                            $record->balance = $expectedBalance;
+                            $record->status = $expectedBalance > 0 ? 'pending' : 'paid';
+                            $record->notes = 'System recalculated';
+                            if (\Illuminate\Support\Facades\Schema::hasColumn('fee_records', 'payment_date') && ! $record->payment_date) {
+                                $record->payment_date = now()->addDays(30);
+                            }
+                            $record->save();
+                        }
+                    }
+                } catch (\Throwable $e) {
+                }
+
                 $paidAmount = (float) \App\Models\Payment::where('student_id', $student->student_id)
                     ->where(function ($q) {
                         $q->whereIn('status', ['approved', 'paid'])
@@ -153,18 +242,7 @@ class FeeManagementService
                     ->sum('balance');
 
                 $expectedBalance = max(0.0, (float) $assignment->total_amount - $paidAmount + $penaltiesTotal);
-
-                if (\App\Models\FeeRecord::where('student_id', $student->student_id)->where('record_type', '!=', 'tuition_total')->doesntExist()) {
-                    $remainingBalance = $expectedBalance;
-                } else {
-                    if ($ledgerBalance < 0 || ($assignment->total_amount > 0 && $ledgerBalance < $assignment->total_amount * 0.1)) {
-                        $remainingBalance = $expectedBalance;
-                    } elseif ($ledgerBalance > $expectedBalance + 0.01) {
-                        $remainingBalance = $expectedBalance;
-                    } else {
-                        $remainingBalance = $ledgerBalance;
-                    }
-                }
+                $remainingBalance = $expectedBalance;
 
                 return [
                     'baseTuition' => (float) $assignment->base_tuition,
@@ -179,15 +257,51 @@ class FeeManagementService
         }
 
         // 2. Generic Calculation (Fallback)
+        // If there is no active tuition fee for this grade, do not show theoretical totals
+        if (! $tuitionFee) {
+            return [
+                'baseTuition' => 0.0,
+                'chargesTotal' => 0.0,
+                'discountsTotal' => 0.0,
+                'totalAmount' => 0.0,
+                'paidAmount' => 0.0,
+                'penaltiesTotal' => 0.0,
+                'remainingBalance' => 0.0,
+            ];
+        }
         $baseTuition = $tuitionFee ? (float) $tuitionFee->amount : 0.0;
 
         $additionalCharges = AdditionalCharge::active()->applicableToGrade($student->level)->get();
         $chargesTotal = (float) $additionalCharges->sum('amount');
 
-        $discounts = Discount::active()->applicableToGrade($student->level)->orderBy('priority', 'desc')->get()
+        $automaticDiscounts = Discount::active()
+            ->automatic()
+            ->applicableToGrade($student->level)
+            ->orderBy('priority', 'desc')
+            ->get();
+        $defaultDiscounts = collect();
+        if ($tuitionFee && ! empty($tuitionFee->default_discount_ids)) {
+            $defaultDiscounts = Discount::active()
+                ->whereIn('id', $tuitionFee->default_discount_ids)
+                ->get();
+        }
+        $discounts = $automaticDiscounts
+            ->merge($defaultDiscounts)
+            ->unique('id')
             ->filter(function ($discount) use ($student) {
                 return $discount->isEligibleForStudent($student) && $discount->isCurrentlyValid();
             });
+        // Ensure Academic Scholar is not automatically applied in fallback path
+        $discounts = $discounts->reject(function ($d) {
+            $name = strtolower(trim((string) $d->discount_name));
+            return strpos($name, 'academic scholar') !== false;
+        });
+        if ($student->is_shs_voucher) {
+            $discounts = $discounts->reject(function ($d) {
+                return strcasecmp(trim((string) $d->discount_name), 'Sibling Discount') === 0
+                    || collect($d->eligibility_rules)->contains('field', 'sibling_rank');
+            });
+        }
 
         $remainingTuition = $baseTuition;
 
@@ -294,16 +408,7 @@ class FeeManagementService
             ->sum('balance');
 
         $expectedBalance = max(0.0, $totalAmount - $paidAmount);
-
-        if (\App\Models\FeeRecord::where('student_id', $student->student_id)->where('record_type', '!=', 'tuition_total')->doesntExist()) {
-            $remainingBalance = $expectedBalance;
-        } else {
-            if ($ledgerBalance > $expectedBalance + 0.01) {
-                $remainingBalance = $expectedBalance;
-            } else {
-                $remainingBalance = $ledgerBalance;
-            }
-        }
+        $remainingBalance = $expectedBalance;
 
         return [
             'baseTuition' => $baseTuition,
@@ -411,16 +516,10 @@ class FeeManagementService
         // This will exist alongside adjustments (discounts/charges).
         $paidAmount = $totals['paidAmount'];
 
-        // We want the summary record to represent the base tuition + standard charges - standard discounts.
-        // Specific adjustments (type 'adjustment') are separate records in the ledger.
+        // The tuition_total record should match the assignment total amount,
+        // and the balance equals (total - paid). Adjustments remain separate records.
         $theoreticalTotal = (float) $totals['totalAmount'];
-
-        // Subtract the amount already covered by adjustment records to avoid double counting
-        $adjustmentSum = (float) FeeRecord::where('student_id', $student->student_id)
-            ->where('record_type', 'adjustment')
-            ->sum('balance');
-
-        $baseBalance = max(0.0, $theoreticalTotal - $adjustmentSum - $paidAmount);
+        $baseBalance = max(0.0, $theoreticalTotal - $paidAmount);
         $status = $baseBalance > 0 ? 'pending' : 'paid';
 
         $record = FeeRecord::firstOrNew([
@@ -428,7 +527,7 @@ class FeeManagementService
             'record_type' => 'tuition_total',
         ]);
 
-        $record->amount = max(0.0, $theoreticalTotal - $adjustmentSum);
+        $record->amount = max(0.0, $theoreticalTotal);
         $record->balance = $baseBalance;
         $record->status = $status;
         $record->notes = 'System recalculated';

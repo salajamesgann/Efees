@@ -189,7 +189,7 @@
                                 </div>
                             </div>
                             
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 pt-6 border-t border-gray-100">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-gray-100">
                                 <div class="space-y-1">
                                     <p class="text-xs text-gray-500 uppercase font-bold tracking-wide">Grade & Section</p>
                                     <p class="font-medium text-gray-900">{{ $student->level }} - {{ $student->section }}</p>
@@ -200,10 +200,6 @@
                                 <div class="space-y-1">
                                     <p class="text-xs text-gray-500 uppercase font-bold tracking-wide">School Year</p>
                                     <p class="font-medium text-gray-900">{{ $student->school_year ?? 'N/A' }}</p>
-                                </div>
-                                <div class="space-y-1">
-                                    <p class="text-xs text-gray-500 uppercase font-bold tracking-wide">Contact Email</p>
-                                    <p class="font-medium text-gray-900 break-all">{{ $student->user->email ?? 'N/A' }}</p>
                                 </div>
                             </div>
                         </div>

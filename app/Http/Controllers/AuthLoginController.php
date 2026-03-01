@@ -384,6 +384,19 @@ class AuthLoginController extends Controller
             $recentTransactions = collect();
             $pendingPayments = collect();
         } else {
+            // Reconcile ledger for students in active School Year so metrics reflect assignment totals
+            try {
+                $svc = app(\App\Services\FeeManagementService::class);
+                if ($activeSy) {
+                    \App\Models\Student::where('school_year', $activeSy)->get(['student_id'])->each(function ($s) use ($svc) {
+                        try {
+                            $svc->recomputeStudentLedger($s);
+                        } catch (\Throwable $e) {
+                        }
+                    });
+                }
+            } catch (\Throwable $e) {
+            }
             // 1. Total Collected (This Month vs Last Month)
             $totalCollected = \App\Models\Payment::where('paid_at', '>=', $startOfMonth)->sum('amount_paid');
             $prevTotalCollected = \App\Models\Payment::whereBetween('paid_at', [$startOfLastMonth, $endOfLastMonth])->sum('amount_paid');
@@ -391,8 +404,15 @@ class AuthLoginController extends Controller
             // Pending Approvals (Real-time)
             $pendingApprovals = \App\Models\Payment::where('status', 'pending')->sum('amount_paid');
 
-            // 2. Pending Outstanding (Outstanding Debt - Matching Reports)
-            $pendingOutstanding = max(0.0, (float) \App\Models\FeeRecord::active()->sum('balance'));
+            // 2. Pending Outstanding (use student Net Payable basis: totalAmount - paidAmount)
+            $svc = app(\App\Services\FeeManagementService::class);
+            $pendingOutstanding = 0.0;
+            \App\Models\Student::select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, $svc) {
+                foreach ($chunk as $stu) {
+                    $t = $svc->computeTotalsForStudent($stu);
+                    $pendingOutstanding += max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
+                }
+            });
 
             // Expected Collection (Total Fees Assigned)
             // Note: This is an estimate. For strict accuracy, sum of all FeeRecords amounts?
@@ -565,10 +585,15 @@ class AuthLoginController extends Controller
                 ->sum('amount_paid');
         }
 
-        // 2. Pending Outstanding (Outstanding Debt)
-        $pendingOutstanding = max(0.0, (float) \App\Models\FeeRecord::active()
-            ->whereIn('student_id', $studentIds)
-            ->sum('balance'));
+        // 2. Pending Outstanding (use student Net Payable basis across filtered students)
+        $svc = app(\App\Services\FeeManagementService::class);
+        $pendingOutstanding = 0.0;
+        \App\Models\Student::whereIn('student_id', $studentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, $svc) {
+            foreach ($chunk as $stu) {
+                $t = $svc->computeTotalsForStudent($stu);
+                $pendingOutstanding += max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
+            }
+        });
 
         // Calculate expected collection based on fee records total amount if possible,
         // or simplistic approximation: collected + outstanding.

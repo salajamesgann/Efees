@@ -263,11 +263,16 @@
                         <div class="col-span-1 md:col-span-2">
                             <div class="flex items-start">
                                 <div class="flex items-center h-5">
-                                    <input id="is_automatic" name="is_automatic" type="checkbox" value="1" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded" {{ old('is_automatic', $discount->is_automatic) ? 'checked' : '' }} x-data="{ checked: {{ old('is_automatic', $discount->is_automatic) ? 'true' : 'false' }} }" @change="checked = $el.checked; $dispatch('toggle-grades', checked)">
+                                    <input id="is_automatic" name="is_automatic" type="checkbox" value="1" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                        {{ str_contains(strtolower($discount->discount_name), 'academic scholar') ? '' : (old('is_automatic', $discount->is_automatic) ? 'checked' : '') }}
+                                        {{ str_contains(strtolower($discount->discount_name), 'academic scholar') ? 'disabled' : '' }}
+                                        x-data="{ checked: {{ old('is_automatic', $discount->is_automatic) ? 'true' : 'false' }} }" @change="checked = $el.checked; $dispatch('toggle-grades', checked)">
                                 </div>
                                 <div class="ml-3 text-sm">
                                     <label for="is_automatic" class="font-medium text-gray-700">Automatic Application</label>
-                                    <p class="text-gray-500">Automatically apply this discount to students in selected grades.</p>
+                                    <p class="text-gray-500">
+                                        {{ str_contains(strtolower($discount->discount_name), 'academic scholar') ? 'This discount is manual only.' : 'Automatically apply this discount to students in selected grades.' }}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -285,17 +290,7 @@
                             </div>
                         </div>
 
-                        <!-- Priority and Stackable -->
-                        <div>
-                            <label for="priority" class="block text-sm font-medium text-gray-700">Priority Level</label>
-                            <input type="number" name="priority" id="priority" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" value="{{ old('priority', $discount->priority) }}" min="0">
-                            <p class="mt-1 text-xs text-gray-500">Higher number = higher priority.</p>
-                        </div>
-
-                        <div class="flex items-center mt-6">
-                            <input type="checkbox" name="is_stackable" id="is_stackable" value="1" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {{ old('is_stackable', data_get($discount->eligibility_rules, 'is_stackable', true)) ? 'checked' : '' }}>
-                            <label for="is_stackable" class="ml-2 block text-sm text-gray-900">Stackable (Can be combined)</label>
-                        </div>
+                        <!-- Priority/Stackable controls removed for simplicity and consistency -->
 
                         <div class="col-span-1 md:col-span-2">
                             <label for="description" class="block text-sm font-medium text-gray-700">Description</label>

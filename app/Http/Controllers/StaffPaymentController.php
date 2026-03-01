@@ -21,9 +21,6 @@ class StaffPaymentController extends Controller
         if ($request->ajax() || $request->has('action')) {
             if ($request->action === 'fetch_students') {
                 $query = Student::select('student_id', 'first_name', 'last_name', 'level', 'section', 'strand', 'enrollment_status')
-                    ->withSum(['feeRecords as total_balance' => function ($q) {
-                        $q->select(DB::raw('SUM(balance)'));
-                    }], 'balance')
                     ->with(['payments' => function ($q) {
                         $q->latest()->limit(1);
                     }]);
@@ -61,7 +58,14 @@ class StaffPaymentController extends Controller
                 //     $q->where('balance', '>', 0);
                 // });
 
-                return response()->json($query->orderBy('last_name')->paginate(10));
+                $page = $query->orderBy('last_name')->paginate(10);
+                $svc = app(\App\Services\FeeManagementService::class);
+                $page->getCollection()->transform(function ($stu) use ($svc) {
+                    $t = $svc->computeTotalsForStudent($stu);
+                    $stu->total_balance = max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
+                    return $stu;
+                });
+                return response()->json($page);
             }
 
             if ($request->action === 'fetch_fees') {

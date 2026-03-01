@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\SystemSetting;
 use App\Services\AuditService;
 use App\Services\FeeManagementService;
+use App\Services\SmsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -84,23 +85,51 @@ class StudentDiscountController extends Controller
      */
     public function destroy(Student $student, Discount $discount, SmsService $smsService): RedirectResponse
     {
-        $activeYear = SystemSetting::getActiveSchoolYear();
-        if ($activeYear && $student->school_year !== $activeYear) {
-            return back()->withErrors(['error' => 'Cannot remove discounts from a locked School Year.']);
-        }
-
         $feeAssignment = $student->getCurrentFeeAssignment();
 
         if (! $feeAssignment) {
-            return back()->withErrors(['error' => 'No active fee assignment found for this student.']);
+            // Fallback: use most recent assignment even if no active tuition is configured (needed for cleanup cases)
+            $feeAssignment = $student->feeAssignments()->orderByDesc('created_at')->first();
+            if (! $feeAssignment) {
+                return back()->withErrors(['error' => 'No active fee assignment found for this student.']);
+            }
+        }
+
+        // Allow removing manual discounts (e.g., Academic Scholar) even if the student's school year is not the active year.
+        // Keep the lock for automatic discounts on locked years.
+        $activeYear = SystemSetting::getActiveSchoolYear();
+        if ($activeYear && $student->school_year !== $activeYear) {
+            $isManual = ! (bool) $discount->is_automatic;
+            $isAcademicScholar = stripos((string) $discount->discount_name, 'academic scholar') !== false;
+            if (! $isManual && ! $isAcademicScholar) {
+                return back()->withErrors(['error' => 'Cannot remove automatic discounts from a locked School Year.']);
+            }
         }
 
         DB::transaction(function () use ($feeAssignment, $discount, $student, $smsService) {
-            // Detach discount
-            $feeAssignment->discounts()->detach($discount->id);
+            // Detach discount from all of the student's assignments to avoid mismatches
+            $assignmentIds = $student->feeAssignments()->pluck('id')->all();
+            if (! empty($assignmentIds)) {
+                \Illuminate\Support\Facades\DB::table('fee_assignment_discounts')
+                    ->whereIn('fee_assignment_id', $assignmentIds)
+                    ->where('discount_id', $discount->id)
+                    ->delete();
+            } else {
+                // Fallback to current assignment
+                $feeAssignment->discounts()->detach($discount->id);
+            }
 
-            // Recompute totals
-            $feeAssignment->calculateTotal();
+            // Recompute totals for affected assignments (at least the current one)
+            if (! empty($assignmentIds)) {
+                foreach ($assignmentIds as $faId) {
+                    $fa = \App\Models\FeeAssignment::find($faId);
+                    if ($fa) {
+                        $fa->calculateTotal();
+                    }
+                }
+            } else {
+                $feeAssignment->calculateTotal();
+            }
 
             // Recompute ledger/records
             app(FeeManagementService::class)->recomputeStudentLedger($student);

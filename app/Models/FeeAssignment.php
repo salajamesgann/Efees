@@ -140,7 +140,7 @@ class FeeAssignment extends Model
             $isVoucher = stripos($discount->discount_name, 'voucher') !== false;
             $isSibling = collect($discount->eligibility_rules)->contains('field', 'sibling_rank');
 
-            if (! $isVoucher && $discount->type === 'percentage') {
+            if (! $isVoucher && $discount->type === 'percentage' && $discount->isStackable()) {
                 $projected = $nonVoucherPercentageTotal + (float) $discount->value;
                 if ($projected > 10.0) {
                     continue;
@@ -300,6 +300,11 @@ class FeeAssignment extends Model
                 ->first();
         }
 
+        // Require a tuition fee to create an assignment; do not create charge-only assignments
+        if (! $tuitionFee) {
+            return null;
+        }
+
         // Get applicable additional charges
         $additionalCharges = collect();
         if ($tuitionFee && isset($tuitionFee->default_charge_ids)) {
@@ -309,11 +314,28 @@ class FeeAssignment extends Model
                     ->whereIn('id', $tuitionFee->default_charge_ids)
                     ->get();
             }
-        } else {
-            // Fallback to legacy behavior: all charges applicable to grade
-            $additionalCharges = AdditionalCharge::active()
-                ->applicableToGrade($gradeLevel)
-                ->get();
+        }
+        // Fallback for older tuition records where default_charge_ids was not saved:
+        // Map tuition_fee_charges by name/amount to AdditionalCharge entries
+        if ($additionalCharges->isEmpty() && $tuitionFee && method_exists($tuitionFee, 'charges')) {
+            $tfCharges = $tuitionFee->charges()->get(['name','amount']);
+            if ($tfCharges->isNotEmpty()) {
+                $names = $tfCharges->pluck('name')->filter()->values()->all();
+                $candidates = AdditionalCharge::active()
+                    ->whereIn('charge_name', $names)
+                    ->get();
+                // Match by name and (approximate) amount
+                $map = $tfCharges->map(function ($c) use ($candidates) {
+                    $match = $candidates->first(function ($cand) use ($c) {
+                        return strcasecmp((string) $cand->charge_name, (string) $c->name) === 0
+                            && abs((float) $cand->amount - (float) $c->amount) < 0.01;
+                    });
+                    return $match;
+                })->filter();
+                if ($map->isNotEmpty()) {
+                    $additionalCharges = $map->values();
+                }
+            }
         }
 
         // Get applicable discounts (check eligibility)
@@ -321,6 +343,11 @@ class FeeAssignment extends Model
             ->automatic()
             ->applicableToGrade($gradeLevel)
             ->get();
+        // Exclude Academic Scholar from automatic application; it must be manually applied
+        $automaticDiscounts = $automaticDiscounts->reject(function ($d) {
+            $name = strtolower(trim((string) $d->discount_name));
+            return strpos($name, 'academic scholar') !== false;
+        });
 
         // Log Sibling Discount Skip (Voucher Exclusion)
         if ($student->is_shs_voucher) {
@@ -369,6 +396,11 @@ class FeeAssignment extends Model
             $defaultDiscounts = Discount::active()
                 ->whereIn('id', $tuitionFee->default_discount_ids)
                 ->get();
+            // Ensure Academic Scholar is not auto-attached from defaults
+            $defaultDiscounts = $defaultDiscounts->reject(function ($d) {
+                $name = strtolower(trim((string) $d->discount_name));
+                return strpos($name, 'academic scholar') !== false;
+            });
         }
 
         // Merge and filter by eligibility
@@ -376,6 +408,11 @@ class FeeAssignment extends Model
             ->unique('id')
             ->filter(function ($discount) use ($student) {
                 return $discount->isEligibleForStudent($student);
+            })
+            ->reject(function ($d) {
+                // Final guard: Academic Scholar must always be manual
+                $name = strtolower(trim((string) $d->discount_name));
+                return strpos($name, 'academic scholar') !== false;
             });
 
         // Log Sibling Discount Application

@@ -324,11 +324,16 @@ class AdminFeeController extends Controller
                         return $names->implode(', ');
                     })();
                     $base = (float) $tf->amount;
+                    $subjectSubtotal = (float) collect(is_array($tf->subject_fees) ? $tf->subject_fees : [])->sum(function ($c) {
+                        return (float) ($c['amount'] ?? 0);
+                    });
+                    $tuitionSubtotal = $subjectSubtotal > 0 ? $subjectSubtotal : $base;
                     $chargesTotal = (float) collect($tf->charges ?? [])->sum('amount');
+                    $totalTuition = $tuitionSubtotal + $chargesTotal;
 
                     // CORRECTED LOGIC: Calculate Net Payable using only AUTOMATIC discounts
                     // and respecting scope (tuition_only, charges_only, total) and stackability.
-                    $remainingTuition = $base;
+                    $remainingTuition = $tuitionSubtotal;
                     $remainingCharges = $chargesTotal;
                     $appliedDiscountsTotal = 0.0;
 
@@ -388,27 +393,27 @@ class AdminFeeController extends Controller
                         }
                     }
 
-                    $discountBase = $base + $chargesTotal;
+                    $discountBase = $tuitionSubtotal + $chargesTotal;
                     $discountsTotal = $appliedDiscountsTotal;
 
                     return [
                         'id' => $tf->id,
+                        'grade_level' => $tf->grade_level, // Add missing grade_level field
+                        'school_year' => $tf->school_year, // Add missing school_year field
                         'fee_name' => (function () use ($tf) {
                             $notes = (string) ($tf->notes ?? '');
-                            $pos = mb_strpos($notes, ' — ');
                             $pos = mb_strpos($notes, ' — ');
                             if ($pos !== false) {
                                 return mb_substr($notes, 0, $pos);
                             }
 
-                            return $notes ?: ($tf->grade_level.' Tuition – SY '.($tf->school_year ?? 'N/A'));
+                            return null;
                         })(),
-                        'school_year' => $tf->school_year ?? 'N/A',
-                        'grade_level' => $tf->grade_level,
                         'track' => $tf->track ?? null,
                         'strand' => $tf->strand ?? null,
-                        'amount' => (float) $tf->amount,
-                        'net_payable' => max(0.0, $discountBase - $discountsTotal),
+                        'amount' => $totalTuition, // Use calculated total for display
+                        'base_tuition' => $base,
+                        'net_payable' => $totalTuition,
                         'is_active' => (bool) $tf->is_active,
                         'semester' => $tf->semester ?? 'N/A',
                         'charges_summary' => $chargesSummary,
@@ -563,7 +568,12 @@ class AdminFeeController extends Controller
 
             return $acc + max(0, $amt);
         }, 0.0);
-        $validated['amount'] = $computedSubtotal;
+        $baseComponent = collect($subjectFeesParsed)->first(function ($c) {
+            $t = strtolower((string) ($c['type'] ?? ''));
+            return $t === 'base tuition';
+        });
+        $validated['amount'] = isset($baseComponent['amount']) ? (float) $baseComponent['amount'] : 0.0;
+        $totalTuition = $computedSubtotal;
 
         // Duplicate guard before transaction
         $dupQuery = TuitionFee::where('grade_level', $validated['grade_level'])
@@ -605,7 +615,7 @@ class AdminFeeController extends Controller
             DB::transaction(function () use ($request, $validated, &$tuitionFee) {
                 $tuitionFee = TuitionFee::create([
                     'grade_level' => $validated['grade_level'],
-                    'amount' => $validated['amount'],
+                    'amount' => (float) ($validated['amount'] ?? 0), // Store only base tuition in amount field
                     'is_active' => $validated['is_active'],
                     'school_year' => $validated['school_year'],
                     'semester' => $validated['semester'],
@@ -715,9 +725,19 @@ class AdminFeeController extends Controller
                     }
                 }
 
-                $selectedChargeIds = collect(explode(',', (string) $request->input('selected_charge_ids', '')))
+                $rawChargeIds = (string) $request->input('selected_charge_ids', '');
+                $selectedChargeIds = [];
+                if (strlen($rawChargeIds)) {
+                    if (str_starts_with(trim($rawChargeIds), '[')) {
+                        $decoded = json_decode($rawChargeIds, true);
+                        $selectedChargeIds = is_array($decoded) ? $decoded : [];
+                    } else {
+                        $selectedChargeIds = explode(',', $rawChargeIds);
+                    }
+                }
+                $selectedChargeIds = collect($selectedChargeIds)
+                    ->map(fn ($id) => (int) preg_replace('/[^0-9]/', '', (string) $id))
                     ->filter()
-                    ->map(fn ($id) => (int) $id)
                     ->values()
                     ->all();
 
@@ -726,16 +746,7 @@ class AdminFeeController extends Controller
                     $tuitionFee->update(['default_charge_ids' => $selectedChargeIds]);
                 }
 
-                $selectedDiscountIds = collect(explode(',', (string) $request->input('selected_discount_ids', '')))
-                    ->filter()
-                    ->map(fn ($id) => (int) $id)
-                    ->values()
-                    ->all();
-
-                // Save selected discount IDs as default for this tuition fee
-                if (\Illuminate\Support\Facades\Schema::hasColumn('tuition_fees', 'default_discount_ids')) {
-                    $tuitionFee->update(['default_discount_ids' => $selectedDiscountIds]);
-                }
+                // Removed selected discounts: discounts are not set at tuition creation
 
                 // Populate TuitionFeeCharge from selected IDs
                 if (\Illuminate\Support\Facades\Schema::hasTable('tuition_fee_charges') && ! empty($selectedChargeIds)) {
@@ -754,7 +765,7 @@ class AdminFeeController extends Controller
                     }
                 }
 
-                if (! empty($selectedChargeIds) || ! empty($selectedDiscountIds)) {
+                if (! empty($selectedChargeIds)) {
                     $grades = [$validated['grade_level']];
                     $studentIds = [];
                     $assignmentIds = [];
@@ -765,25 +776,14 @@ class AdminFeeController extends Controller
                         $assignmentIds = \App\Models\FeeAssignment::whereIn('student_id', $studentIds)->pluck('id')->all();
                     }
                     if (! empty($assignmentIds)) {
-                        if (! empty($selectedChargeIds)) {
-                            if (\Illuminate\Support\Facades\Schema::hasTable('fee_assignment_additional_charges')) {
-                                foreach ($selectedChargeIds as $cid) {
-                                    app(FeeManagementService::class)->attachChargeToAssignmentsLocal($cid, $assignmentIds);
-                                }
-                            }
-                            try {
-                                app(FeeManagementService::class)->syncChargeAssignmentsToSupabaseBatch($selectedChargeIds, $assignmentIds);
-                            } catch (\Throwable $e) {
+                        if (\Illuminate\Support\Facades\Schema::hasTable('fee_assignment_additional_charges')) {
+                            foreach ($selectedChargeIds as $cid) {
+                                app(FeeManagementService::class)->attachChargeToAssignmentsLocal($cid, $assignmentIds);
                             }
                         }
-                        if (! empty($selectedDiscountIds)) {
-                            if (\Illuminate\Support\Facades\Schema::hasTable('fee_assignment_discounts')) {
-                                app(FeeManagementService::class)->attachDiscountsToAssignmentsLocal($selectedDiscountIds, $assignmentIds);
-                            }
-                            try {
-                                app(FeeManagementService::class)->syncDiscountAssignmentsToSupabaseBatch($selectedDiscountIds, $assignmentIds);
-                            } catch (\Throwable $e) {
-                            }
+                        try {
+                            app(FeeManagementService::class)->syncChargeAssignmentsToSupabaseBatch($selectedChargeIds, $assignmentIds);
+                        } catch (\Throwable $e) {
                         }
                     }
                 }
@@ -854,7 +854,8 @@ class AdminFeeController extends Controller
                 return response()->json([
                     'id' => $tuitionFee?->id,
                     'grade_level' => $tuitionFee?->grade_level,
-                    'amount' => (float) ($tuitionFee?->amount ?? ($validated['amount'] ?? 0)),
+                    'amount' => $totalTuition, // Return calculated total for display
+                    'base_tuition' => (float) ($validated['amount'] ?? 0), // Return base tuition separately
                     'school_year' => $tuitionFee?->school_year ?? ($validated['school_year'] ?? 'N/A'),
                     'semester' => $tuitionFee?->semester ?? 'N/A',
                     'is_active' => (bool) ($tuitionFee?->is_active ?? true),
@@ -956,7 +957,7 @@ class AdminFeeController extends Controller
             'fee_deadline' => ['nullable', 'date'],
             'school_year' => ['nullable', 'string'],
             'selected_charge_ids' => ['nullable', 'string'],
-            'selected_discount_ids' => ['nullable', 'string'],
+            // selected_discount_ids removed from edit; discounts handled at student level
             'allow_installment' => ['nullable', 'boolean'],
             'payment_plan' => ['nullable', 'in:monthly,quarterly,semester'],
             'track' => ['nullable', 'string', 'max:100'],
@@ -1084,9 +1085,24 @@ class AdminFeeController extends Controller
                     $computedSubtotal += max(0, (float) ($c['amount'] ?? 0));
                 }
             }
+            
+            // Add additional charges to the total calculation
+            $additionalChargesRaw = $request->input('additional_charges', '');
+            $additionalChargesAmount = 0.0;
+            if (strlen($additionalChargesRaw)) {
+                $parsedCharges = json_decode($additionalChargesRaw, true);
+                $additionalCharges = is_array($parsedCharges) ? $parsedCharges : [];
+                foreach ($additionalCharges as $charge) {
+                    $additionalChargesAmount += max(0, (float) ($charge['amount'] ?? 0));
+                }
+            }
+            
+            // Total tuition = base tuition + subject fees + additional charges (for display only)
+            $totalTuition = (float) ($validated['amount'] ?? 0) + $computedSubtotal + $additionalChargesAmount;
+            
             $updateData = [
                 'grade_level' => $validated['grade_level'],
-                'amount' => (strlen($subjectFeesRawForCompute) ? $computedSubtotal : $validated['amount']),
+                'amount' => (float) ($validated['amount'] ?? 0), // Store only base tuition in amount field
                 'is_active' => $validated['is_active'],
             ];
 
@@ -1115,13 +1131,7 @@ class AdminFeeController extends Controller
                 $updateData['subject_fees'] = $subjectFees;
             }
 
-            if (\Illuminate\Support\Facades\Schema::hasColumn('tuition_fees', 'default_discount_ids')) {
-                $updateData['default_discount_ids'] = collect(explode(',', (string) $request->input('selected_discount_ids', '')))
-                    ->filter()
-                    ->map(fn ($id) => (int) $id)
-                    ->values()
-                    ->all();
-            }
+            // default_discount_ids not updated from tuition edit; discounts are student-level
 
             if (\Illuminate\Support\Facades\Schema::hasColumn('tuition_fees', 'default_charge_ids')) {
                 $updateData['default_charge_ids'] = collect(explode(',', (string) $request->input('selected_charge_ids', '')))
@@ -1228,14 +1238,8 @@ class AdminFeeController extends Controller
                     ->map(fn ($id) => (int) $id)
                     ->values()
                     ->all();
-                $selectedDiscountIds = collect(explode(',', (string) $request->input('selected_discount_ids', '')))
-                    ->filter()
-                    ->map(fn ($id) => (int) $id)
-                    ->values()
-                    ->all();
-
-                // Sync TuitionFeeCharge and TuitionFeeDiscount with selected IDs
-                // Only if chargesRaw/discountsRaw were not provided (to avoid conflict)
+                // Sync TuitionFeeCharge with selected IDs when not using builder JSON
+                // Only if chargesRaw was not provided (to avoid conflict)
                 if (empty($chargesRaw) && \Illuminate\Support\Facades\Schema::hasTable('tuition_fee_charges')) {
                     $tuitionFee->charges()->delete();
                     if (! empty($selectedChargeIds)) {
@@ -1250,7 +1254,7 @@ class AdminFeeController extends Controller
                     }
                 }
 
-                if (! empty($selectedChargeIds) || ! empty($selectedDiscountIds)) {
+                if (! empty($selectedChargeIds)) {
                     $grades = [$tuitionFee->grade_level];
                     $studentIds = \App\Models\Student::whereIn('level', $grades)->pluck('student_id')->all();
                     $assignmentIds = \App\Models\FeeAssignment::whereIn('student_id', $studentIds)
@@ -1260,18 +1264,12 @@ class AdminFeeController extends Controller
                         ->pluck('id')
                         ->all();
                     if (! empty($assignmentIds)) {
-                        if (! empty($selectedChargeIds)) {
-                            if (\Illuminate\Support\Facades\Schema::hasTable('fee_assignment_additional_charges')) {
-                                foreach ($selectedChargeIds as $cid) {
-                                    app(FeeManagementService::class)->attachChargeToAssignmentsLocal($cid, $assignmentIds);
-                                }
+                        if (\Illuminate\Support\Facades\Schema::hasTable('fee_assignment_additional_charges')) {
+                            foreach ($selectedChargeIds as $cid) {
+                                app(FeeManagementService::class)->attachChargeToAssignmentsLocal($cid, $assignmentIds);
                             }
-                            app(FeeManagementService::class)->syncChargeAssignmentsToSupabaseBatch($selectedChargeIds, $assignmentIds);
                         }
-                        if (! empty($selectedDiscountIds)) {
-                            app(FeeManagementService::class)->attachDiscountsToAssignmentsLocal($selectedDiscountIds, $assignmentIds);
-                            app(FeeManagementService::class)->syncDiscountAssignmentsToSupabaseBatch($selectedDiscountIds, $assignmentIds);
-                        }
+                        app(FeeManagementService::class)->syncChargeAssignmentsToSupabaseBatch($selectedChargeIds, $assignmentIds);
                     }
                 }
             });
@@ -1331,7 +1329,8 @@ class AdminFeeController extends Controller
                 return response()->json([
                     'id' => $tuitionFee?->id,
                     'grade_level' => $tuitionFee?->grade_level,
-                    'amount' => (float) ($tuitionFee?->amount ?? ($validated['amount'] ?? 0)),
+                    'amount' => $totalTuition, // Return calculated total for display
+                    'base_tuition' => (float) ($validated['amount'] ?? 0), // Return base tuition separately
                     'school_year' => $tuitionFee?->school_year ?? ($validated['school_year'] ?? 'N/A'),
                     'semester' => $tuitionFee?->semester ?? 'N/A',
                     'is_active' => (bool) ($tuitionFee?->is_active ?? true),
@@ -1417,92 +1416,18 @@ class AdminFeeController extends Controller
     {
         $charges = $tuitionFee->charges()->orderBy('id')->get();
         $base = (float) $tuitionFee->amount;
+        $subjectSubtotal = (float) collect(is_array($tuitionFee->subject_fees) ? $tuitionFee->subject_fees : [])->sum(function ($c) {
+            return (float) ($c['amount'] ?? 0);
+        });
+        $tuitionSubtotal = $subjectSubtotal > 0 ? $subjectSubtotal : $base;
         $chargesTotal = (float) $charges->sum('amount');
-
-        // Fetch AUTOMATIC discounts applicable to this grade
-        // This aligns with the logic in index() for Net Payable
-        $discounts = $tuitionFee->applicableDiscounts()
-            ->where('is_automatic', true)
-            ->orderBy('priority', 'desc')
-            ->get();
-
-        $remainingTuition = $base;
-        $remainingCharges = $chargesTotal;
-        $appliedDiscountsTotal = 0.0;
-        $discountBreakdown = [];
-
-        $exclusiveApplied = false;
-
-        foreach ($discounts as $d) {
-            if ($exclusiveApplied) {
-                break;
-            }
-
-            $rules = $d->eligibility_rules ?? [];
-            $scope = $rules['apply_scope'] ?? 'total';
-            $stackable = $rules['is_stackable'] ?? true;
-            $type = $d->type ?? 'percentage';
-            $val = (float) $d->value;
-
-            $calcBase = 0.0;
-            if ($scope === 'tuition_only') {
-                $calcBase = $remainingTuition;
-            } elseif ($scope === 'charges_only') {
-                $calcBase = $remainingCharges;
-            } else {
-                $calcBase = $remainingTuition + $remainingCharges;
-            }
-
-            if ($calcBase <= 0) {
-                continue;
-            }
-
-            $deduction = ($type === 'percentage')
-                ? ($calcBase * $val / 100.0)
-                : min($val, $calcBase);
-
-            if ($deduction > 0) {
-                $appliedDiscountsTotal += $deduction;
-
-                // Update remaining balances
-                if ($scope === 'tuition_only') {
-                    $remainingTuition = max(0.0, $remainingTuition - $deduction);
-                } elseif ($scope === 'charges_only') {
-                    $remainingCharges = max(0.0, $remainingCharges - $deduction);
-                } else {
-                    // For total scope, deduct from tuition first (standard practice)
-                    $tuitionDed = min($remainingTuition, $deduction);
-                    $remainingTuition -= $tuitionDed;
-                    $remainingCharges = max(0.0, $remainingCharges - ($deduction - $tuitionDed));
-                }
-
-                $discountBreakdown[] = [
-                    'id' => $d->id,
-                    'name' => $d->discount_name,
-                    'type' => $type,
-                    'value' => $val,
-                    'scope' => $scope,
-                    'stackable' => $stackable,
-                    'priority' => (int) ($d->priority ?? 0),
-                    'applied_amount' => $deduction,
-                ];
-
-                if (! $stackable) {
-                    $exclusiveApplied = true;
-                }
-            }
-        }
-
-        $net = max(0.0, $base + $chargesTotal - $appliedDiscountsTotal);
+        $grossTotal = $tuitionSubtotal + $chargesTotal;
 
         return view('admin.fees.tuition.show', [
             'tuitionFee' => $tuitionFee,
             'charges' => $charges,
-            'discounts' => $discounts,
             'chargesTotal' => $chargesTotal,
-            'discountsTotal' => $appliedDiscountsTotal,
-            'discountBreakdown' => $discountBreakdown,
-            'netPayable' => $net,
+            'grossTotal' => $grossTotal,
         ]);
     }
 
@@ -2106,7 +2031,14 @@ class AdminFeeController extends Controller
                 'eligibility_rules' => [
                     'apply_scope' => $validated['apply_scope'] ?? 'total',
                     'target_charge_ids' => ($validated['apply_scope'] ?? '') === 'specific_charges' ? ($validated['target_charge_ids'] ?? []) : [],
-                    'is_stackable' => (bool) ($validated['is_stackable'] ?? true),
+                    // Default stackable true, but Academic Scholar is exclusive
+                    'is_stackable' => (function () use ($validated) {
+                        $name = trim(strtolower($validated['discount_name'] ?? ''));
+                        if ($name === 'academic scholar') {
+                            return false;
+                        }
+                        return (bool) ($validated['is_stackable'] ?? true);
+                    })(),
                     'school_year' => $validated['school_year'] ?? null,
                     'valid_from' => $validated['valid_from'] ?? null,
                     'valid_to' => $validated['valid_to'] ?? null,
@@ -2116,6 +2048,14 @@ class AdminFeeController extends Controller
             ];
 
             $created = Discount::create($data);
+            // Enforce Academic Scholar as manual and non-stackable
+            if (strpos(strtolower(trim((string) $created->discount_name)), 'academic scholar') !== false) {
+                $rules = is_array($created->eligibility_rules) ? $created->eligibility_rules : [];
+                $rules['is_stackable'] = false;
+                $created->eligibility_rules = $rules;
+                $created->is_automatic = false;
+                $created->save();
+            }
 
             $grades = $data['applicable_grades'] ?? [];
             app(FeeManagementService::class)->recomputeForGrades($grades);
@@ -2245,7 +2185,13 @@ class AdminFeeController extends Controller
                 'eligibility_rules' => [
                     'apply_scope' => $validated['apply_scope'] ?? data_get($discount->eligibility_rules, 'apply_scope', 'total'),
                     'target_charge_ids' => ($validated['apply_scope'] ?? data_get($discount->eligibility_rules, 'apply_scope')) === 'specific_charges' ? ($validated['target_charge_ids'] ?? []) : [],
-                    'is_stackable' => (bool) ($validated['is_stackable'] ?? data_get($discount->eligibility_rules, 'is_stackable', true)),
+                    'is_stackable' => (function () use ($validated, $discount) {
+                        $name = trim(strtolower($validated['discount_name'] ?? $discount->discount_name));
+                        if ($name === 'academic scholar') {
+                            return false;
+                        }
+                        return (bool) ($validated['is_stackable'] ?? data_get($discount->eligibility_rules, 'is_stackable', true));
+                    })(),
                     'school_year' => $validated['school_year'] ?? data_get($discount->eligibility_rules, 'school_year'),
                     'valid_from' => $validated['valid_from'] ?? data_get($discount->eligibility_rules, 'valid_from'),
                     'valid_to' => $validated['valid_to'] ?? data_get($discount->eligibility_rules, 'valid_to'),
@@ -2255,6 +2201,14 @@ class AdminFeeController extends Controller
             ];
 
             $discount->update($data);
+            // Enforce Academic Scholar as manual and non-stackable on update
+            if (strpos(strtolower(trim((string) $discount->discount_name)), 'academic scholar') !== false) {
+                $rules = is_array($discount->eligibility_rules) ? $discount->eligibility_rules : [];
+                $rules['is_stackable'] = false;
+                $discount->eligibility_rules = $rules;
+                $discount->is_automatic = false;
+                $discount->save();
+            }
 
             $grades = $discount->applicable_grades ?? [];
             app(\App\Services\FeeManagementService::class)->recomputeForGrades($grades);
@@ -2523,7 +2477,12 @@ class AdminFeeController extends Controller
         }
 
         // Calculate totals
-        $baseTuition = $tuitionFee ? $tuitionFee->amount : 0;
+        $subjectSubtotal = $tuitionFee && is_array($tuitionFee->subject_fees)
+            ? collect($tuitionFee->subject_fees)->sum(function ($c) {
+                return (float) ($c['amount'] ?? 0);
+            })
+            : 0;
+        $baseTuition = $subjectSubtotal > 0 ? (float) $subjectSubtotal : ($tuitionFee ? (float) $tuitionFee->amount : 0);
         $additionalChargesTotal = $additionalCharges->sum('amount');
         $discountsTotal = 0;
         $discountBreakdown = [];

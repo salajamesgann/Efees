@@ -228,7 +228,6 @@
                 @method('PUT')
                 <input type="hidden" name="subject_fees" id="edit_subject_fees" value="">
                 <input type="hidden" name="selected_charge_ids" id="edit_selected_charge_ids" value="">
-                <input type="hidden" name="selected_discount_ids" id="edit_selected_discount_ids" value="">
                 <input
                     type="hidden"
                     name="amount"
@@ -361,7 +360,7 @@
                         </div>
                     </div>
 
-                    <!-- Additional Charges & Discounts -->
+                    <!-- Additional Charges -->
                     <div class="space-y-8">
                         <div>
                             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Additional Charges</h3>
@@ -373,6 +372,7 @@
                                                 <input type="checkbox" 
                                                        class="edit-tuition-charge-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                                        value="{{ $charge->id }}"
+                                                       data-label="{{ $charge->charge_name }}"
                                                        data-amount="{{ $charge->amount }}"
                                                        data-type="{{ $charge->charge_type }}"
                                                        {{ in_array($charge->id, $defaultChargeIds) ? 'checked' : '' }}>
@@ -389,29 +389,7 @@
                             @endif
                         </div>
 
-                        <div>
-                            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Applicable Discounts</h3>
-                            @if(isset($availableDiscounts) && count($availableDiscounts) > 0)
-                                <div class="bg-white border border-gray-200 rounded-lg max-h-60 overflow-y-auto">
-                                    <ul class="divide-y divide-gray-200">
-                                        @foreach($availableDiscounts as $discount)
-                                            <li class="flex items-center px-4 py-3 hover:bg-gray-50">
-                                                <input type="checkbox" 
-                                                       class="edit-tuition-discount-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                                       value="{{ $discount->id }}"
-                                                       {{ in_array($discount->id, $defaultDiscountIds) ? 'checked' : '' }}>
-                                                <div class="ml-3 flex-1">
-                                                    <span class="block text-sm font-medium text-gray-900">{{ $discount->name }}</span>
-                                                    <span class="block text-xs text-gray-500">{{ $discount->type === 'percentage' ? $discount->value . '%' : '₱' . number_format($discount->value, 2) }} Off</span>
-                                                </div>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                            @else
-                                <p class="text-sm text-gray-500 italic">No discounts available.</p>
-                            @endif
-                        </div>
+                        <!-- Discounts UI removed: discounts are managed at student level -->
                     </div>
                 </div>
 
@@ -479,8 +457,8 @@
 
             function generateClientSidePreview(plan) {
                 previewBody.innerHTML = '';
-                // Get total tuition
-                let total = parseFloat(document.getElementById('edit_total_tuition').textContent.replace('₱','').replace(',','')) || 0;
+                // Get total tuition using the new calculation function
+                let total = calculateTotalTuition();
                 if(total <= 0) {
                     previewBody.innerHTML = '<tr><td colspan="3" class="px-3 py-2 text-sm text-gray-500 text-center">Add tuition components to see preview</td></tr>';
                     return;
@@ -554,6 +532,41 @@
             const compAmtIn = document.getElementById('edit_comp_amount');
             const addBtn = document.getElementById('edit_add_component_btn');
 
+            // Function to auto-populate components when charges are selected
+            function autoPopulateComponents() {
+                const chargeBoxes = document.querySelectorAll('.edit-tuition-charge-checkbox:checked');
+                const selectedCharges = Array.from(chargeBoxes).map(cb => {
+                    const chargeId = cb.value;
+                    const chargeLabel = cb.getAttribute('data-label');
+                    const chargeAmount = cb.getAttribute('data-amount');
+                    return {
+                        type: 'base',
+                        label: chargeLabel,
+                        amount: parseFloat(chargeAmount) || 0
+                    };
+                });
+
+                // Add selected charges to components array
+                selectedCharges.forEach(charge => {
+                    // Check if this charge already exists in components
+                    const exists = components.some(c => c.label === charge.label);
+                    if (!exists) {
+                        components.push(charge);
+                    }
+                });
+
+                renderComponents();
+            }
+
+            // Function to calculate total including base tuition + additional charges
+            function calculateTotalTuition() {
+                let total = 0;
+                components.forEach(c => {
+                    total += parseFloat(c.amount) || 0;
+                });
+                return total;
+            }
+
             function renderComponents() {
                 compList.innerHTML = '';
                 let total = 0;
@@ -576,7 +589,7 @@
                     `;
                     compList.appendChild(row);
                 });
-                totalDisplay.textContent = '₱' + total.toFixed(2);
+                totalDisplay.textContent = 'Total Tuition: ₱' + total.toFixed(2);
                 hiddenInput.value = JSON.stringify(components);
                 if(totalAmountInput) totalAmountInput.value = total.toFixed(2);
                 updatePreview();
@@ -614,18 +627,23 @@
             // Initial render
             renderComponents();
 
+            // Add event listeners for charge checkboxes to auto-populate components
+            document.addEventListener('DOMContentLoaded', function() {
+                const chargeCheckboxes = document.querySelectorAll('.edit-tuition-charge-checkbox');
+                chargeCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        autoPopulateComponents();
+                    });
+                });
+            });
+
             // Form Submit - Gather Checkboxes
             const form = document.getElementById('editTuitionForm');
             form.addEventListener('submit', function(e) {
                 // Charges
                 const chargeBoxes = document.querySelectorAll('.edit-tuition-charge-checkbox:checked');
                 const chargeIds = Array.from(chargeBoxes).map(cb => cb.value);
-                document.getElementById('edit_selected_charge_ids').value = JSON.stringify(chargeIds);
-
-                // Discounts
-                const discountBoxes = document.querySelectorAll('.edit-tuition-discount-checkbox:checked');
-                const discountIds = Array.from(discountBoxes).map(cb => cb.value);
-                document.getElementById('edit_selected_discount_ids').value = JSON.stringify(discountIds);
+                document.getElementById('edit_selected_charge_ids').value = chargeIds.join(',');
             });
         });
     </script>

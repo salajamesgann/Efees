@@ -244,6 +244,31 @@ class Discount extends Model
     }
 
     /**
+     * Ensure Academic Scholar discounts are non-stackable (exclusive) by default.
+     */
+    public static function ensureAcademicScholarExclusive(): void
+    {
+        if (! Schema::hasTable('discounts')) {
+            return;
+        }
+        $items = static::whereRaw('LOWER(discount_name) LIKE ?', ['academic scholar%'])->get();
+        foreach ($items as $d) {
+            $rules = is_array($d->eligibility_rules) ? $d->eligibility_rules : [];
+            if (($rules['is_stackable'] ?? true) !== false) {
+                $rules['is_stackable'] = false;
+                $d->eligibility_rules = $rules;
+                // Also ensure Academic Scholar is manual (not automatic)
+                if ($d->is_automatic) {
+                    $d->is_automatic = false;
+                }
+                // Priority is kept as-is; UI no longer exposes it
+                $d->save();
+            }
+        }
+    }
+    /**
+
+    /**
      * Check eligibility rules against student data.
      */
     private function checkEligibilityRules($student): bool

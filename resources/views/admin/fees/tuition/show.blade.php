@@ -187,7 +187,7 @@
                         <div class="flex items-center justify-between"><dt>Strand</dt><dd class="font-semibold">{{ in_array($tuitionFee->grade_level,['Grade 11','Grade 12']) ? ($tuitionFee->strand ?? '—') : '—' }}</dd></div>
                         <div class="flex items-center justify-between"><dt>Status</dt><dd class="font-semibold">{{ $tuitionFee->is_active ? 'Active' : 'Inactive' }}</dd></div>
                         <div class="flex items-center justify-between"><dt>Base Tuition</dt><dd class="font-semibold">₱{{ number_format((float) $tuitionFee->amount, 2) }}</dd></div>
-                        <div class="border-t border-dashed pt-3 flex items-center justify-between"><dt>Net Payable</dt><dd class="text-blue-600 font-bold">₱{{ number_format((float) $netPayable, 2) }}</dd></div>
+                        <div class="border-t border-dashed pt-3 flex items-center justify-between"><dt>Gross Total</dt><dd class="text-blue-600 font-bold">₱{{ number_format((float) $grossTotal, 2) }}</dd></div>
                     </dl>
                     <div class="mt-4 flex flex-wrap items-center gap-3">
                         <a href="{{ route('admin.fees.edit-tuition', $tuitionFee) }}" class="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-sm hover:shadow-md hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
@@ -214,51 +214,8 @@
                     <dl class="space-y-3 text-sm">
                         <div class="flex items-center justify-between"><dt>Base tuition</dt><dd class="font-semibold">₱{{ number_format((float) $tuitionFee->amount, 2) }}</dd></div>
                         <div class="flex items-center justify-between"><dt>Additional charges</dt><dd class="font-semibold">₱{{ number_format((float) $chargesTotal, 2) }}</dd></div>
-                        <div class="flex items-center justify-between"><dt>Discounts</dt><dd class="font-semibold">-₱{{ number_format((float) $discountsTotal, 2) }}</dd></div>
-                        <div class="border-t border-dashed border-gray-200 pt-3 flex items-center justify-between"><dt>Net payable</dt><dd class="text-blue-600 font-bold">₱{{ number_format((float) $netPayable, 2) }}</dd></div>
+                        <div class="border-t border-dashed border-gray-200 pt-3 flex items-center justify-between"><dt>Gross total</dt><dd class="text-blue-600 font-bold">₱{{ number_format((float) $grossTotal, 2) }}</dd></div>
                     </dl>
-                    @if(isset($discounts) && $discounts->count() > 0)
-                        <div class="mt-4">
-                            <h3 class="text-sm font-semibold text-gray-700 mb-2">Selected discounts</h3>
-                            <ul class="divide-y divide-gray-200 text-sm">
-                                @foreach($discounts as $d)
-                                    <li class="py-2 flex items-center justify-between">
-                                        <span>
-                                            {{ $d->discount_name }}
-                                            <small class="text-gray-500">
-                                                {{ ucfirst($d->type) }}
-                                                @if($d->type === 'percentage'){{ number_format((float) $d->value, 2) }}%@else₱{{ number_format((float) $d->value, 2) }}@endif
-                                                —
-                                                Scope: {{ ucfirst(str_replace('_', ' ', method_exists($d, 'getApplyScope') ? $d->getApplyScope() : 'total')) }}
-                                                —
-                                                {{ ($d->isStackable() ? 'Stackable' : 'Non-stackable') }}
-                                            </small>
-                                        </span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-                    @if(!empty($discountBreakdown))
-                        <div class="mt-4">
-                            <h3 class="text-sm font-semibold text-gray-700 mb-2">Discount breakdown</h3>
-                            <ul class="divide-y divide-gray-200 text-sm">
-                                @foreach($discountBreakdown as $db)
-                                    <li class="py-2 flex items-center justify-between">
-                                        <span>
-                                            {{ $db['name'] ?? '—' }}
-                                            <small class="text-gray-500">
-                                                {{ ($db['type'] ?? 'percentage') === 'percentage' ? ($db['value'] ?? 0).'%' : '₱'.number_format((float) ($db['value'] ?? 0), 2) }}
-                                                —
-                                                Scope: {{ ucfirst(str_replace('_', ' ', $db['scope'] ?? 'total')) }}
-                                            </small>
-                                        </span>
-                                        <span class="font-semibold text-red-600">-₱{{ number_format((float) ($db['applied_amount'] ?? 0), 2) }}</span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
                 </div>
             </div>
             <div class="mt-6 grid gap-6 md:grid-cols-2 max-w-6xl mx-auto">
@@ -275,31 +232,6 @@
                         </ul>
                     @else
                         <p class="text-sm text-gray-600">No charges found for this configuration.</p>
-                    @endif
-                </div>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h2 class="text-lg font-semibold mb-4">Selected Discounts</h2>
-                    @if(collect($discounts)->count() > 0)
-                        <ul class="divide-y divide-gray-200 text-sm">
-                            @foreach($discounts as $discount)
-                                <li class="py-2 flex items-center justify-between">
-                                    <span>
-                                        {{ $discount->discount_name ?? '—' }}
-                                        <small class="text-gray-500">
-                                            {{
-                                                ($discount->type ?? 'percentage') === 'percentage'
-                                                ? ($discount->value ?? 0).'%'
-                                                : '₱'.number_format((float) ($discount->value ?? 0), 2)
-                                            }}
-                                            —
-                                            Scope: {{ ucfirst(str_replace('_',' ', method_exists($discount,'getApplyScope') ? $discount->getApplyScope() : 'total')) }}
-                                        </small>
-                                    </span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="text-sm text-gray-600">No discounts found for this configuration.</p>
                     @endif
                 </div>
             </div>

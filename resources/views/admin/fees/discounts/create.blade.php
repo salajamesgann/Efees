@@ -253,7 +253,7 @@
                         <div class="col-span-1 md:col-span-2">
                             <div class="flex items-start">
                                 <div class="flex items-center h-5">
-                                    <input id="is_automatic" name="is_automatic" type="checkbox" value="1" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded" {{ old('is_automatic') ? 'checked' : '' }} x-data="{ checked: {{ old('is_automatic') ? 'true' : 'false' }} }" @change="checked = $el.checked; $dispatch('toggle-grades', checked)">
+                                    <input id="is_automatic" name="is_automatic" type="checkbox" value="1" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded" {{ old('is_automatic') ? 'checked' : '' }}>
                                 </div>
                                 <div class="ml-3 text-sm">
                                     <label for="is_automatic" class="font-medium text-gray-700">Automatic Application</label>
@@ -275,17 +275,7 @@
                             </div>
                         </div>
 
-                        <!-- Priority and Stackable -->
-                        <div>
-                            <label for="priority" class="block text-sm font-medium text-gray-700">Priority Level</label>
-                            <input type="number" name="priority" id="priority" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" value="{{ old('priority', 0) }}" min="0">
-                            <p class="mt-1 text-xs text-gray-500">Higher number = higher priority.</p>
-                        </div>
-
-                        <div class="flex items-center mt-6">
-                            <input type="checkbox" name="is_stackable" id="is_stackable" value="1" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {{ old('is_stackable', true) ? 'checked' : '' }}>
-                            <label for="is_stackable" class="ml-2 block text-sm text-gray-900">Stackable (Can be combined)</label>
-                        </div>
+                        <!-- Priority/Stackable controls removed for simplicity and consistency -->
 
                         <div class="col-span-1 md:col-span-2">
                             <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
@@ -310,5 +300,24 @@
             </div>
         </main>
     </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var nameInput = document.getElementById('discount_name');
+        var autoCb = document.getElementById('is_automatic');
+        function syncAutoLock() {
+            var v = (nameInput.value || '').trim().toLowerCase();
+            if (v.indexOf('academic scholar') !== -1) {
+                autoCb.checked = false;
+                autoCb.disabled = true;
+            } else {
+                autoCb.disabled = false;
+            }
+        }
+        if (nameInput && autoCb) {
+            nameInput.addEventListener('input', syncAutoLock);
+            syncAutoLock();
+        }
+    });
+</script>
 </body>
 </html>

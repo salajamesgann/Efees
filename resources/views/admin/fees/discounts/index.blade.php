@@ -68,8 +68,7 @@
           <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Value</th>
           <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Scope</th>
           <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Auto</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Stackable</th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Priority</th>
+          <!-- Removed Stackable and Priority for cleaner UX -->
           <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Active</th>
           <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
         </tr>
@@ -88,8 +87,7 @@
             </td>
             <td class="px-3 py-2 text-sm text-gray-600 capitalize">{{ str_replace('_',' ', $discount->getApplyScope()) }}</td>
             <td class="px-3 py-2 text-sm text-gray-900">{{ $discount->is_automatic ? 'Yes' : 'No' }}</td>
-            <td class="px-3 py-2 text-sm text-gray-900">{{ $discount->isStackable() ? 'Yes' : 'No' }}</td>
-            <td class="px-3 py-2 text-sm text-gray-900">{{ $discount->priority }}</td>
+            <!-- Stackable/Priority removed from table -->
             <td class="px-3 py-2 text-sm text-gray-900">{{ $discount->is_active ? 'Yes' : 'No' }}</td>
             <td class="px-3 py-2">
               <a href="{{ route('admin.fees.edit-discount', $discount) }}" class="inline-flex items-center h-8 px-2 rounded-lg bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600">
@@ -106,7 +104,7 @@
           </tr>
         @empty
           <tr>
-            <td colspan="9" class="px-4 py-6 text-center text-gray-600 text-sm">No discounts found.</td>
+            <td colspan="7" class="px-4 py-6 text-center text-gray-600 text-sm">No discounts found.</td>
           </tr>
         @endforelse
       </tbody>

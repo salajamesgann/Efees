@@ -49,9 +49,15 @@ class AdminReportsController extends Controller
         // Dashboard Stats (Filtered)
         $totalCollected = Payment::whereIn('student_id', $statsStudentIds)->sum('amount_paid');
         $pendingApprovals = Payment::whereIn('student_id', $statsStudentIds)->where('status', 'pending')->sum('amount_paid');
-        $pendingOutstanding = FeeRecord::whereIn('student_id', $statsStudentIds)
-            ->where('balance', '>', 0)
-            ->sum('balance');
+        // Pending Outstanding based on Net Payable per student (totalAmount - paidAmount)
+        $svc = app(\App\Services\FeeManagementService::class);
+        $pendingOutstanding = 0.0;
+        Student::whereIn('student_id', $statsStudentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, $svc) {
+            foreach ($chunk as $stu) {
+                $t = $svc->computeTotalsForStudent($stu);
+                $pendingOutstanding += max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
+            }
+        });
         $overdueBalances = FeeRecord::whereIn('student_id', $statsStudentIds)->overdue()->sum('balance');
         $remindersSent = SmsLog::whereIn('student_id', $statsStudentIds)->where('status', 'sent')->count();
 
@@ -256,11 +262,17 @@ class AdminReportsController extends Controller
         $totalCollected = Payment::whereIn('student_id', $studentIds)->where('status', 'approved')->sum('amount_paid');
         $pendingApprovals = Payment::whereIn('student_id', $studentIds)->where('status', 'pending')->sum('amount_paid');
         $pendingPayments = FeeRecord::whereIn('student_id', $studentIds)
+            ->where('record_type', '!=', 'tuition_total')
             ->whereIn('status', ['pending', 'partial'])
             ->sum('balance');
-        $pendingOutstanding = FeeRecord::whereIn('student_id', $studentIds)
-            ->where('balance', '>', 0)
-            ->sum('balance');
+        $svc = app(\App\Services\FeeManagementService::class);
+        $pendingOutstanding = 0.0;
+        Student::whereIn('student_id', $studentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, $svc) {
+            foreach ($chunk as $stu) {
+                $t = $svc->computeTotalsForStudent($stu);
+                $pendingOutstanding += max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
+            }
+        });
         $overdueBalances = FeeRecord::whereIn('student_id', $studentIds)->overdue()->sum('balance');
         $remindersSent = SmsLog::whereIn('student_id', $studentIds)->where('status', 'sent')->count();
 

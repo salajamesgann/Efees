@@ -72,21 +72,27 @@
     @if(($tuitionFees instanceof \Illuminate\Support\Collection ? $tuitionFees->count() : count($tuitionFees)) > 0)
         <div class="overflow-x-auto max-h-[60vh] overflow-y-auto rounded-lg border border-slate-200 custom-scrollbar" id="tuition-table-wrap">
             <table class="min-w-full divide-y divide-slate-200" id="tuition-table">
+                <colgroup>
+                    <col style="width: 44%">
+                    <col style="width: 16%">
+                    <col style="width: 16%">
+                    <col style="width: 12%">
+                    <col style="width: 12%">
+                </colgroup>
                 <thead class="bg-slate-50 sticky top-0 z-10">
                     <tr>
-                        <th class="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Fee Name</th>
-                        <th class="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">S.Y.</th>
-                        <th class="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Grade</th>
-                        <th class="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Gross Amount</th>
-                        <th class="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Net Payable</th>
-                        <th class="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                        <th class="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Fee Name</th>
+                        <th class="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">S.Y.</th>
+                        <th class="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Grade</th>
+                        <th class="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Gross Amount</th>
+                        <th class="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th class="px-5 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white">
                     @foreach($tuitionFees as $fee)
                         <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3 text-sm text-slate-900">
+                            <td class="px-5 py-3 text-sm text-slate-900">
                                 @php
                                     $feeName = is_array($fee) ? ($fee['fee_name'] ?? null) : ($fee->notes ?: null);
                                     $computedName = $feeName ?: ((is_array($fee) ? ($fee['grade_level'] ?? 'N/A') : $fee->grade_level).' Tuition – SY '.(is_array($fee) ? ($fee['school_year'] ?? 'N/A') : ($fee->school_year ?? 'N/A')));
@@ -99,10 +105,10 @@
                                     </span>
                                 </div>
                             </td>
-                            <td class="px-4 py-3 text-sm text-slate-600">
+                            <td class="px-5 py-3 text-sm text-slate-600">
                                 {{ is_array($fee) ? ($fee['school_year'] ?? 'N/A') : ($fee->school_year ?? 'N/A') }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-slate-600">
+                            <td class="px-5 py-3 text-sm text-slate-600">
                                 @php $gl = is_array($fee) ? $fee['grade_level'] : $fee->grade_level; @endphp
                                 {{ $gl }}
                                 @if(in_array($gl, ['Grade 11','Grade 12']))
@@ -112,44 +118,44 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-sm text-slate-900 text-right">
-                                @php $amt = is_array($fee) ? ($fee['amount'] ?? 0) : (float) $fee->amount; @endphp
+                            <td class="px-5 py-3 text-sm text-slate-900 text-right">
+                                @php 
+                                    $amt = is_array($fee) 
+                                        ? (($fee['amount'] ?? null) !== null ? $fee['amount'] : ($fee['base_tuition'] ?? 0))
+                                        : (float) $fee->amount; 
+                                @endphp
                                 ₱{{ number_format($amt, 2) }}
                             </td>
-                            <td class="px-4 py-3 text-sm font-semibold text-blue-600 text-right">
-                                @php $net = is_array($fee) ? ($fee['net_payable'] ?? $amt) : (float) $fee->amount; @endphp
-                                ₱{{ number_format($net, 2) }}
-                            </td>
-                            <td class="px-4 py-3 text-sm">
+                            <td class="px-5 py-3 text-sm">
                                 @php $active = is_array($fee) ? (bool) ($fee['is_active'] ?? false) : (bool) $fee->is_active; @endphp
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium {{ $active ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100' }}">
                                     {{ $active ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm whitespace-nowrap text-right">
-                                <div class="inline-flex items-center gap-2 text-slate-400">
+                            <td class="px-5 py-3 text-sm whitespace-nowrap text-right">
+                                <div class="inline-flex items-center gap-3 text-slate-400">
                                     @php $fid = is_array($fee) ? $fee['id'] : $fee->id; @endphp
                                     <a href="{{ route('admin.fees.show-tuition', $fid) }}"
                                        class="hover:text-blue-600 transition-colors" title="View details">
-                                        <i class="fas fa-eye text-xs"></i>
+                                        <i class="fas fa-eye text-sm"></i>
                                     </a>
                                     <a href="{{ route('admin.fees.edit-tuition', $fid) }}"
                                        class="hover:text-blue-600 transition-colors" title="Edit">
-                                        <i class="fas fa-pen text-xs"></i>
+                                        <i class="fas fa-edit text-sm"></i>
                                     </a>
                                     <form method="POST" action="{{ route('admin.fees.toggle-tuition', $fid) }}" class="inline">
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="active" value="{{ $active ? '0' : '1' }}">
-                                        <button type="submit" class="hover:text-{{ $active ? 'yellow' : 'green' }}-600 transition-colors" title="{{ $active ? 'Deactivate' : 'Activate' }}">
-                                            <i class="fas fa-{{ $active ? 'ban' : 'check-circle' }} text-xs"></i>
+                                        <button type="submit" class="hover:text-blue-600 transition-colors" title="{{ (is_array($fee) ? ($fee['is_active'] ?? false) : $fee->is_active) ? 'Deactivate' : 'Activate' }}">
+                                            <i class="fas {{ (is_array($fee) ? ($fee['is_active'] ?? false) : $fee->is_active) ? 'fa-toggle-off' : 'fa-toggle-on' }} text-sm"></i>
                                         </button>
                                     </form>
                                     <form method="POST" action="{{ route('admin.fees.destroy-tuition', $fid) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this tuition fee?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="hover:text-red-600 transition-colors" title="Delete">
-                                            <i class="fas fa-trash text-xs"></i>
+                                            <i class="fas fa-trash text-sm"></i>
                                         </button>
                                     </form>
                                 </div>

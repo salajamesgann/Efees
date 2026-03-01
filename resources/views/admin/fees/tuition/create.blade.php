@@ -223,7 +223,6 @@
                 @csrf
                 <input type="hidden" name="subject_fees" id="create_subject_fees" value="">
                 <input type="hidden" name="selected_charge_ids" id="create_selected_charge_ids" value="">
-                <input type="hidden" name="selected_discount_ids" id="create_selected_discount_ids" value="">
 
                 <!-- Section 1: Basic Information -->
                 <div class="p-6 border-b border-gray-200">
@@ -368,8 +367,8 @@
                     </div>
                 </div>
 
-                <!-- Section 4: Attach Charges & Discounts -->
-                <div class="p-6 border-b border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Section 4: Attach Charges -->
+                <div class="p-6 border-b border-gray-200 grid grid-cols-1 gap-8">
                     <!-- Additional Charges -->
                     <div>
                         <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Attach Additional Charges</h3>
@@ -388,30 +387,6 @@
                                 </div>
                             @empty
                                 <p class="text-sm text-gray-500 italic">No additional charges available.</p>
-                            @endforelse
-                        </div>
-                    </div>
-
-                    <!-- Discounts -->
-                    <div>
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Applicable Discounts</h3>
-                        <p class="text-sm text-gray-500 mb-4">Select discounts that can be applied to this fee.</p>
-                        
-                        <div class="max-h-60 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-2 custom-scrollbar">
-                            @forelse($availableDiscounts as $discount)
-                                <div class="flex items-start">
-                                    <div class="flex h-5 items-center">
-                                        <input id="create_discount_{{ $discount->id }}" name="discounts[]" value="{{ $discount->id }}" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    </div>
-                                    <div class="ml-3 text-sm">
-                                        <label for="create_discount_{{ $discount->id }}" class="font-medium text-gray-700">{{ $discount->discount_name }}</label>
-                                        <p class="text-gray-500">
-                                            {{ $discount->type === 'percentage' ? $discount->value.'%' : '₱'.number_format((float)$discount->value, 2) }}
-                                        </p>
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="text-sm text-gray-500 italic">No discounts available.</p>
                             @endforelse
                         </div>
                     </div>
@@ -486,7 +461,6 @@
             const noCompsRow = document.getElementById('create_no_comps_row');
             const form = document.getElementById('createTuitionForm');
             const hiddenCharges = document.getElementById('create_selected_charge_ids');
-            const hiddenDiscounts = document.getElementById('create_selected_discount_ids');
 
             function renderTable() {
                 while(tbody.firstChild) {
@@ -569,9 +543,7 @@
                         }
                     }
                     const chargeIds = Array.from(document.querySelectorAll('input[name="charges[]"]:checked')).map(el => el.value);
-                    const discountIds = Array.from(document.querySelectorAll('input[name="discounts[]"]:checked')).map(el => el.value);
                     hiddenCharges.value = chargeIds.join(',');
-                    hiddenDiscounts.value = discountIds.join(',');
                 });
             }
         });

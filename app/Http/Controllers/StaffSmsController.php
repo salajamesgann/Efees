@@ -33,7 +33,7 @@ class StaffSmsController extends Controller
         $strand = $request->get('strand');
 
         // Students - show those with balance by default, but allow finding others via search
-        $students = Student::with(['feeRecords', 'parents']) // Load ALL fee records for accurate balance calculation
+        $students = Student::with(['feeRecords', 'parents'])
             ->where('school_year', $activeYear)
             ->when(! $search, function ($q) {
                 $q->whereHas('feeRecords', function ($q) {
@@ -58,6 +58,14 @@ class StaffSmsController extends Controller
         $sections = Student::where('school_year', $activeYear)->distinct()->whereNotNull('section')->orderBy('section')->pluck('section');
         $strands = Strand::orderBy('name')->pluck('name');
 
+        // Compute Net Payable map
+        $svc = app(\App\Services\FeeManagementService::class);
+        $netById = [];
+        foreach ($students as $s) {
+            $t = $svc->computeTotalsForStudent($s);
+            $netById[$s->student_id] = max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
+        }
+
         // Templates
         $templates = SmsTemplate::all();
 
@@ -80,7 +88,8 @@ class StaffSmsController extends Controller
             'level',
             'section',
             'strand',
-            'activeYear'
+            'activeYear',
+            'netById'
         ));
     }
 
@@ -119,8 +128,11 @@ class StaffSmsController extends Controller
                 continue;
             }
 
-            $balance = $student->feeRecords->where('balance', '>', 0)->sum('balance');
-            $totalPaid = $student->total_paid;
+            // Use Net Payable basis for balances
+            $totals = app(\App\Services\FeeManagementService::class)->computeTotalsForStudent($student);
+            $totalDueAll = (float) ($totals['totalAmount'] ?? 0.0);
+            $totalPaid = (float) ($totals['paidAmount'] ?? 0.0);
+            $balance = max(0.0, $totalDueAll - $totalPaid);
 
             // Determine due date from earliest pending fee's payment_date or default +7 days
             $nextDueFee = $student->feeRecords->where('balance', '>', 0)->sortBy('payment_date')->first();

@@ -139,26 +139,31 @@ class StaffDashboardController extends Controller
         // Replace collection in paginator
         $students->setCollection($transformedCollection);
 
-        // Calculate Stats using raw SQL for performance
-        $statsResult = DB::select("
-            SELECT
-                SUM(CASE WHEN balance <= 0 THEN 1 ELSE 0 END) as paid,
-                SUM(CASE WHEN balance > 0 AND paid > 0 THEN 1 ELSE 0 END) as partial,
-                SUM(CASE WHEN balance > 0 AND paid = 0 THEN 1 ELSE 0 END) as unpaid
-            FROM (
-                SELECT 
-                    s.student_id,
-                    COALESCE((SELECT SUM(balance) FROM fee_records fr WHERE fr.student_id = s.student_id AND fr.status != 'cancelled'), 0) as balance,
-                    COALESCE((SELECT SUM(amount_paid) FROM payments p WHERE p.student_id = s.student_id AND (p.status IN ('approved','paid') OR p.status IS NULL)), 0) as paid
-                FROM students s
-                WHERE s.deleted_at IS NULL
-            ) as totals
-        ")[0];
+        // Calculate Stats based on Net Payable (totalAmount - paidAmount)
+        $svc = app(FeeManagementService::class);
+        $counters = ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
+        Student::where('school_year', $activeYear)
+            ->select(['student_id', 'level', 'school_year'])
+            ->chunk(200, function ($chunk) use (&$counters, $svc) {
+                foreach ($chunk as $stu) {
+                    $totals = $svc->computeTotalsForStudent($stu);
+                    $total = (float) ($totals['totalAmount'] ?? 0);
+                    $paid = (float) ($totals['paidAmount'] ?? 0);
+                    $due = max(0.0, $total - $paid);
+                    if ($due <= 0 && $total > 0) {
+                        $counters['paid']++;
+                    } elseif ($due > 0 && $paid > 0) {
+                        $counters['partial']++;
+                    } elseif ($due > 0 && $paid <= 0) {
+                        $counters['unpaid']++;
+                    }
+                }
+            });
 
         $stats = [
-            'paid' => (int) ($statsResult->paid ?? 0),
-            'partial' => (int) ($statsResult->partial ?? 0),
-            'unpaid' => (int) ($statsResult->unpaid ?? 0),
+            'paid' => $counters['paid'],
+            'partial' => $counters['partial'],
+            'unpaid' => $counters['unpaid'],
         ];
 
         return view('auth.staff_dashboard', [
@@ -253,12 +258,17 @@ class StaffDashboardController extends Controller
             return back()->with('error', 'No user account found for this student.');
         }
 
-        // Insert a realtime notification row (Supabase listens to inserts)
+            // Compute Net Payable for message
+            $svc = app(FeeManagementService::class);
+            $totals = $svc->computeTotalsForStudent($student);
+            $netDue = max(0.0, ((float) ($totals['totalAmount'] ?? 0)) - ((float) ($totals['paidAmount'] ?? 0)));
+
+            // Insert a realtime notification row (Supabase listens to inserts)
         try {
             DB::table('notifications')->insert([
                 'user_id' => $targetUser->user_id,
-                'title' => 'Fee Reminder',
-                'body' => 'Hello '.$student->first_name.', please review your outstanding fees.',
+                    'title' => 'Fee Reminder',
+                    'body' => 'Hello '.$student->first_name.', your current outstanding balance is ₱'.number_format($netDue, 2).'.',
                 'created_at' => now(),
             ]);
 
@@ -277,7 +287,7 @@ class StaffDashboardController extends Controller
                 try {
                     $this->smsGateway->send(
                         $mobileNumber,
-                        "Hello {$student->first_name}, this is a reminder from ".config('app.name').' to please review your outstanding fees.'
+                        "Hello {$student->first_name}, your outstanding balance is ₱".number_format($netDue, 2).'. - '.config('app.name')
                     );
                 } catch (\Exception $e) {
                     Log::warning('SMS Reminder failed', ['error' => $e->getMessage()]);
