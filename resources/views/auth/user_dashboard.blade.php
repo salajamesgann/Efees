@@ -151,7 +151,7 @@
             </a>
 
             <!-- Logout -->
-            <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-6 px-4 pb-6">
+            <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-6 px-4 pb-6" onsubmit="return confirmLogout()">
                 @csrf
                 <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200 group">
                     <div class="w-8 flex justify-center">
@@ -397,5 +397,12 @@
     <script src="//unpkg.com/alpinejs" defer></script>
     <!-- Supabase Realtime -->
     @include('partials.supabase_realtime')
+    
+    <!-- Logout Confirmation Script -->
+    <script>
+    function confirmLogout() {
+        return confirm('Are you sure you want to sign out?');
+    }
+    </script>
 </body>
 </html>

@@ -59,6 +59,7 @@ class Staff extends Model
         'contact_number',
         'position',
         'department',
+        'school_year',
         'is_active',
         'created_at',
         'updated_at',

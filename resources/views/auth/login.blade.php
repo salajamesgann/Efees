@@ -187,8 +187,13 @@
                                 <i class="fas fa-lock text-slate-500"></i>
                             </div>
                             <input id="password" type="password" name="password" required
-                                class="form-input block w-full pl-10 pr-3 py-3 rounded-xl text-sm"
-                                placeholder="••••••••">
+                                class="form-input block w-full pl-10 pr-12 py-3 rounded-xl text-sm"
+                                placeholder="•••••••">
+                            <button type="button" 
+                                    class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                                    onclick="togglePassword()">
+                                <i id="password-toggle-icon" class="fas fa-eye"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -215,6 +220,23 @@
             </div>
         </div>
     </div>
+
+    <script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const passwordIcon = document.getElementById('password-toggle-icon');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            passwordIcon.classList.remove('fa-eye');
+            passwordIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            passwordIcon.classList.remove('fa-eye-slash');
+            passwordIcon.classList.add('fa-eye');
+        }
+    }
+    </script>
 
 </body>
 </html>

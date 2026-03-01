@@ -416,7 +416,12 @@ class FeeAssignment extends Model
             }
         }
 
-        // Create fee assignment
+        // Create fee assignment only if there's a tuition fee or applicable charges/discounts
+        if (! $tuitionFee && $additionalCharges->isEmpty() && $eligibleDiscounts->isEmpty()) {
+            // No fees to assign - don't create an assignment
+            return null;
+        }
+
         $feeAssignment = self::create([
             'student_id' => $studentId,
             'tuition_fee_id' => $tuitionFee?->id,

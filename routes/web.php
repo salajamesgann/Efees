@@ -5,8 +5,6 @@ use App\Http\Controllers\AdminParentController;
 use App\Http\Controllers\AdminStudentController;
 use App\Http\Controllers\AuthLoginController;
 use App\Http\Controllers\StaffDashboardController;
-use App\Http\Controllers\StudentProfileController;
-use App\Http\Controllers\StudentSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -264,12 +262,5 @@ Route::middleware('auth')->group(function () {
         Route::post('/clear-cache', [\App\Http\Controllers\AdminSettingsController::class, 'clearCache'])->name('clear-cache');
         Route::post('/reset-database', [\App\Http\Controllers\AdminSettingsController::class, 'resetDatabase'])->name('reset-database');
         Route::post('/export-db', [\App\Http\Controllers\AdminSettingsController::class, 'exportDatabase'])->name('export-db');
-    });
-
-    // Student Profile Routes
-    Route::middleware(['auth', 'ensureRole:student'])->prefix('student')->name('student.')->group(function () {
-        Route::get('/profile', [StudentProfileController::class, 'show'])->name('profile');
-        Route::get('/settings', [StudentSettingsController::class, 'index'])->name('settings');
-        Route::post('/settings/password', [StudentSettingsController::class, 'updatePassword'])->name('settings.password');
     });
 });

@@ -30,6 +30,12 @@ class StaffPaymentController extends Controller
 
                 if ($request->school_year) {
                     $query->where('school_year', $request->school_year);
+                } else {
+                    // Default to active school year
+                    $activeYear = SystemSetting::where('key', 'school_year')->value('value');
+                    if ($activeYear) {
+                        $query->where('school_year', $activeYear);
+                    }
                 }
                 if ($request->level) {
                     $query->where('level', $request->level);
@@ -89,16 +95,20 @@ class StaffPaymentController extends Controller
             }
         }
 
+        $activeYear = SystemSetting::where('key', 'school_year')->value('value');
+        
         $schoolYears = Student::distinct()->whereNotNull('school_year')->orderBy('school_year', 'desc')->pluck('school_year');
-        $levels = Student::distinct()->whereNotNull('level')->pluck('level')
-            ->merge(['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'])
+        
+        // Filter dropdowns by active school year only
+        $levels = Student::where('school_year', $activeYear)->distinct()->whereNotNull('level')->pluck('level')
+            ->merge(['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'])
             ->unique()
             ->sort(function ($a, $b) {
                 return strnatcmp($a, $b);
             })
             ->values();
-        $strands = Student::distinct()->whereNotNull('strand')->pluck('strand');
-        $sections = Student::distinct()->whereNotNull('section')->pluck('section');
+        $strands = Student::where('school_year', $activeYear)->distinct()->whereNotNull('strand')->pluck('strand');
+        $sections = Student::where('school_year', $activeYear)->distinct()->whereNotNull('section')->pluck('section');
 
         $notifications = DB::table('notifications')
             ->where('user_id', Auth::id())
@@ -106,7 +116,7 @@ class StaffPaymentController extends Controller
             ->limit(10)
             ->get();
 
-        return view('auth.staff_payment_processing', compact('schoolYears', 'levels', 'strands', 'sections', 'notifications'));
+        return view('auth.staff_payment_processing', compact('schoolYears', 'levels', 'strands', 'sections', 'notifications', 'activeYear'));
     }
 
     public function store(Request $request): RedirectResponse

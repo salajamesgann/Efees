@@ -110,7 +110,7 @@
         </nav>
 
         <div class="px-4 py-4 border-t border-gray-200">
-            <form method="POST" action="{{ route('logout') }}">
+            <form method="POST" action="{{ route('logout') }}" onsubmit="return confirmLogout()">
                 @csrf
                 <button class="w-full flex items-center gap-3 bg-blue-600 text-white font-bold text-sm rounded-lg h-10 justify-center cursor-pointer transition-colors duration-300 hover:bg-blue-700" type="submit">
                     <i class="fas fa-sign-out-alt"></i>
@@ -721,5 +721,12 @@
         });
     </script>
     <script src="//unpkg.com/alpinejs" defer></script>
+    
+    <!-- Logout Confirmation Script -->
+    <script>
+    function confirmLogout() {
+        return confirm('Are you sure you want to sign out?');
+    }
+    </script>
 </body>
 </html>

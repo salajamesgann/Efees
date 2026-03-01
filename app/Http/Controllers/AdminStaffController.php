@@ -8,11 +8,14 @@ use App\Models\Staff;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\FeeManagementService;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
@@ -124,16 +127,38 @@ class AdminStaffController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'role_name' => ['required', 'string', 'exists:roles,role_name'],
             'password' => [
-                'required',
+                'required_if:role_name,staff,admin', // Required for staff/admin, optional for parents
+                'nullable', // Allow null for parents
+            ],
+        ], [
+            'password.required_if' => 'Password is required for staff and admin accounts.',
+            'email.unique' => 'This email address is already registered.',
+        ]);
+
+        // Add password complexity rules only if password is provided
+        if ($request->filled('password')) {
+            $validator->sometimes('password', [
                 'string',
                 'min:8',
                 'confirmed',
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
-            ],
-        ], [
-            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
-            'email.unique' => 'This email address is already registered.',
-        ]);
+            ], function ($input) {
+                return $input->filled('password');
+            }, [
+                'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+            ]);
+        }
+
+        // Add phone number uniqueness validation only for parent accounts
+        if ($request->input('role_name') === 'parent' && $request->filled('phone_number')) {
+            $validator->sometimes('phone_number', [
+                'unique:parents,phone',
+            ], function ($input) {
+                return $input->role_name === 'parent' && $input->filled('phone_number');
+            }, [
+                'phone_number.unique' => 'This phone number is already registered.',
+            ]);
+        }
 
         if ($validator->fails()) {
             return redirect()
@@ -144,22 +169,27 @@ class AdminStaffController extends Controller
 
         try {
             $roleName = $request->input('role_name');
+            $validated = $validator->validated();
+            $email = strtolower($validated['email']); // Define email here for use in success message
 
-            DB::transaction(function () use ($request, $validator, $roleName) {
-                $validated = $validator->validated();
-                $role = Role::where('role_name', $roleName)->firstOrFail();
+            // Pre-transaction checks (outside transaction to avoid failed transaction issues)
+            if (User::where('email', $email)->exists()) {
+                throw new \Exception('A user with this email already exists.');
+            }
+
+            if ($roleName === 'parent') {
+                // Check if parent already exists by email
+                $existingParent = ParentContact::where('email', $email)->first();
+            } else {
+                $existingParent = null;
+            }
+
+            // Get role outside transaction to avoid transaction issues
+            $role = Role::where('role_name', $roleName)->firstOrFail();
+
+            DB::transaction(function () use ($request, $validated, $roleName, $email, $existingParent, $role) {
 
                 if ($roleName === 'parent') {
-                    $email = strtolower($validated['email']);
-
-                    // Check if parent user already exists
-                    if (User::where('email', $email)->exists()) {
-                        throw new \Exception('A user with this email already exists.');
-                    }
-
-                    // Check if parent already exists by email
-                    $parent = ParentContact::where('email', $email)->first();
-
                     $parentData = [
                         'full_name' => trim($validated['first_name'].' '.($validated['middle_initial'] ?? '').' '.$validated['last_name']),
                         'phone' => $validated['phone_number'] ?? null,
@@ -167,7 +197,7 @@ class AdminStaffController extends Controller
                         'account_status' => 'Active',
                     ];
 
-                    if (! $parent) {
+                    if (! $existingParent) {
                         // Create Parent Contact
                         $parent = ParentContact::create($parentData);
 
@@ -188,17 +218,44 @@ class AdminStaffController extends Controller
                         }
                     } else {
                         // Update existing parent info
-                        $parent->update($parentData);
+                        $existingParent->update($parentData);
+                        $parent = $existingParent; // Use existing parent for user creation
                     }
 
                     // Create User Account
-                    User::create([
+                    $user = User::create([
                         'email' => $email,
                         'password' => Hash::make($validated['password']),
+                        'must_change_password' => empty($validated['password']),
                         'role_id' => $role->role_id,
                         'roleable_type' => ParentContact::class,
                         'roleable_id' => (string) $parent->id,
                     ]);
+
+                    // Send password reset email if no password was provided and it's a Gmail address
+                    if (empty($validated['password']) && str_contains(strtolower($email), '@gmail.com')) {
+                        try {
+                            // Create password reset token
+                            $token = Password::createToken($user);
+                            
+                            // Generate reset URL
+                            $resetUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
+                            
+                            // Send email with reset link
+                            Mail::send('auth.emails.parent-account-created', [
+                                'parent' => $parent,
+                                'user' => $user,
+                                'resetUrl' => $resetUrl,
+                            ], function ($message) use ($parent, $user) {
+                                $message->to($user->email, $parent->full_name)
+                                    ->subject('Your E-Fees Parent Account - Set Your Password');
+                            });
+                            
+                        } catch (\Throwable $e) {
+                            // Log error but don't fail the parent creation
+                            Log::error('Failed to send parent account email: ' . $e->getMessage());
+                        }
+                    }
 
                     // Audit Log
                     try {
@@ -213,8 +270,6 @@ class AdminStaffController extends Controller
                     }
 
                 } else {
-                    $email = strtolower($validated['email']);
-
                     // Check if staff user already exists
                     if (User::where('email', $email)->exists()) {
                         throw new \Exception('A user with this email already exists.');
@@ -226,8 +281,8 @@ class AdminStaffController extends Controller
                         'MI' => $validated['middle_initial'] ?? null,
                         'last_name' => $validated['last_name'],
                         'contact_number' => $validated['phone_number'] ?? null,
-                        'department' => $request->input('department'),
-                        'position' => $request->input('position'),
+                        'department' => $request->input('department') ?: 'General Administration', // Default department
+                        'position' => $request->input('position') ?: 'Staff', // Default position
                         'is_active' => true,
                     ];
 
@@ -251,11 +306,13 @@ class AdminStaffController extends Controller
                     } catch (\Throwable $e) {
                     }
                 }
+                
+                return true; // Return success value from transaction
             });
 
             return redirect()
                 ->route('admin.staff.index')
-                ->with('success', ucfirst($roleName).' account created successfully.');
+                ->with('success', ucfirst($roleName).' account created successfully. '.($roleName === 'parent' && str_contains(strtolower($email), '@gmail.com') && empty($validated['password']) ? 'A password setup email has been sent to the Gmail address.' : ''));
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.staff.create')
@@ -374,6 +431,7 @@ class AdminStaffController extends Controller
             $roleable = $user->roleable;
 
             if (! $roleable) {
+                // Handle case where roleable relationship is not loaded
                 if ($user->roleable_type === Staff::class) {
                     $current = DB::table('staff')
                         ->where('staff_id', $user->roleable_id)
@@ -386,37 +444,39 @@ class AdminStaffController extends Controller
 
                     return back()->with('success', "Account has been {$status} successfully.");
                 } elseif ($user->roleable_type === ParentContact::class) {
-                    // Handle string roleable_id referencing integer parents.id on pgsql
-                    $pid = is_numeric($user->roleable_id) ? (int) $user->roleable_id : null;
-                    if ($pid === null) {
-                        // Attempt cast via whereRaw if needed
+                    // Handle parent account status update
+                    try {
                         $current = DB::table('parents')
-                            ->whereRaw('CAST(parents.id AS VARCHAR) = ?', [$user->roleable_id])
+                            ->where('id', $user->roleable_id)
                             ->value('account_status');
-                        $newStatus = ($current ?? 'Inactive') === 'Active' ? 'Inactive' : 'Active';
+                        
+                        // Parent accounts use 'Active' and 'Archived' status values
+                        $newStatus = ($current ?? 'Active') === 'Active' ? 'Archived' : 'Active';
+                        
                         DB::table('parents')
-                            ->whereRaw('CAST(parents.id AS VARCHAR) = ?', [$user->roleable_id])
+                            ->where('id', $user->roleable_id)
                             ->update(['account_status' => $newStatus, 'updated_at' => now()]);
-                    } else {
-                        $current = DB::table('parents')->where('id', $pid)->value('account_status');
-                        $newStatus = ($current ?? 'Inactive') === 'Active' ? 'Inactive' : 'Active';
-                        DB::table('parents')->where('id', $pid)->update(['account_status' => $newStatus, 'updated_at' => now()]);
-                    }
-                    $status = ($newStatus === 'Active') ? 'activated' : 'deactivated';
+                        
+                        $status = ($newStatus === 'Active') ? 'activated' : 'archived';
 
-                    return back()->with('success', "Account has been {$status} successfully.");
+                        return back()->with('success', "Account has been {$status} successfully.");
+                    } catch (\Exception $e) {
+                        return back()->with('error', 'Failed to update parent status: ' . $e->getMessage());
+                    }
                 } else {
                     return back()->with('error', 'Role profile not found.');
                 }
             }
 
+            // Update using the loaded roleable model
             if ($user->roleable_type === Staff::class) {
                 $roleable->update(['is_active' => ! $roleable->is_active]);
                 $status = $roleable->is_active ? 'activated' : 'deactivated';
             } elseif ($user->roleable_type === ParentContact::class) {
-                $newStatus = $roleable->account_status === 'Active' ? 'Inactive' : 'Active';
+                // Parent accounts use 'Active' and 'Archived' status values
+                $newStatus = $roleable->account_status === 'Active' ? 'Archived' : 'Active';
                 $roleable->update(['account_status' => $newStatus]);
-                $status = $newStatus === 'Active' ? 'activated' : 'deactivated';
+                $status = $newStatus === 'Active' ? 'activated' : 'archived';
             } else {
                 return back()->with('error', 'Cannot toggle status for this user type.');
             }
@@ -424,7 +484,8 @@ class AdminStaffController extends Controller
             return back()->with('success', "Account has been {$status} successfully.");
 
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to update status.');
+            // Add more detailed error information for debugging
+            return back()->with('error', 'Failed to update status: ' . $e->getMessage());
         }
     }
 

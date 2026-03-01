@@ -153,7 +153,7 @@
           </a>
 
           <!-- Logout -->
-          <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-6 px-4 pb-6">
+          <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-6 px-4 pb-6" onsubmit="return confirmLogout()">
               @csrf
               <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 hover:shadow-sm transition-all duration-200 group border border-red-100">
                   <div class="w-8 flex justify-center">
@@ -1022,5 +1022,12 @@
     setInterval(fetchMetrics, 30000);
    });
   </script>
+   
+   <!-- Logout Confirmation Script -->
+   <script>
+   function confirmLogout() {
+       return confirm('Are you sure you want to sign out?');
+   }
+   </script>
  </body>
 </html>

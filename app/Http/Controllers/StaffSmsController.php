@@ -7,6 +7,7 @@ use App\Models\SmsLog;
 use App\Models\SmsTemplate;
 use App\Models\Strand;
 use App\Models\Student;
+use App\Models\SystemSetting;
 use App\Services\SmsGatewayService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,8 @@ class StaffSmsController extends Controller
 
     public function index(Request $request): View
     {
+        $activeYear = SystemSetting::where('key', 'school_year')->value('value');
+        
         $search = $request->get('search');
         $status = $request->get('status');
         $level = $request->get('level');
@@ -30,12 +33,11 @@ class StaffSmsController extends Controller
         $strand = $request->get('strand');
 
         // Students - show those with balance by default, but allow finding others via search
-        $students = Student::with(['feeRecords' => function ($q) {
-            $q->where('balance', '>', 0);
-        }, 'parents'])
+        $students = Student::with(['feeRecords', 'parents']) // Load ALL fee records for accurate balance calculation
+            ->where('school_year', $activeYear)
             ->when(! $search, function ($q) {
                 $q->whereHas('feeRecords', function ($q) {
-                    $q->where('balance', '>', 0);
+                    $q->where('balance', '>', 0); // Only show students with outstanding balances by default
                 });
             })
             ->when($search, function ($q) use ($search) {
@@ -51,9 +53,9 @@ class StaffSmsController extends Controller
             ->when($strand, fn ($q) => $q->where('strand', $strand))
             ->paginate(10, ['*'], 'students_page');
 
-        // Filter Options
-        $levels = Student::distinct()->whereNotNull('level')->orderBy('level')->pluck('level');
-        $sections = Student::distinct()->whereNotNull('section')->orderBy('section')->pluck('section');
+        // Filter Options - only from current school year
+        $levels = collect(['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+        $sections = Student::where('school_year', $activeYear)->distinct()->whereNotNull('section')->orderBy('section')->pluck('section');
         $strands = Strand::orderBy('name')->pluck('name');
 
         // Templates
@@ -77,7 +79,8 @@ class StaffSmsController extends Controller
             'strands',
             'level',
             'section',
-            'strand'
+            'strand',
+            'activeYear'
         ));
     }
 

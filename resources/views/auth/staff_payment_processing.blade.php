@@ -555,7 +555,7 @@
         return {
             filters: {
                 search: '',
-                school_year: '',
+                school_year: '{{ $activeYear ?? "" }}',
                 level: '',
                 strand: '',
                 section: ''

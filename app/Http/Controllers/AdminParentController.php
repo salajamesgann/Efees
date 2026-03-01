@@ -8,11 +8,15 @@ use App\Models\Student;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\FeeManagementService;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -119,7 +123,31 @@ class AdminParentController extends Controller
                         'roleable_id' => (string) $parent->id,
                     ]);
 
-                    if ($parent->phone && empty($data['password'])) {
+                    // Send password reset email if no password was provided
+                    if (empty($data['password']) && str_contains(strtolower($data['email']), '@gmail.com')) {
+                        try {
+                            // Create password reset token
+                            $token = Password::createToken($user);
+                            
+                            // Generate reset URL
+                            $resetUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
+                            
+                            // Send email with reset link
+                            Mail::send('auth.emails.parent-account-created', [
+                                'parent' => $parent,
+                                'user' => $user,
+                                'resetUrl' => $resetUrl,
+                            ], function ($message) use ($parent, $user) {
+                                $message->to($user->email, $parent->full_name)
+                                    ->subject('Your E-Fees Parent Account - Set Your Password');
+                            });
+                            
+                        } catch (\Throwable $e) {
+                            // Log error but don't fail the parent creation
+                            \Log::error('Failed to send parent account email: ' . $e->getMessage());
+                        }
+                    } elseif ($parent->phone && empty($data['password'])) {
+                        // Fallback to SMS for non-Gmail emails or if email fails
                         try {
                             $message = "Your E-Fees parent account was created.\nEmail: {$user->email}\nTemp Password: {$password}";
                             app(\App\Services\SmsService::class)->send($parent->phone, $message, null);
@@ -128,7 +156,7 @@ class AdminParentController extends Controller
                     }
                 }
 
-                return redirect()->route('admin.parents.index')->with('success', 'Parent created.');
+                return redirect()->route('admin.parents.index')->with('success', 'Parent created successfully. A password setup email has been sent to the Gmail address.');
             });
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'Failed to create parent: '.$e->getMessage())->withInput();

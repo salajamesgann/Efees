@@ -378,6 +378,11 @@ class FeeManagementService
         if (! $assignment && $schoolYear) {
             // Auto-assign fees if missing
             $assignment = FeeAssignment::assignForStudent($student->student_id, $schoolYear, 'N/A');
+            
+            // If no assignment was created (no fees available), don't proceed
+            if (! $assignment) {
+                return;
+            }
         }
 
         // Attempt to reconcile installments (e.g. if schedule changed)

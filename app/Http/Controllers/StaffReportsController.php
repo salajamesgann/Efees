@@ -6,6 +6,7 @@ use App\Models\GeneratedReport;
 use App\Models\Payment;
 use App\Models\ScheduledReport;
 use App\Models\Student;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -14,9 +15,12 @@ class StaffReportsController extends Controller
 {
     public function index(): View
     {
-        // Get unique levels and sections for dropdowns
-        $levels = Student::distinct()->whereNotNull('level')->orderBy('level')->pluck('level');
-        $sections = Student::distinct()->whereNotNull('section')->orderBy('section')->pluck('section');
+        // Get active school year
+        $activeYear = SystemSetting::where('key', 'school_year')->value('value');
+        
+        // Get unique levels and sections for dropdowns - from current school year only
+        $levels = collect(['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+        $sections = Student::where('school_year', $activeYear)->distinct()->whereNotNull('section')->orderBy('section')->pluck('section');
 
         // Get scheduled reports for the current user
         $scheduledReports = ScheduledReport::where('created_by', Auth::user()->user_id)

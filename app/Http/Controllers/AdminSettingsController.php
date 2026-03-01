@@ -14,6 +14,7 @@ use App\Models\StudentSmsPreference;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\SchoolYearUpdateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,12 @@ class AdminSettingsController extends Controller
 
         $oldSettings = SystemSetting::whereIn('key', array_keys($data))->pluck('value', 'key')->toArray();
 
+        // Check if school year is being updated
+        $schoolYearUpdateResults = [];
+        if (isset($data['school_year']) && $data['school_year'] !== ($oldSettings['school_year'] ?? null)) {
+            $schoolYearUpdateResults = SchoolYearUpdateService::handleSchoolYearChange($data['school_year']);
+        }
+
         foreach ($data as $key => $value) {
             SystemSetting::updateOrCreate(['key' => $key], ['value' => $value]);
         }
@@ -100,7 +107,25 @@ class AdminSettingsController extends Controller
         } catch (\Throwable $e) {
         }
 
-        return redirect()->route('admin.settings.index')->with('success', 'Settings updated');
+        // Prepare success message
+        $successMessage = 'Settings updated';
+        if (!empty($schoolYearUpdateResults['staff_updated'])) {
+            $successMessage .= sprintf(
+                '. School year updated: %d staff records updated to %s. %d student records preserved in their original enrollment years.',
+                $schoolYearUpdateResults['staff_updated'],
+                $data['school_year'] ?? 'new school year',
+                $schoolYearUpdateResults['students_preserved'] ?? 0
+            );
+        }
+
+        if (!empty($schoolYearUpdateResults['errors'])) {
+            // Add errors to session if any occurred during school year update
+            return redirect()->route('admin.settings.index')
+                ->with('success', $successMessage)
+                ->with('warning', 'Some issues occurred during school year update: ' . implode(', ', $schoolYearUpdateResults['errors']));
+        }
+
+        return redirect()->route('admin.settings.index')->with('success', $successMessage);
     }
 
     public function resetDemoData(Request $request): RedirectResponse

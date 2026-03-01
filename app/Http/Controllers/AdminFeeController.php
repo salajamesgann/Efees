@@ -229,7 +229,7 @@ class AdminFeeController extends Controller
         $discounts = collect();
         $availableCharges = collect();
         $availableDiscounts = collect();
-        $gradeLevels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+        $gradeLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
         if ($currentTab === 'charges') {
             try {
                 $query = \App\Models\AdditionalCharge::query();
@@ -472,7 +472,7 @@ class AdminFeeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'fee_name' => ['required', 'string', 'max:255'],
-            'grade_level' => ['required', 'string', 'in:Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
+            'grade_level' => ['required', 'string', 'in:Grade 1,Grade 2,Grade 3,Grade 4,Grade 5,Grade 6,Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
             'subject_fees' => ['required', 'string'],
             'selected_charge_ids' => ['nullable', 'string'],
             'selected_discount_ids' => ['nullable', 'string'],
@@ -946,7 +946,7 @@ class AdminFeeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'fee_name' => ['nullable', 'string', 'max:255'],
-            'grade_level' => ['required', 'string', 'in:Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
+            'grade_level' => ['required', 'string', 'in:Grade 1,Grade 2,Grade 3,Grade 4,Grade 5,Grade 6,Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
             'amount' => ['required', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
             'subject_fees' => ['nullable', 'string'],
@@ -2489,7 +2489,7 @@ class AdminFeeController extends Controller
      */
     public function summary(Request $request): View
     {
-        $gradeLevels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+        $gradeLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
         $gradeLevel = $request->get('grade_level', $gradeLevels[0]);
         $schoolYear = \App\Models\SystemSetting::getActiveSchoolYear() ?? 'N/A';
         $semester = 'N/A';

@@ -361,7 +361,7 @@ class AuthLoginController extends Controller
             $schoolYears->prepend($activeSy);
         }
 
-        $levels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+        $levels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
         $sections = Section::orderBy('name')->pluck('name');
 
         // Date ranges for Trends
@@ -607,8 +607,8 @@ class AuthLoginController extends Controller
                 ->groupBy('students.level')
                 ->get();
 
-            // Ensure Grade 7 to 12 are displayed in correct order
-            $allLevels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+            // Ensure Grade 1 to 12 are displayed in correct order
+            $allLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
             $collectionsByGrade = collect($allLevels)->map(function ($lvl) use ($rawGrades) {
                 $found = $rawGrades->firstWhere('label', $lvl);
 

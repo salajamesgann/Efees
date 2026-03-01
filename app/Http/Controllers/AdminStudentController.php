@@ -15,7 +15,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AdminStudentController extends Controller
@@ -135,6 +138,9 @@ class AdminStudentController extends Controller
 
         $currentSchoolYear = $request->query('school_year', $defaultSy);
         $isReadOnly = ($activeSy && $currentSchoolYear !== $activeSy);
+        
+        // Always filter by the current school year
+        $selectedSchoolYear = $currentSchoolYear;
 
         $selectedStudent = null;
         $recentActivity = [];
@@ -216,9 +222,7 @@ class AdminStudentController extends Controller
             $viewState = 'students';
 
             $studentsQuery = Student::with(['parents'])
-                ->when($currentSchoolYear, function ($query) use ($currentSchoolYear) {
-                    $query->where('school_year', $currentSchoolYear);
-                })
+                ->where('school_year', $selectedSchoolYear)
                 ->when($level, function ($query) use ($level) {
                     $query->where('level', $level);
                 })
@@ -264,7 +268,7 @@ class AdminStudentController extends Controller
         } else {
             $viewState = 'levels';
             // Always show all grade levels regardless of enrollment
-            $levels = collect(['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
+            $levels = collect(['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']);
         }
 
         $totalStudents = Student::count();
@@ -490,8 +494,8 @@ class AdminStudentController extends Controller
             // New Parent Fields
             'parent_guardian_name' => ['required_if:parent_mode,new', 'nullable', 'string', 'max:255'],
             'parent_contact_number' => ['required_if:parent_mode,new', 'nullable', 'string', 'min:11', 'max:11', 'unique:parents,phone'],
-            'parent_email' => ['required_if:parent_mode,new', 'nullable', 'email', 'max:255'],
-            'parent_password' => ['required_if:parent_mode,new', 'nullable', 'string', 'min:6'],
+            'parent_email' => ['required_if:parent_mode,new', 'nullable', 'email', 'max:255'], // Required for password reset
+            'parent_password' => ['nullable', 'string', 'min:6'], // Optional - will use email reset if empty
             'parent_address' => ['nullable', 'string', 'max:500'],
             'relationship' => ['required', 'string', 'max:50'],
 
@@ -578,7 +582,7 @@ class AdminStudentController extends Controller
                 ]);
 
                 // Create User Account for Parent
-                $parentPassword = $validated['parent_password'];
+                $parentPassword = $validated['parent_password'] ?? null;
                 $parentRole = \App\Models\Role::firstOrCreate(['role_name' => 'parent'], ['description' => 'Parent']);
 
                 // Username is email if provided, otherwise phone (but email is preferred for login)
@@ -586,14 +590,42 @@ class AdminStudentController extends Controller
 
                 // Check if user exists (shouldn't if validation passed, but safety check)
                 if (! \App\Models\User::where('email', $username)->exists()) {
-                    \App\Models\User::create([
+                    // Generate a random password if none provided
+                    if (empty($parentPassword)) {
+                        $parentPassword = Str::random(16); // Generate secure random password
+                    }
+
+                    $user = \App\Models\User::create([
                         'email' => $username, // Using email as username/email field for login
                         'password' => Hash::make($parentPassword),
-                        'must_change_password' => true,
+                        'must_change_password' => empty($validated['parent_password']), // Force change if no password was provided by admin
                         'role_id' => $parentRole->role_id,
                         'roleable_type' => \App\Models\ParentContact::class,
                         'roleable_id' => (string) $parentContact->id,
                     ]);
+
+                    // Send password reset email if no password was provided by admin and it's a Gmail address
+                    if (empty($validated['parent_password']) && str_contains(strtolower($parentEmail), '@gmail.com')) {
+                        try {
+                            // Create password reset token
+                            $token = \Illuminate\Support\Facades\Password::createToken($user);
+                            
+                            // Generate reset URL
+                            $resetUrl = route('password.reset', ['token' => $token, 'email' => $user->email]);
+                            
+                            // Send professional email with reset link
+                            \Illuminate\Support\Facades\Mail::send('auth.emails.parent-account-created', [
+                                'parent' => $parentContact,
+                                'user' => $user,
+                                'resetUrl' => $resetUrl,
+                            ], function ($message) use ($parentContact, $user) {
+                                $message->to($user->email, $parentContact->full_name)
+                                    ->subject('Your E-Fees Parent Account - Set Your Password');
+                            });
+                        } catch (\Throwable $e) {
+                            // Continue if email fails - parent account still created
+                        }
+                    }
                 }
 
             } else {
@@ -637,19 +669,40 @@ class AdminStudentController extends Controller
             ];
         });
 
-        // 5. Send SMS (if new parent and toggle is on)
+        // 5. Send SMS (if new parent and toggle is on, and email wasn't used for password setup)
         if ($sendSms && $result['isNewParent'] && $result['parentContact'] && $result['parentContact']->phone) {
-            try {
-                $msg = \App\Services\SmsTemplates::getNewAccountMessage($result['parentContact']->phone, $result['parentPassword']);
-                app(\App\Services\SmsService::class)->send($result['parentContact']->phone, $msg, $result['student']->student_id);
-            } catch (\Exception $e) {
-                // Don't rollback for SMS failure
+            // Only send SMS if no email was provided, or if email is not Gmail, or if password was provided
+            $parentEmail = $result['parentContact']->email;
+            $parentPassword = $result['parentPassword'];
+            
+            $shouldSendSms = empty($parentEmail) || 
+                            !str_contains(strtolower($parentEmail), '@gmail.com') || 
+                            !empty($parentPassword);
+            
+            if ($shouldSendSms) {
+                try {
+                    $msg = \App\Services\SmsTemplates::getNewAccountMessage($result['parentContact']->phone, $result['parentPassword']);
+                    app(\App\Services\SmsService::class)->send($result['parentContact']->phone, $msg, $result['student']->student_id);
+                } catch (\Exception $e) {
+                    // Don't rollback for SMS failure
+                }
+            }
+        }
+
+        // Build success message
+        $successMessage = 'Student enrolled successfully.';
+        if ($result['isNewParent'] && $result['parentContact']) {
+            $parentEmail = $result['parentContact']->email;
+            $parentPassword = $result['parentPassword'];
+            
+            if (empty($parentPassword) && str_contains(strtolower($parentEmail), '@gmail.com')) {
+                $successMessage .= ' A password setup email has been sent to the parent\'s Gmail address.';
             }
         }
 
         return redirect()
             ->route('admin.students.index', ['id' => $result['student']->student_id])
-            ->with('success', 'Student enrolled successfully.');
+            ->with('success', $successMessage);
     }
 
     /**

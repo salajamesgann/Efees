@@ -98,7 +98,7 @@
                 <label class="text-sm font-semibold text-slate-700">Grade Level <span class="text-red-500">*</span></label>
                 <select name="level" x-model="gradeLevel" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" required>
                     <option value="">Select Grade</option>
-                    @foreach(['Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'] as $grade)
+                    @foreach(['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'] as $grade)
                         <option value="{{ $grade }}" {{ old('level', $student->level ?? request('level') ?? '') === $grade ? 'selected' : '' }}>{{ $grade }}</option>
                     @endforeach
                 </select>

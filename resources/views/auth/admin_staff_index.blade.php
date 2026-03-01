@@ -124,6 +124,14 @@
                 <span class="text-sm font-medium">SMS Control</span>
             </a>
 
+            <!-- Requests -->
+            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.requests.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.requests.index') }}">
+                <div class="w-8 flex justify-center">
+                    <i class="fas fa-key text-lg {{ request()->routeIs('admin.requests.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+                </div>
+                <span class="text-sm font-medium">Requests</span>
+            </a>
+
             <!-- Settings -->
             <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.settings.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.settings.index') }}">
                 <div class="w-8 flex justify-center">
@@ -255,30 +263,98 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             @php
-                                                $isActive = $user->is_active;
+                                                // Handle different status fields for different user types
+                                                if ($user->role->role_name === 'parent' && $user->roleable) {
+                                                    $isActive = $user->roleable->account_status === 'Active';
+                                                    $statusText = $user->roleable->account_status;
+                                                } else {
+                                                    $isActive = $user->is_active;
+                                                    $statusText = $isActive ? 'Active' : 'Inactive';
+                                                }
                                             @endphp
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                                {{ $isActive ? 'Active' : 'Inactive' }}
+                                                {{ $statusText }}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <a href="{{ route('admin.staff.show', $user) }}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
-                                            <a href="{{ route('admin.staff.edit', $user) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
-                                            <form action="{{ route('admin.staff.toggle-status', $user) }}" method="POST" class="inline mr-3">
-                                                @csrf
-                                                @if($isActive)
-                                                    <button type="submit" class="text-red-600 hover:text-red-900">Deactivate</button>
-                                                @else
-                                                    <button type="submit" class="text-green-600 hover:text-green-900">Activate</button>
-                                                @endif
-                                            </form>
-                                            @if($user->role && $user->role->role_name !== 'admin')
-                                                <form action="{{ route('admin.staff.destroy', $user) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this user account? This action cannot be undone.');">
+                                            <div class="flex justify-end space-x-2">
+                                                <!-- View Action -->
+                                                <a href="{{ route('admin.staff.show', $user) }}" 
+                                                   class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors duration-200"
+                                                   title="View User">
+                                                    <i class="fas fa-eye text-sm"></i>
+                                                </a>
+                                                
+                                                <!-- Edit Action -->
+                                                <a href="{{ route('admin.staff.edit', $user) }}" 
+                                                   class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-colors duration-200"
+                                                   title="Edit User">
+                                                    <i class="fas fa-edit text-sm"></i>
+                                                </a>
+                                                
+                                                <!-- Toggle Status Action -->
+                                                <form action="{{ route('admin.staff.toggle-status', $user) }}" method="POST" class="inline">
                                                     @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                                                    @if($user->role->role_name === 'parent' && $user->roleable)
+                                                        @if($user->roleable->account_status === 'Active')
+                                                            <button type="submit" 
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors duration-200"
+                                                                    title="Archive Parent">
+                                                                <i class="fas fa-archive text-sm"></i>
+                                                            </button>
+                                                        @else
+                                                            <button type="submit" 
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 transition-colors duration-200"
+                                                                    title="Activate Parent">
+                                                                <i class="fas fa-check text-sm"></i>
+                                                            </button>
+                                                        @endif
+                                                    @else
+                                                        @if($isActive)
+                                                            <button type="submit" 
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors duration-200"
+                                                                    title="Deactivate User">
+                                                                <i class="fas fa-ban text-sm"></i>
+                                                            </button>
+                                                        @else
+                                                            <button type="submit" 
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 transition-colors duration-200"
+                                                                    title="Activate User">
+                                                                <i class="fas fa-check text-sm"></i>
+                                                            </button>
+                                                        @endif
+                                                    @endif
                                                 </form>
-                                            @endif
+                                                
+                                                <!-- Delete Action (only for inactive non-admin users) -->
+                                                @if($user->role && $user->role->role_name !== 'admin')
+                                                    @if($user->role->role_name === 'parent' && $user->roleable)
+                                                        @if($user->roleable->account_status === 'Archived')
+                                                            <form action="{{ route('admin.staff.destroy', $user) }}" method="POST" class="inline" 
+                                                                  onsubmit="return confirm('Are you sure you want to delete this user account? This action cannot be undone.');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" 
+                                                                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors duration-200"
+                                                                        title="Delete User">
+                                                                    <i class="fas fa-trash text-sm"></i>
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    @elseif(!$isActive)
+                                                        <form action="{{ route('admin.staff.destroy', $user) }}" method="POST" class="inline" 
+                                                              onsubmit="return confirm('Are you sure you want to delete this user account? This action cannot be undone.');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" 
+                                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors duration-200"
+                                                                    title="Delete User">
+                                                                <i class="fas fa-trash text-sm"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty

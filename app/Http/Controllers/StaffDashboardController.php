@@ -45,7 +45,7 @@ class StaffDashboardController extends Controller
             ->get();
 
         // Filters
-        $query = Student::query();
+        $query = Student::query()->where('school_year', $activeYear);
 
         // Search
         if ($request->filled('q')) {
@@ -83,10 +83,10 @@ class StaffDashboardController extends Controller
             $query->orderBy('last_name', 'asc');
         }
 
-        // Get distinct values for dropdowns
-        $levels = Student::distinct()->pluck('level')->sort()->values();
-        $strands = Student::distinct()->whereNotNull('strand')->where('strand', '!=', '')->pluck('strand')->sort()->values();
-        $sections = Student::distinct()->whereNotNull('section')->where('section', '!=', '')->pluck('section')->sort()->values();
+        // Get distinct values for dropdowns from current school year only
+        $levels = Student::where('school_year', $activeYear)->distinct()->pluck('level')->sort()->values();
+        $strands = Student::where('school_year', $activeYear)->distinct()->whereNotNull('strand')->where('strand', '!=', '')->pluck('strand')->sort()->values();
+        $sections = Student::where('school_year', $activeYear)->distinct()->whereNotNull('section')->where('section', '!=', '')->pluck('section')->sort()->values();
 
         // Pagination
         $students = $query->paginate(15);

@@ -196,7 +196,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('admin.staff.store') }}" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 card-hover">
+    <form method="POST" action="{{ route('admin.staff.store') }}" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 card-hover" novalidate>
       @csrf
 
       <h2 class="text-xl font-semibold mb-6 text-blue-600">User Information</h2>
@@ -245,22 +245,34 @@
         <div>
           <label class="block text-sm font-medium mb-2 text-gray-700">Password</label>
           <div x-data="{ show: false }" class="relative">
-            <input name="password" :type="show ? 'text' : 'password'" class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+            <input name="password" :type="show ? 'text' : 'password'" 
+                   :required="document.querySelector('select[name=role_name]').value !== 'parent'"
+                   class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
             <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
               <i :class="show ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
             </button>
           </div>
-          <p class="text-xs text-gray-500 mt-1">Must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character.</p>
+          <p x-show="document.querySelector('select[name=role_name]').value === 'parent'" class="text-xs text-blue-600 mt-1">
+            <i class="fas fa-info-circle"></i> Leave empty for Gmail addresses to send password setup email
+          </p>
+          <p x-show="document.querySelector('select[name=role_name]').value !== 'parent'" class="text-xs text-gray-500 mt-1">
+            Must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character.
+          </p>
         </div>
 
         <div>
           <label class="block text-sm font-medium mb-2 text-gray-700">Confirm Password</label>
           <div x-data="{ show: false }" class="relative">
-            <input name="password_confirmation" :type="show ? 'text' : 'password'" class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+            <input name="password_confirmation" :type="show ? 'text' : 'password'" 
+                   :required="document.querySelector('select[name=role_name]').value !== 'parent'"
+                   class="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
             <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
               <i :class="show ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
             </button>
           </div>
+          <p x-show="document.querySelector('select[name=role_name]').value === 'parent'" class="text-xs text-blue-600 mt-1">
+            <i class="fas fa-info-circle"></i> Optional for parent accounts with Gmail
+          </p>
         </div>
       </div>
 
