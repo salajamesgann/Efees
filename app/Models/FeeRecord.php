@@ -17,6 +17,48 @@ class FeeRecord extends Model
     protected $table = 'fee_records';
 
     /**
+     * Boot the model, registering guards against negative balance/amount.
+     *
+     * - `amount` is always a magnitude — it must never be negative.
+     * - `balance` for non-adjustment records must never go below zero.
+     *   Adjustment records intentionally carry a signed balance
+     *   (negative = discount credit, positive = additional charge).
+     * - When balance reaches 0 on a non-cancelled/non-adjustment record,
+     *   the status is automatically promoted to 'paid'.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::saving(function (self $record): void {
+            // Always keep amount non-negative (it represents a magnitude)
+            if (isset($record->amount)) {
+                $record->amount = max(0.0, (float) $record->amount);
+            }
+
+            // Clamp balance to ≥ 0 for every record type except 'adjustment'
+            // (adjustment rows use a signed balance as a credit/debit marker)
+            $type = (string) ($record->record_type ?? '');
+            if ($type !== 'adjustment' && isset($record->balance)) {
+                $record->balance = max(0.0, (float) $record->balance);
+            }
+
+            // Auto-promote status to 'paid' when balance reaches zero,
+            // unless the record is already cancelled, refunded, or an adjustment.
+            $protectedStatuses = ['cancelled', 'refund', 'refunded'];
+            $protectedTypes    = ['adjustment', 'payment'];
+            if (
+                isset($record->balance, $record->status) &&
+                (float) $record->balance === 0.0 &&
+                ! in_array($type, $protectedTypes, true) &&
+                ! in_array((string) $record->status, $protectedStatuses, true)
+            ) {
+                $record->status = 'paid';
+            }
+        });
+    }
+
+    /**
      * The primary key associated with the table.
      *
      * @var string

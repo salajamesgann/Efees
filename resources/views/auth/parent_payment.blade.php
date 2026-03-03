@@ -4,8 +4,17 @@
 <div class="max-w-4xl mx-auto">
     <!-- Header -->
     <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900">Make a Payment</h1>
-        <p class="text-gray-600 mt-1">Securely pay tuition and fees for your children.</p>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Make a Payment</h1>
+                <p class="text-gray-600 mt-1">Securely pay tuition and fees for your children.</p>
+            </div>
+            @if(isset($students) && count($students) > 1)
+            <a href="{{ route('parent.pay.multi') }}" class="inline-flex items-center gap-2 text-sm bg-blue-50 text-blue-700 px-4 py-2 rounded-xl font-medium hover:bg-blue-100 transition-colors border border-blue-200">
+                <i class="fas fa-users"></i> Pay Multiple Children
+            </a>
+            @endif
+        </div>
     </div>
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">

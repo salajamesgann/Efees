@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Admin;
 use App\Models\ParentContact;
 use App\Models\Role;
 use App\Models\Staff;
@@ -235,16 +236,17 @@ class AdminUserController extends Controller
                 }
 
                 // Audit Log
-                // try {
-                AuditService::log(
-                    'User Created',
-                    $auditSubject,
-                    "Created {$roleName} user: {$validated['email']}",
-                    null,
-                    $auditSubject->toArray()
-                );
-                // } catch (\Throwable $e) {
-                // }
+                try {
+                    AuditService::log(
+                        'User Created',
+                        $auditSubject,
+                        "Created {$roleName} user: {$validated['email']}",
+                        null,
+                        $auditSubject->toArray()
+                    );
+                } catch (\Throwable $e) {
+                    // Continue if audit logging fails
+                }
             });
 
             return redirect()->route('admin.users.index')->with('success', 'User created successfully.');

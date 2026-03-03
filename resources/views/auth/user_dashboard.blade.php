@@ -70,11 +70,19 @@
 
             @if(isset($isParent) && $isParent)
             <!-- Payments Link -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('parent.pay') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-gray-600 hover:bg-gray-50' }}" href="{{ route('parent.pay') }}">
+            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('parent.pay') && !request()->routeIs('parent.pay.multi') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-gray-600 hover:bg-gray-50' }}" href="{{ route('parent.pay') }}">
                 <div class="w-8 flex justify-center">
-                    <i class="fas fa-credit-card text-lg {{ request()->routeIs('parent.pay') ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600' }}"></i>
+                    <i class="fas fa-credit-card text-lg {{ request()->routeIs('parent.pay') && !request()->routeIs('parent.pay.multi') ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600' }}"></i>
                 </div>
                 <span class="text-sm font-medium">Payments</span>
+            </a>
+
+            <!-- Multi-Child Payment Link -->
+            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('parent.pay.multi') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-gray-600 hover:bg-gray-50' }}" href="{{ route('parent.pay.multi') }}">
+                <div class="w-8 flex justify-center">
+                    <i class="fas fa-users text-lg {{ request()->routeIs('parent.pay.multi') ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600' }}"></i>
+                </div>
+                <span class="text-sm font-medium">Multi-Child Pay</span>
             </a>
 
             <!-- Payment History Link -->
@@ -83,6 +91,15 @@
                     <i class="fas fa-history text-lg {{ request()->routeIs('parent.history') ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600' }}"></i>
                 </div>
                 <span class="text-sm font-medium">Payment History</span>
+            </a>
+
+            <!-- Notifications Link -->
+            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('parent.notifications') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-gray-600 hover:bg-gray-50' }}" href="{{ route('parent.notifications') }}">
+                <div class="w-8 flex justify-center relative">
+                    <i class="fas fa-bell text-lg {{ request()->routeIs('parent.notifications') ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600' }}"></i>
+                    <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center hidden">0</span>
+                </div>
+                <span class="text-sm font-medium">Notifications</span>
             </a>
             @endif
 
@@ -129,6 +146,12 @@
                             <a href="{{ route('parent.soa', $child->student_id) }}" 
                                class="flex items-center gap-3 pl-14 pr-4 py-2 text-sm font-medium hover:text-blue-600 transition-colors {{ request()->routeIs('parent.soa') && request()->route('student')->student_id == $child->student_id ? 'text-blue-600 bg-blue-50/50' : 'text-gray-500' }}">
                                 <i class="fas fa-file-invoice-dollar w-4 text-center text-xs"></i> SOA
+                            </a>
+
+                            <!-- Payment Schedule -->
+                            <a href="{{ route('parent.schedule', $child->student_id) }}" 
+                               class="flex items-center gap-3 pl-14 pr-4 py-2 text-sm font-medium hover:text-blue-600 transition-colors {{ request()->routeIs('parent.schedule') && request()->route('student')->student_id == $child->student_id ? 'text-blue-600 bg-blue-50/50' : 'text-gray-500' }}">
+                                <i class="fas fa-calendar-alt w-4 text-center text-xs"></i> Payment Schedule
                             </a>
                             
                             <!-- Pay Now -->
@@ -392,6 +415,28 @@
 
             // Start Polling
             setInterval(window.fetchMetrics, POLL_INTERVAL);
+
+            // Notification Badge Polling
+            function fetchNotificationCount() {
+                fetch('/parent/notifications/unread-count')
+                    .then(response => response.json())
+                    .then(data => {
+                        const badge = document.getElementById('notification-badge');
+                        if (badge) {
+                            if (data.count > 0) {
+                                badge.textContent = data.count > 99 ? '99+' : data.count;
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error fetching notification count:', err));
+            }
+
+            // Initial fetch and polling for notifications
+            fetchNotificationCount();
+            setInterval(fetchNotificationCount, POLL_INTERVAL);
         });
     </script>
     <script src="//unpkg.com/alpinejs" defer></script>

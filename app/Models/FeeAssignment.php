@@ -338,6 +338,14 @@ class FeeAssignment extends Model
             }
         }
 
+        // Final fallback: get active mandatory charges applicable to the grade level
+        if ($additionalCharges->isEmpty()) {
+            $additionalCharges = AdditionalCharge::active()
+                ->mandatory()
+                ->applicableToGrade($gradeLevel)
+                ->get();
+        }
+
         // Get applicable discounts (check eligibility)
         $automaticDiscounts = Discount::active()
             ->automatic()

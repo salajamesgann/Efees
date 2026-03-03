@@ -462,8 +462,8 @@
           <i class="fas fa-exclamation-circle text-orange-500"></i>
           Pending Payments
          </h2>
-         <div class="text-xs text-slate-500">
-             Top 10 oldest/highest
+         <div id="pendingPaymentsCount" class="text-xs text-slate-500">
+             Showing {{ count($pendingPayments ?? []) }} of {{ $pendingPaymentsTotal ?? count($pendingPayments ?? []) }} student{{ ($pendingPaymentsTotal ?? 1) !== 1 ? 's' : '' }} with balances
          </div>
      </div>
      <div class="overflow-x-auto scrollbar-thin max-h-96">
@@ -471,10 +471,12 @@
        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
         <tr>
          <th class="px-4 py-3 text-left font-semibold text-gray-700 whitespace-nowrap" scope="col">Student</th>
+         <th class="px-4 py-3 text-center font-semibold text-gray-700 whitespace-nowrap" scope="col">Level</th>
          <th class="px-4 py-3 text-left font-semibold text-gray-700 whitespace-nowrap" scope="col">Parent</th>
-         <th class="px-4 py-3 text-left font-semibold text-gray-700 whitespace-nowrap" scope="col">Due Date</th>
-         <th class="px-4 py-3 text-center font-semibold text-gray-700 whitespace-nowrap" scope="col">Overdue</th>
+         <th class="px-4 py-3 text-right font-semibold text-gray-700 whitespace-nowrap" scope="col">Total Tuition</th>
+         <th class="px-4 py-3 text-right font-semibold text-gray-700 whitespace-nowrap" scope="col">Paid</th>
          <th class="px-4 py-3 text-right font-semibold text-gray-700 whitespace-nowrap" scope="col">Balance</th>
+         <th class="px-4 py-3 text-center font-semibold text-gray-700 whitespace-nowrap" scope="col">Overdue</th>
          <th class="px-4 py-3 text-center font-semibold text-gray-700 whitespace-nowrap" scope="col">Action</th>
         </tr>
        </thead>
@@ -485,8 +487,17 @@
               <div class="font-medium text-gray-900">{{ $rec['student_name'] }}</div>
               <div class="text-xs text-gray-500">ID: {{ $rec['student_id'] }}</div>
           </td>
+          <td class="px-4 py-3 whitespace-nowrap text-center">
+              @if(!empty($rec['level']) && $rec['level'] !== '—')
+                  <span class="inline-block px-2 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700">{{ $rec['level'] }}</span>
+              @else
+                  <span class="text-gray-400 text-xs">—</span>
+              @endif
+          </td>
           <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ $rec['parent_name'] }}</td>
-          <td class="px-4 py-3 whitespace-nowrap text-gray-500">{{ $rec['due_date'] }}</td>
+          <td class="px-4 py-3 whitespace-nowrap text-right text-gray-700">₱{{ number_format((float)($rec['total_tuition'] ?? 0), 2) }}</td>
+          <td class="px-4 py-3 whitespace-nowrap text-right text-green-600 font-medium">₱{{ number_format((float)($rec['total_paid'] ?? 0), 2) }}</td>
+          <td class="px-4 py-3 whitespace-nowrap text-right font-bold text-orange-600">₱{{ number_format((float)($rec['balance'] ?? 0), 2) }}</td>
           <td class="px-4 py-3 whitespace-nowrap text-center">
               @if($rec['days_overdue'] > 0)
                   <span class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
@@ -496,7 +507,6 @@
                   <span class="text-gray-400 text-xs">-</span>
               @endif
           </td>
-          <td class="px-4 py-3 whitespace-nowrap text-right font-bold text-orange-600">₱{{ number_format((float)($rec['balance'] ?? 0), 2) }}</td>
           <td class="px-4 py-3 whitespace-nowrap text-center">
              <a href="{{ route('admin.students.index', ['id' => $rec['student_id']]) }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline">
                  View Ledger
@@ -939,6 +949,12 @@
 
                 // Pending Payments Table
                 const pendingTableBody = document.getElementById('pendingPaymentsTableBody');
+                const pendingCountEl   = document.getElementById('pendingPaymentsCount');
+                if (pendingCountEl && data.pendingPaymentsTotal !== undefined) {
+                    const showing = data.pendingPayments ? data.pendingPayments.length : 0;
+                    const total   = data.pendingPaymentsTotal;
+                    pendingCountEl.textContent = `Showing ${showing} of ${total} student${total !== 1 ? 's' : ''} with balances`;
+                }
                 if (pendingTableBody) {
                     pendingTableBody.innerHTML = '';
                     if (data.pendingPayments && data.pendingPayments.length > 0) {
@@ -947,16 +963,24 @@
                                 ? `<span class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">${rec.days_overdue} days</span>`
                                 : `<span class="text-gray-400 text-xs">-</span>`;
                             
+                            const levelBadge = (rec.level && rec.level !== '—')
+                                ? `<span class="inline-block px-2 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700">${rec.level}</span>`
+                                : `<span class="text-gray-400 text-xs">—</span>`;
+
+                            const fmt = v => (v || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
                             const row = `
                                 <tr class="hover:bg-orange-50 transition-colors">
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="font-medium text-gray-900">${rec.student_name}</div>
                                         <div class="text-xs text-gray-500">ID: ${rec.student_id}</div>
                                     </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-center">${levelBadge}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-gray-600">${rec.parent_name}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-gray-500">${rec.due_date}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right text-gray-700">₱${fmt(rec.total_tuition)}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right text-green-600 font-medium">₱${fmt(rec.total_paid)}</td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-right font-bold text-orange-600">₱${fmt(rec.balance)}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-center">${overdueBadge}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-right font-bold text-orange-600">₱${rec.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-center">
                                         <a href="/admin/students?id=${rec.student_id}" class="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline">
                                             View Ledger
@@ -967,7 +991,7 @@
                             pendingTableBody.insertAdjacentHTML('beforeend', row);
                         });
                     } else {
-                         pendingTableBody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No pending payments found</td></tr>';
+                         pendingTableBody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">No pending payments found</td></tr>';
                     }
                 }
 

@@ -42,7 +42,13 @@ return [
     ],
 
     'sms' => [
-        'driver' => env('SMS_DRIVER', 'log'), // Options: log, semaphore, twilio
+        'driver' => env('SMS_DRIVER', 'log'), // Options: log, philsms, semaphore, twilio
+    ],
+
+    'philsms' => [
+        'api_token' => env('PHILSMS_API_TOKEN'),
+        'base_url' => env('PHILSMS_BASE_URL', 'https://dashboard.philsms.com/api/v3'),
+        'sender_id' => env('PHILSMS_SENDER_ID', 'PhilSMS'),
     ],
 
     'semaphore' => [

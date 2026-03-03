@@ -118,11 +118,18 @@
             </div>
         </div>
 
-        <!-- Action Button -->
-        <div class="bg-blue-600 p-3 no-print hover:bg-blue-700 transition-colors cursor-pointer text-center" onclick="window.print()">
-            <span class="text-white font-bold text-sm flex items-center justify-center gap-2">
-                Download receipt <i class="fas fa-download"></i>
-            </span>
+        <!-- Action Buttons -->
+        <div class="flex flex-col gap-0">
+            <a href="{{ route('parent.receipt.pdf', $payment->id) }}" class="bg-green-600 p-3 no-print hover:bg-green-700 transition-colors cursor-pointer text-center block">
+                <span class="text-white font-bold text-sm flex items-center justify-center gap-2">
+                    Download PDF <i class="fas fa-file-pdf"></i>
+                </span>
+            </a>
+            <div class="bg-blue-600 p-3 no-print hover:bg-blue-700 transition-colors cursor-pointer text-center" onclick="window.print()">
+                <span class="text-white font-bold text-sm flex items-center justify-center gap-2">
+                    Print receipt <i class="fas fa-print"></i>
+                </span>
+            </div>
         </div>
         </div>
     </div>

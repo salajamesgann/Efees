@@ -247,4 +247,29 @@ class AdminSmsController extends Controller
 
         return response('OK', 200);
     }
+
+    /**
+     * PhilSMS delivery callback webhook.
+     */
+    public function philsmsCallback(Request $request): \Illuminate\Http\Response
+    {
+        $messageId = $request->input('message_id') ?? $request->input('id');
+        $status = $request->input('status');
+
+        if (! $messageId) {
+            return response('Missing message_id', 400);
+        }
+
+        $log = SmsLog::where('gateway_message_id', $messageId)->first();
+        if ($log) {
+            $mapped = match (strtolower($status ?? '')) {
+                'delivered' => 'delivered',
+                'failed', 'rejected', 'expired' => 'failed',
+                default => 'sent',
+            };
+            $log->update(['status' => $mapped, 'provider_response' => json_encode($request->all())]);
+        }
+
+        return response('OK', 200);
+    }
 }

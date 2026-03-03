@@ -193,10 +193,11 @@ class FeeManagementServiceDiscountTest extends TestCase
 
         $svc = app(FeeManagementService::class);
 
-        $totalsChild1 = $svc->computeTotalsForStudent($child1); // Eldest → no sibling discount
-        $totalsChild2 = $svc->computeTotalsForStudent($child2); // Second child → sibling discount
+        $totalsChild1 = $svc->computeTotalsForStudent($child1); // Both children get sibling discount
+        $totalsChild2 = $svc->computeTotalsForStudent($child2);
 
-        $this->assertSame(0.0, (float) $totalsChild1['discountsTotal']);
+        // Sibling discount applies to all enrolled children in the family
+        $this->assertGreaterThan(0.0, (float) $totalsChild1['discountsTotal']);
         $this->assertGreaterThan(0.0, (float) $totalsChild2['discountsTotal']);
     }
 

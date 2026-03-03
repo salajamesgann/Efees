@@ -72,9 +72,14 @@
                                 {{ str_replace('_', ' ', $payment->method) }}
                             </td>
                             <td class="px-6 py-4 text-right">
-                                <a href="{{ route('parent.receipts.download', $payment->id) }}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
-                                    <i class="fas fa-receipt"></i> View
-                                </a>
+                                <div class="flex items-center justify-end gap-2">
+                                    <a href="{{ route('parent.receipts.download', $payment->id) }}" class="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
+                                        <i class="fas fa-receipt"></i> View
+                                    </a>
+                                    <a href="{{ route('parent.receipt.pdf', $payment->id) }}" class="inline-flex items-center gap-1.5 text-green-600 hover:text-green-800 font-medium px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors" title="Download PDF">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     @empty

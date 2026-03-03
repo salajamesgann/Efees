@@ -16,8 +16,9 @@ class FeeManagementService
 {
     public function computeTotalsForStudent(Student $student): array
     {
-        \App\Models\Discount::ensureSiblingDefaults();
-        \App\Models\Discount::ensureAcademicScholarExclusive();
+        // Use savepoints so a failed write doesn't poison the PG connection
+        try { DB::transaction(fn () => \App\Models\Discount::ensureSiblingDefaults()); } catch (\Throwable $e) {}
+        try { DB::transaction(fn () => \App\Models\Discount::ensureAcademicScholarExclusive()); } catch (\Throwable $e) {}
 
         $tuitionFee = TuitionFee::active()->forGrade($student->level)->first();
 
@@ -51,36 +52,50 @@ class FeeManagementService
 
             if ($assignment) {
                 // Ensure additional charges are attached to assignment (fallback for older tuition records)
-                try {
-                    if ($assignment->additionalCharges()->count() === 0 && $assignment->tuitionFee) {
-                        $tf = $assignment->tuitionFee;
+                // Wrapped in a savepoint so a failure here doesn't poison the PG transaction
+                try { DB::transaction(function () use ($assignment, $student) {
+                    if ($assignment->additionalCharges()->count() === 0) {
                         $chargeIds = [];
-                        if (! empty($tf->default_charge_ids)) {
-                            $chargeIds = (array) $tf->default_charge_ids;
-                        } else {
-                            // Map tuition_fee_charges -> additional_charges by name/amount
-                            $tfCharges = $tf->charges()->get(['name','amount']);
-                            if ($tfCharges->isNotEmpty()) {
-                                $names = $tfCharges->pluck('name')->filter()->values()->all();
-                                $candidates = \App\Models\AdditionalCharge::active()
-                                    ->whereIn('charge_name', $names)
-                                    ->get();
-                                foreach ($tfCharges as $c) {
-                                    $match = $candidates->first(function ($cand) use ($c) {
-                                        return strcasecmp((string) $cand->charge_name, (string) $c->name) === 0
-                                            && abs((float) $cand->amount - (float) $c->amount) < 0.01;
-                                    });
-                                    if ($match) {
-                                        $chargeIds[] = $match->id;
+
+                        if ($assignment->tuitionFee) {
+                            $tf = $assignment->tuitionFee;
+                            if (! empty($tf->default_charge_ids)) {
+                                $chargeIds = (array) $tf->default_charge_ids;
+                            } else {
+                                // Map tuition_fee_charges -> additional_charges by name/amount
+                                $tfCharges = $tf->charges()->get(['name','amount']);
+                                if ($tfCharges->isNotEmpty()) {
+                                    $names = $tfCharges->pluck('name')->filter()->values()->all();
+                                    $candidates = \App\Models\AdditionalCharge::active()
+                                        ->whereIn('charge_name', $names)
+                                        ->get();
+                                    foreach ($tfCharges as $c) {
+                                        $match = $candidates->first(function ($cand) use ($c) {
+                                            return strcasecmp((string) $cand->charge_name, (string) $c->name) === 0
+                                                && abs((float) $cand->amount - (float) $c->amount) < 0.01;
+                                        });
+                                        if ($match) {
+                                            $chargeIds[] = $match->id;
+                                        }
                                     }
                                 }
                             }
                         }
+
+                        // Final fallback: get active mandatory charges applicable to the grade
+                        if (empty($chargeIds)) {
+                            $chargeIds = \App\Models\AdditionalCharge::active()
+                                ->mandatory()
+                                ->applicableToGrade($student->level)
+                                ->pluck('id')
+                                ->all();
+                        }
+
                         if (! empty($chargeIds)) {
                             $assignment->additionalCharges()->syncWithoutDetaching($chargeIds);
                         }
                     }
-                } catch (\Throwable $e) {
+                }); } catch (\Throwable $e) {
                 }
                 $existingDiscounts = $assignment->discounts()->get();
                 $manualDiscountIds = $existingDiscounts->filter(function ($discount) {
@@ -140,11 +155,11 @@ class FeeManagementService
                 )));
 
                 if (! empty($finalDiscountIds)) {
-                    try {
+                    try { DB::transaction(function () use ($assignment, $finalDiscountIds) {
                         $assignment->discounts()->sync($finalDiscountIds);
                         $assignment->discount_ids = $finalDiscountIds;
                         $assignment->save();
-                    } catch (\Throwable $e) {
+                    }); } catch (\Throwable $e) {
                         \App\Services\AuditService::log(
                             'DISCOUNT_SYNC_FAILED',
                             $student,
@@ -167,8 +182,7 @@ class FeeManagementService
                     }
                 }
 
-                try {
-                    $assignment->calculateTotal();
+                try { DB::transaction(fn () => $assignment->calculateTotal());
                 } catch (\Throwable $e) {
                     \App\Services\AuditService::log(
                         'DISCOUNT_CALCULATION_FAILED',
@@ -192,7 +206,7 @@ class FeeManagementService
                 }
 
                 // Ensure ledger 'tuition_total' reflects assignment total; skip if installment records exist
-                try {
+                try { DB::transaction(function () use ($student, $assignment) {
                     $hasInstallments = \App\Models\FeeRecord::where('student_id', $student->student_id)
                         ->whereIn('record_type', ['tuition_installment', 'tuition_base'])
                         ->exists();
@@ -220,7 +234,7 @@ class FeeManagementService
                             $record->save();
                         }
                     }
-                } catch (\Throwable $e) {
+                }); } catch (\Throwable $e) {
                 }
 
                 $paidAmount = (float) \App\Models\Payment::where('student_id', $student->student_id)
@@ -546,7 +560,9 @@ class FeeManagementService
 
     public function recomputeForGrade(string $gradeLevel): int
     {
-        $students = Student::where('level', $gradeLevel)->get();
+        $students = Student::where('level', $gradeLevel)
+            ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
+            ->get();
         $count = 0;
         DB::transaction(function () use ($students, &$count) {
             foreach ($students as $student) {
@@ -704,9 +720,13 @@ class FeeManagementService
     public function recomputeForGrades(array $grades): int
     {
         if (empty($grades)) {
-            $students = Student::whereNotNull('level')->get();
+            $students = Student::whereNotNull('level')
+                ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
+                ->get();
         } else {
-            $students = Student::whereIn('level', $grades)->get();
+            $students = Student::whereIn('level', $grades)
+                ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
+                ->get();
         }
         $count = 0;
         DB::transaction(function () use ($students, &$count) {

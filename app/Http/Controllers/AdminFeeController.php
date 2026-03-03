@@ -218,6 +218,59 @@ class AdminFeeController extends Controller
     }
 
     /**
+     * Assign a discount to specific (cherry-picked) students.
+     */
+    public function assignDiscountToStudents(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'discount_id'  => ['required', 'exists:discounts,id'],
+            'student_ids'  => ['required', 'array', 'min:1'],
+            'student_ids.*' => ['exists:students,student_id'],
+        ]);
+
+        $discount  = Discount::findOrFail($validated['discount_id']);
+        $students  = Student::whereIn('student_id', $validated['student_ids'])->get();
+        $count     = 0;
+        $skipped   = 0;
+
+        DB::transaction(function () use ($students, $discount, &$count, &$skipped) {
+            foreach ($students as $student) {
+                $feeAssignment = $student->getCurrentFeeAssignment();
+
+                if (! $feeAssignment) {
+                    $skipped++;
+                    continue;
+                }
+
+                if ($feeAssignment->discounts()->where('discounts.id', $discount->id)->exists()) {
+                    $skipped++;
+                    continue;
+                }
+
+                $feeAssignment->discounts()->attach($discount->id);
+                $feeAssignment->calculateTotal();
+                app(FeeManagementService::class)->recomputeStudentLedger($student);
+                $count++;
+            }
+
+            AuditService::log(
+                'Individual Discount Assigned',
+                auth()->user(),
+                "Assigned discount '{$discount->discount_name}' to {$count} individually selected student(s). Skipped: {$skipped}.",
+                null,
+                ['discount_id' => $discount->id, 'student_ids' => $students->pluck('student_id')->all()]
+            );
+        });
+
+        $message = "Discount assigned to {$count} student(s) successfully.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} skipped (already applied or no fee assignment).";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
      * Display the fee management dashboard.
      */
     public function index(Request $request): View
@@ -251,6 +304,12 @@ class AdminFeeController extends Controller
                 $discounts = \App\Models\Discount::orderBy('priority')->orderBy('created_at', 'desc')->get();
             } catch (\Throwable $e) {
                 $discounts = collect();
+            }
+            try {
+                $students = \App\Models\Student::select(['student_id', 'first_name', 'last_name', 'level', 'section', 'school_year'])
+                    ->orderBy('last_name')->orderBy('first_name')->get();
+            } catch (\Throwable $e) {
+                $students = collect();
             }
         } elseif ($currentTab === 'tuition') {
             try {
@@ -437,6 +496,7 @@ class AdminFeeController extends Controller
             'availableDiscounts' => $availableDiscounts,
             'gradeLevels' => $gradeLevels,
             'currentTab' => $currentTab,
+            'students' => $students ?? collect(),
         ]);
     }
 
@@ -463,7 +523,7 @@ class AdminFeeController extends Controller
         $activeSchoolYear = SystemSetting::getActiveSchoolYear();
 
         return view('admin.fees.tuition.create', [
-            'gradeLevels' => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+            'gradeLevels' => ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
             'availableCharges' => $availableCharges,
             'availableDiscounts' => $availableDiscounts,
             'activeSchoolYear' => $activeSchoolYear,
@@ -934,7 +994,7 @@ class AdminFeeController extends Controller
 
         return view('admin.fees.tuition.edit', [
             'tuitionFee' => $tuitionFee,
-            'gradeLevels' => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+            'gradeLevels' => ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
             'availableCharges' => $availableCharges,
             'availableDiscounts' => $availableDiscounts,
         ]);
@@ -1460,7 +1520,7 @@ class AdminFeeController extends Controller
         $activeSchoolYear = SystemSetting::getActiveSchoolYear();
 
         return view('admin.fees.charges.create', [
-            'gradeLevels' => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+            'gradeLevels' => ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
             'chargesTableMissing' => $chargesTableMissing,
             'activeSchoolYear' => $activeSchoolYear,
         ]);
@@ -1725,7 +1785,7 @@ class AdminFeeController extends Controller
     {
         return view('admin.fees.charges.edit', [
             'additionalCharge' => $charge,
-            'gradeLevels' => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+            'gradeLevels' => ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
         ]);
     }
 
@@ -1959,7 +2019,7 @@ class AdminFeeController extends Controller
     public function createDiscount(): View
     {
         return view('admin.fees.discounts.create', [
-            'gradeLevels' => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+            'gradeLevels' => ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
             'additionalCharges' => \App\Models\AdditionalCharge::active()->orderBy('charge_name')->get(),
         ]);
     }
@@ -1978,7 +2038,7 @@ class AdminFeeController extends Controller
             'is_automatic' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
             'applicable_grades' => ['nullable', 'array'],
-            'applicable_grades.*' => ['string', 'in:Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
+            'applicable_grades.*' => ['string', 'in:Grade 1,Grade 2,Grade 3,Grade 4,Grade 5,Grade 6,Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
             'apply_scope' => ['nullable', 'in:total,tuition_only,charges_only,specific_charges'],
             'target_charge_ids' => ['nullable', 'array'],
             'target_charge_ids.*' => ['exists:additional_charges,id'],
@@ -2124,7 +2184,7 @@ class AdminFeeController extends Controller
     {
         return view('admin.fees.discounts.edit', [
             'discount' => $discount,
-            'gradeLevels' => ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
+            'gradeLevels' => ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'],
             'additionalCharges' => \App\Models\AdditionalCharge::active()->orderBy('charge_name')->get(),
         ]);
     }
@@ -2144,7 +2204,7 @@ class AdminFeeController extends Controller
             'is_active' => ['nullable', 'boolean'],
             'is_automatic' => ['nullable', 'boolean'],
             'applicable_grades' => ['nullable', 'array'],
-            'applicable_grades.*' => ['string', 'in:Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
+            'applicable_grades.*' => ['string', 'in:Grade 1,Grade 2,Grade 3,Grade 4,Grade 5,Grade 6,Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
             'apply_scope' => ['nullable', 'in:total,tuition_only,charges_only'],
             'is_stackable' => ['nullable', 'boolean'],
             'school_year' => ['nullable', 'regex:/^\\d{4}-\\d{4}$/'],

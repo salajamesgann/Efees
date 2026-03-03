@@ -206,56 +206,69 @@
         @endif
 
         <!-- Dashboard Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-            <div onclick="document.getElementById('paymentTrendsChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+            <!-- Total Fees Payable (gross assigned) -->
+            <div class="xl:col-span-1 bg-white p-5 rounded-xl shadow-sm border border-indigo-100 hover:bg-indigo-50 transition-colors">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wider">Total Fees Payable</p>
+                        <h3 id="stat-total-payable" class="text-xl font-bold text-indigo-900 mt-1">₱{{ number_format($totalFeesPayable, 2) }}</h3>
+                        <p class="text-xs text-slate-400 mt-1">Gross assigned (whole year)</p>
+                    </div>
+                    <div class="p-2 bg-indigo-50 rounded-lg text-indigo-500">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                </div>
+            </div>
+            <div onclick="document.getElementById('paymentTrendsChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Total Fees Collected</p>
-                        <h3 id="stat-total-collected" class="text-2xl font-bold text-gray-900 mt-1">₱{{ number_format($totalCollected, 2) }}</h3>
+                        <h3 id="stat-total-collected" class="text-xl font-bold text-gray-900 mt-1">₱{{ number_format($totalCollected, 2) }}</h3>
                     </div>
                     <div class="p-2 bg-green-50 rounded-lg text-green-600">
                         <i class="fas fa-money-bill-wave"></i>
                     </div>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Pending Approvals</p>
-                        <h3 id="stat-pending-approvals" class="text-2xl font-bold text-gray-900 mt-1">₱{{ number_format($pendingApprovals, 2) }}</h3>
+                        <h3 id="stat-pending-approvals" class="text-xl font-bold text-gray-900 mt-1">₱{{ number_format($pendingApprovals, 2) }}</h3>
                     </div>
                     <div class="p-2 bg-yellow-50 rounded-lg text-yellow-600">
                         <i class="fas fa-check-double"></i>
                     </div>
                 </div>
             </div>
-            <div onclick="document.getElementById('paymentStatusChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+            <div onclick="document.getElementById('paymentStatusChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Outstanding Debt</p>
-                        <h3 id="stat-pending-payments" class="text-2xl font-bold text-gray-900 mt-1">₱{{ number_format($pendingOutstanding, 2) }}</h3>
+                        <h3 id="stat-pending-payments" class="text-xl font-bold text-gray-900 mt-1">₱{{ number_format($pendingOutstanding, 2) }}</h3>
                     </div>
                     <div class="p-2 bg-orange-50 rounded-lg text-orange-600">
                         <i class="fas fa-file-invoice-dollar"></i>
                     </div>
                 </div>
             </div>
-            <div onclick="document.getElementById('paymentStatusChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+            <div onclick="document.getElementById('paymentStatusChart').scrollIntoView({behavior: 'smooth'})" class="cursor-pointer bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Overdue Balances</p>
-                        <h3 id="stat-overdue-balances" class="text-2xl font-bold text-gray-900 mt-1">₱{{ number_format($overdueBalances, 2) }}</h3>
+                        <h3 id="stat-overdue-balances" class="text-xl font-bold text-gray-900 mt-1">₱{{ number_format($overdueBalances, 2) }}</h3>
                     </div>
                     <div class="p-2 bg-red-50 rounded-lg text-red-600">
                         <i class="fas fa-exclamation-circle"></i>
                     </div>
                 </div>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-500">Reminders Sent</p>
-                        <h3 id="stat-reminders-sent" class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($remindersSent) }}</h3>
+                        <h3 id="stat-reminders-sent" class="text-xl font-bold text-gray-900 mt-1">{{ number_format($remindersSent) }}</h3>
                     </div>
                     <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
                         <i class="fas fa-sms"></i>
@@ -360,36 +373,43 @@
                             <th class="px-6 py-3">Student</th>
                             <th class="px-6 py-3">Level / Section</th>
                             <th class="px-6 py-3">School Year</th>
-                            <th class="px-6 py-3 text-right">Tuition & Fees</th>
+                            <th class="px-6 py-3 text-right">Total Fees Payable</th>
                             <th class="px-6 py-3 text-right">Total Paid</th>
-                            <th class="px-6 py-3 text-right">Balance</th>
+                            <th class="px-6 py-3 text-right">Remaining Balance</th>
                             <th class="px-6 py-3 text-center">Status</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($students as $student)
                             @php
-                                $assignment = $student->getCurrentFeeAssignment($student->school_year);
-                                $totalDue = $assignment ? $assignment->total_amount : 0;
-                                $paid = $student->total_paid;
-                                $balance = $student->current_balance;
+                                $totals   = $studentTotals[$student->student_id] ?? null;
+                                $totalDue = $totals ? (float) ($totals['totalAmount'] ?? 0) : 0;
+                                $paid     = $totals ? (float) ($totals['paidAmount']  ?? 0) : 0;
+                                $balance  = max(0, $totalDue - $paid);
                                 
                                 $statusClass = 'bg-gray-100 text-gray-600';
-                                $statusText = 'Pending';
+                                $statusText  = 'Pending';
                                 if ($balance <= 0 && $totalDue > 0) {
                                     $statusClass = 'bg-green-100 text-green-700';
-                                    $statusText = 'Paid';
+                                    $statusText  = 'Paid';
                                 } elseif ($student->feeRecords->where('status', 'overdue')->count() > 0) {
                                     $statusClass = 'bg-red-100 text-red-700';
-                                    $statusText = 'Overdue';
-                                } elseif ($paid > 0) {
+                                    $statusText  = 'Overdue';
+                                } elseif ($paid > 0 && $balance > 0) {
                                     $statusClass = 'bg-yellow-100 text-yellow-700';
-                                    $statusText = 'Partial';
+                                    $statusText  = 'Partial';
                                 }
                             @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-3">
-                                    <div class="font-medium text-gray-900">{{ $student->full_name }}</div>
+                                    <div class="font-medium text-gray-900 flex items-center gap-2">
+                                        {{ $student->full_name }}
+                                        @if(strtolower($student->enrollment_status ?? '') === 'irregular')
+                                            <span class="text-xs font-semibold bg-yellow-100 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded">Irregular</span>
+                                        @elseif(strtolower($student->enrollment_status ?? '') === 'withdrawn')
+                                            <span class="text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded">Withdrawn</span>
+                                        @endif
+                                    </div>
                                     <div class="text-xs text-gray-500">{{ $student->student_id }}</div>
                                 </td>
                                 <td class="px-6 py-3">
@@ -723,6 +743,8 @@
                     document.getElementById('stat-pending-payments').textContent = formatCurrency(data.pendingOutstanding);
                     document.getElementById('stat-overdue-balances').textContent = formatCurrency(data.overdueBalances);
                     document.getElementById('stat-reminders-sent').textContent = formatNumber(data.remindersSent);
+                    const totalPayableEl = document.getElementById('stat-total-payable');
+                    if (totalPayableEl) totalPayableEl.textContent = formatCurrency(data.totalFeesPayable);
 
                     // Update charts
                     updateCharts(data);

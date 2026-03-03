@@ -8,6 +8,9 @@
             <i class="fas fa-arrow-left"></i> Back to Dashboard
         </a>
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <a href="{{ route('parent.soa.pdf', $student->student_id) }}" class="w-full sm:w-auto justify-center bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-green-200 transition-all hover:-translate-y-0.5 flex items-center gap-2">
+                <i class="fas fa-file-pdf"></i> Download PDF
+            </a>
             <a href="{{ route('parent.pay', ['student_id' => $student->student_id]) }}" class="w-full sm:w-auto justify-center bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2">
                 <i class="fas fa-credit-card"></i> Pay Now
             </a>

@@ -189,8 +189,57 @@
           </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.students.store') }}" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <form method="POST" action="{{ route('admin.students.store') }}" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6" x-data="{ forceConfirmed: {{ session('duplicate_warning') ? 'false' : 'true' }} }">
           @csrf
+
+          {{-- Duplicate Warning Banner --}}
+          @if(session('duplicate_warning'))
+            @php $dup = session('duplicate_warning'); @endphp
+            <div class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <div class="flex items-start gap-3">
+                <div class="flex-shrink-0 w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mt-0.5">
+                  <i class="fas fa-exclamation-triangle text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold text-amber-800 mb-1">Possible Duplicate Student Detected</p>
+                  <p class="text-sm text-amber-700 mb-3">A student with the same name{{ $dup['date_of_birth'] ? ', date of birth,' : '' }} and school year already exists:</p>
+                  <div class="bg-white border border-amber-200 rounded-lg px-4 py-3 mb-4 text-sm space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="font-semibold text-slate-800">{{ $dup['full_name'] }}</span>
+                      <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                        {{ strtolower($dup['enrollment_status'] ?? '') === 'active' ? 'bg-green-100 text-green-700' : '' }}
+                        {{ strtolower($dup['enrollment_status'] ?? '') === 'irregular' ? 'bg-yellow-100 text-yellow-700' : '' }}
+                        {{ strtolower($dup['enrollment_status'] ?? '') === 'withdrawn' ? 'bg-orange-100 text-orange-700' : '' }}
+                        {{ strtolower($dup['enrollment_status'] ?? '') === 'archived' ? 'bg-red-100 text-red-700' : '' }}
+                      ">{{ $dup['enrollment_status'] }}</span>
+                    </div>
+                    <div class="text-slate-500">
+                      ID: <span class="font-mono text-slate-700">{{ $dup['student_id'] }}</span>
+                      &nbsp;·&nbsp; {{ $dup['level'] }}{{ $dup['section'] ? ' — '.$dup['section'] : '' }}
+                      &nbsp;·&nbsp; SY {{ $dup['school_year'] }}
+                      @if($dup['date_of_birth'])
+                        &nbsp;·&nbsp; Born {{ $dup['date_of_birth'] }}
+                      @endif
+                    </div>
+                    <div class="mt-2">
+                      <a href="{{ route('admin.students.index', ['id' => $dup['student_id']]) }}" target="_blank"
+                         class="text-blue-600 hover:underline text-xs font-medium">
+                        <i class="fas fa-external-link-alt mr-1"></i>View existing student record
+                      </a>
+                    </div>
+                  </div>
+                  <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input type="checkbox" name="force_save" value="1"
+                           x-model="forceConfirmed"
+                           class="mt-0.5 h-4 w-4 text-amber-600 border-amber-400 rounded focus:ring-amber-500" />
+                    <span class="text-sm text-amber-800 font-medium">
+                      I confirm this is a <strong>different student</strong> — create a new record anyway
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          @endif
 
           <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
             <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
@@ -259,6 +308,54 @@
           <div class="mb-8">
             <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Academic Information</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+              {{-- Student ID with Generate button --}}
+              <div class="md:col-span-3" x-data="{
+                  studentId: '{{ old('student_id', '') }}',
+                  loading: false,
+                  errMsg: '',
+                  async generate() {
+                      this.loading = true;
+                      this.errMsg = '';
+                      try {
+                          const res = await fetch('{{ route('admin.students.generateId') }}', {
+                              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                          });
+                          const data = await res.json();
+                          this.studentId = data.student_id;
+                      } catch(e) {
+                          this.errMsg = 'Failed to generate ID. Please enter one manually.';
+                      } finally {
+                          this.loading = false;
+                      }
+                  }
+              }" x-init="if (!studentId) generate()">
+                <label class="block text-sm font-semibold mb-2 text-slate-700">
+                  Student ID
+                  <span class="ml-1 text-xs font-normal text-slate-400">(auto-generated; you may edit it)</span>
+                </label>
+                <div class="flex gap-2 items-stretch">
+                  <input name="student_id" x-model="studentId" type="text"
+                         class="flex-1 rounded-xl border-slate-200 bg-slate-50 text-slate-800 px-4 py-2.5 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                         placeholder="e.g. STU-2025-0001" autocomplete="off" />
+                  <button type="button" @click="generate()"
+                          class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl border border-slate-200 transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
+                          :disabled="loading">
+                    <svg x-show="loading" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    <i x-show="!loading" class="fas fa-sync-alt text-sm"></i>
+                    <span x-show="!loading">Regenerate</span>
+                    <span x-show="loading" x-cloak>Generating…</span>
+                  </button>
+                </div>
+                @error('student_id')
+                  <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+                <p x-show="errMsg" x-text="errMsg" class="mt-1 text-xs text-amber-600" x-cloak></p>
+              </div>
+
               <div>
                 <label class="block text-sm font-semibold mb-2 text-slate-700">Grade Level <span class="text-red-500">*</span></label>
                 <select name="level" id="grade-level" class="w-full rounded-xl border-slate-200 bg-slate-50 text-slate-800 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" required>
@@ -408,7 +505,13 @@
 
           <div class="flex justify-end gap-4 mt-10 pt-6 border-t border-slate-100">
             <a href="{{ route('admin.students.index') }}" class="px-6 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold rounded-xl transition-all duration-200 shadow-sm">Cancel</a>
-            <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-blue-200 hover:shadow-blue-300">Create Student</button>
+            <button type="submit"
+                    :disabled="!forceConfirmed"
+                    :class="forceConfirmed ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 hover:shadow-blue-300 cursor-pointer' : 'bg-blue-300 cursor-not-allowed opacity-60'"
+                    class="px-6 py-2.5 text-white font-semibold rounded-xl transition-all duration-200">
+              <span x-show="forceConfirmed">Create Student</span>
+              <span x-show="!forceConfirmed" x-cloak>Confirm Duplicate Check First</span>
+            </button>
           </div>
         </form>
       </main>

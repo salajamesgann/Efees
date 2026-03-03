@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
+use App\Models\SystemSetting;
 use App\Services\FeeManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -145,6 +146,7 @@ class AdminStudentEnrollmentController extends Controller
             'user_id' => auth()->id() ?? 'SYSTEM',
             'action' => 'archive_student',
             'details' => "Archived student {$student->student_id}",
+            'ip_address' => request()->ip(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);

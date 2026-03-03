@@ -24,6 +24,8 @@ class SmsGatewayService
 
         try {
             switch ($this->driver) {
+                case 'philsms':
+                    return $this->sendViaPhilSms($to, $message);
                 case 'semaphore':
                     return $this->sendViaSemaphore($to, $message);
                 case 'twilio':
@@ -42,6 +44,49 @@ class SmsGatewayService
                 'response' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Send via PhilSMS (Philippines).
+     */
+    protected function sendViaPhilSms(string $to, string $message): array
+    {
+        $apiToken = config('services.philsms.api_token');
+        $baseUrl = config('services.philsms.base_url');
+        $senderId = config('services.philsms.sender_id');
+
+        if (empty($apiToken) || empty($baseUrl)) {
+            throw new \Exception('PhilSMS API token or base URL is missing.');
+        }
+
+        // Format PH numbers: 09xx → 639xx
+        if (Str::startsWith($to, '09')) {
+            $to = '63'.substr($to, 1);
+        } elseif (Str::startsWith($to, '+63')) {
+            $to = substr($to, 1); // Remove leading +
+        }
+
+        $response = Http::retry(3, 500)
+            ->withToken($apiToken)
+            ->post(rtrim($baseUrl, '/').'/sms/send', [
+                'recipient' => $to,
+                'sender_id' => $senderId,
+                'type' => 'plain',
+                'message' => $message,
+            ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+
+            return [
+                'success' => true,
+                'message_id' => $data['message_id'] ?? $data['id'] ?? null,
+                'status' => 'sent',
+                'response' => $data,
+            ];
+        }
+
+        throw new \Exception('PhilSMS Error: '.$response->body());
     }
 
     /**

@@ -395,11 +395,19 @@ class Discount extends Model
                 'eligibility_rules' => [
                     'min_siblings' => 2,
                     'apply_scope' => 'tuition_only',
-                    'is_stackable' => false,
+                    'is_stackable' => true,
                     'max_percent' => 5,
                 ],
                 'applicable_grades' => null,
             ]);
+        } else {
+            // Ensure existing Sibling Discount is stackable
+            $rules = is_array($existing->eligibility_rules) ? $existing->eligibility_rules : [];
+            if (($rules['is_stackable'] ?? true) === false) {
+                $rules['is_stackable'] = true;
+                $existing->eligibility_rules = $rules;
+                $existing->save();
+            }
         }
 
         static::whereIn('discount_name', [

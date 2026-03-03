@@ -47,10 +47,10 @@
                 </a>
 
                 <!-- Unlink Button -->
-                <form action="{{ route('parent.unlink_student') }}" method="POST" class="absolute -top-2 -right-2 z-20" onsubmit="return confirm('Are you sure you want to remove {{ $child->first_name }} from your list?');">
+                <form action="{{ route('parent.unlink_student') }}" method="POST" class="absolute -top-2 -right-2 z-20" onsubmit="return confirm('This will submit an unlink request for admin approval. Continue?');">
                     @csrf
                     <input type="hidden" name="student_id" value="{{ $child->student_id }}">
-                    <button type="submit" class="bg-white text-red-500 border border-red-100 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100" title="Remove student">
+                    <button type="submit" class="bg-white text-red-500 border border-red-100 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100" title="Request to unlink student">
                         <i class="fas fa-times"></i>
                     </button>
                 </form>
@@ -106,13 +106,33 @@
                                        placeholder="Student ID (e.g. 2023-0001)">
                             </div>
                         </div>
+
+                        <div>
+                            <label for="relationship" class="block text-xs font-medium text-gray-600 mb-1">Relationship to Student</label>
+                            <select name="relationship" id="relationship" class="block w-full py-2.5 px-3 border border-gray-300 rounded-xl bg-gray-50 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                <option value="">Select...</option>
+                                <option value="Mother">Mother</option>
+                                <option value="Father">Father</option>
+                                <option value="Guardian">Guardian</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="reason" class="block text-xs font-medium text-gray-600 mb-1">Reason (optional)</label>
+                            <textarea name="reason" id="reason" rows="2" class="block w-full py-2.5 px-3 border border-gray-300 rounded-xl bg-gray-50 text-sm placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="e.g. Enrolling my child for the new school year"></textarea>
+                        </div>
+
+                        <p class="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                            <i class="fas fa-info-circle mr-1"></i> Your request will be reviewed by an administrator before the student is linked to your account.
+                        </p>
                         
                         <div class="grid grid-cols-2 gap-3">
                             <button type="button" @click="showLinkModal = false" class="w-full justify-center rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
                                 Cancel
                             </button>
                             <button type="submit" class="w-full justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5">
-                                Link Account
+                                Submit Request
                             </button>
                         </div>
                     </form>

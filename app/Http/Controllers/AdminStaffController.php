@@ -225,7 +225,7 @@ class AdminStaffController extends Controller
                     // Create User Account
                     $user = User::create([
                         'email' => $email,
-                        'password' => Hash::make($validated['password']),
+                        'password' => Hash::make($validated['password'] ?? \Illuminate\Support\Str::random(32)),
                         'must_change_password' => empty($validated['password']),
                         'role_id' => $role->role_id,
                         'roleable_type' => ParentContact::class,
@@ -316,7 +316,7 @@ class AdminStaffController extends Controller
 
             return redirect()
                 ->route('admin.staff.index')
-                ->with('success', ucfirst($roleName).' account created successfully. '.($roleName === 'parent' && str_contains(strtolower($email), '@gmail.com') && empty($validated['password']) ? 'A password setup email has been sent to the Gmail address.' : ''));
+                ->with('success', rtrim(ucfirst($roleName).' account created successfully.'.($roleName === 'parent' && str_contains(strtolower($email), '@gmail.com') && empty($validated['password']) ? ' A password setup email has been sent to the Gmail address.' : '')));
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.staff.create')
@@ -359,10 +359,7 @@ class AdminStaffController extends Controller
         $user->load(['role', 'roleable']);
         $roleable = $user->roleable;
 
-        $validator = Validator::make($request->all(), [
-            'first_name' => ['required', 'string', 'max:255'],
-            'middle_initial' => ['nullable', 'string', 'max:5'],
-            'last_name' => ['required', 'string', 'max:255'],
+        $rules = [
             'phone_number' => ['nullable', 'string', 'max:20'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->user_id.',user_id'],
             'password' => [
@@ -372,7 +369,20 @@ class AdminStaffController extends Controller
                 'confirmed',
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
             ],
-        ]);
+        ];
+
+        // Conditional validation based on user type
+        if ($user->roleable_type === ParentContact::class) {
+            $rules['first_name'] = ['required', 'string', 'max:255'];
+            $rules['middle_initial'] = ['nullable', 'string', 'max:5'];
+            $rules['last_name'] = ['required', 'string', 'max:255'];
+        } else {
+            $rules['first_name'] = ['required', 'string', 'max:255'];
+            $rules['middle_initial'] = ['nullable', 'string', 'max:5'];
+            $rules['last_name'] = ['required', 'string', 'max:255'];
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return redirect()

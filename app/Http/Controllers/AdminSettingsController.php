@@ -27,6 +27,7 @@ class AdminSettingsController extends Controller
         $settings = SystemSetting::whereIn('key', [
             'school_year',
             'semester',
+            'student_id_format',
             'allow_staff_edit_fees',
             'auto_generate_fees_on_enrollment',
             'notifications_enabled',
@@ -46,6 +47,7 @@ class AdminSettingsController extends Controller
         $data = $request->validate([
             'school_year' => ['nullable', 'string', 'max:50'],
             'semester' => ['nullable', 'string', 'max:50'],
+            'student_id_format' => ['nullable', 'string', 'max:100'],
             'auto_generate_fees_on_enrollment' => ['nullable', 'in:0,1'],
             'notifications_enabled' => ['nullable', 'in:0,1'],
             'maintenance_mode' => ['nullable', 'in:0,1'],
@@ -167,5 +169,130 @@ class AdminSettingsController extends Controller
         }
 
         return redirect()->route('admin.settings.index')->with('success', 'All students and parent accounts have been removed.');
+    }
+
+    /**
+     * Clear application cache.
+     */
+    public function clearCache(): RedirectResponse
+    {
+        try {
+            \Artisan::call('cache:clear');
+            \Artisan::call('config:clear');
+            \Artisan::call('view:clear');
+            \Artisan::call('route:clear');
+
+            try {
+                AuditService::log('Cache Cleared', null, 'Admin cleared all application caches.', null, []);
+            } catch (\Throwable $e) {
+            }
+
+            return redirect()->route('admin.settings.index')->with('success', 'All caches cleared successfully.');
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.settings.index')->with('error', 'Failed to clear cache: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reset all data in the database (dangerous operation).
+     */
+    public function resetDatabase(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'confirm' => ['required', 'in:RESET'],
+        ]);
+
+        try {
+            DB::transaction(function () {
+                // Delete in order to respect foreign key constraints
+                DB::table('fee_records')->delete();
+                DB::table('payments')->delete();
+                DB::table('student_fee_adjustments')->delete();
+                DB::table('sms_logs')->delete();
+                DB::table('sms_schedules')->delete();
+                DB::table('student_sms_preferences')->delete();
+
+                // Delete fee assignments pivot data
+                if (\Schema::hasTable('fee_assignment_additional_charge')) {
+                    DB::table('fee_assignment_additional_charge')->delete();
+                }
+                if (\Schema::hasTable('fee_assignment_discount')) {
+                    DB::table('fee_assignment_discount')->delete();
+                }
+                DB::table('fee_assignments')->delete();
+
+                DB::table('parent_student')->delete();
+
+                // Remove student and parent user accounts
+                User::where('roleable_type', \App\Models\ParentContact::class)->delete();
+                User::where('roleable_type', \App\Models\Student::class)->delete();
+
+                Student::query()->delete();
+                ParentContact::query()->delete();
+            });
+
+            try {
+                AuditService::log('Database Reset', null, 'Admin performed full database reset.', null, []);
+            } catch (\Throwable $e) {
+            }
+
+            return redirect()->route('admin.settings.index')->with('success', 'Database has been reset successfully.');
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.settings.index')->with('error', 'Failed to reset database: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export the database as a downloadable SQL dump or CSV archive.
+     */
+    public function exportDatabase(): \Symfony\Component\HttpFoundation\StreamedResponse|RedirectResponse
+    {
+        try {
+            $filename = 'efees_export_' . now()->format('Ymd_His') . '.csv';
+
+            try {
+                AuditService::log('Database Exported', null, 'Admin exported database.', null, []);
+            } catch (\Throwable $e) {
+            }
+
+            return response()->streamDownload(function () {
+                $fp = fopen('php://output', 'w');
+
+                // Export students
+                fputcsv($fp, ['--- STUDENTS ---']);
+                fputcsv($fp, ['Student ID', 'First Name', 'Last Name', 'Level', 'Section', 'School Year', 'Status']);
+                Student::chunk(500, function ($students) use ($fp) {
+                    foreach ($students as $s) {
+                        fputcsv($fp, [$s->student_id, $s->first_name, $s->last_name, $s->level, $s->section, $s->school_year, $s->enrollment_status]);
+                    }
+                });
+
+                // Export payments
+                fputcsv($fp, []);
+                fputcsv($fp, ['--- PAYMENTS ---']);
+                fputcsv($fp, ['Payment ID', 'Student ID', 'Amount', 'Status', 'Method', 'Date']);
+                \App\Models\Payment::chunk(500, function ($payments) use ($fp) {
+                    foreach ($payments as $p) {
+                        fputcsv($fp, [$p->payment_id, $p->student_id, $p->amount_paid, $p->status, $p->payment_method, $p->payment_date]);
+                    }
+                });
+
+                // Export fee assignments
+                fputcsv($fp, []);
+                fputcsv($fp, ['--- FEE ASSIGNMENTS ---']);
+                fputcsv($fp, ['ID', 'Student ID', 'Tuition Fee ID', 'Total Amount', 'Created At']);
+                FeeAssignment::chunk(500, function ($fas) use ($fp) {
+                    foreach ($fas as $fa) {
+                        fputcsv($fp, [$fa->id, $fa->student_id, $fa->tuition_fee_id, $fa->total_amount, $fa->created_at]);
+                    }
+                });
+
+                fclose($fp);
+            }, $filename, [
+                'Content-Type' => 'text/csv',
+            ]);
+        } catch (\Throwable $e) {
+            return redirect()->route('admin.settings.index')->with('error', 'Failed to export database: ' . $e->getMessage());
+        }
     }
 }

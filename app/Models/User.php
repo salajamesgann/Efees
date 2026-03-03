@@ -66,6 +66,8 @@ class User extends Authenticatable
     protected $casts = [
         'password' => 'hashed',
         'must_change_password' => 'boolean',
+        'lockout_until' => 'datetime',
+        'password_expires_at' => 'datetime',
     ];
 
     /**
@@ -80,6 +82,9 @@ class User extends Authenticatable
         'role_id',
         'roleable_type',
         'roleable_id',
+        'failed_login_attempts',
+        'lockout_until',
+        'password_expires_at',
     ];
 
     /**

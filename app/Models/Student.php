@@ -186,10 +186,65 @@ class Student extends Model
      */
     public function getFullNameAttribute()
     {
-        return trim($this->first_name.' '.($this->middle_name ?? '').' '.$this->last_name);
+        return preg_replace('/\s+/', ' ', trim($this->first_name.' '.($this->middle_name ?? '').' '.$this->last_name));
     }
 
     /**
+     * Get all siblings of this student (other students sharing a parent).
+     * Returns a collection of Student models (deduplicated).
+     */
+    public function getSiblingsAttribute()
+    {
+        return $this->getSiblings();
+    }
+
+    /**
+     * Get siblings of this student via shared parent contacts.
+     *
+     * @param  string|null  $schoolYear  Optionally filter to a specific school year.
+     * @return \Illuminate\Support\Collection<Student>
+     */
+    public function getSiblings(?string $schoolYear = null): \Illuminate\Support\Collection
+    {
+        $this->loadMissing('parents');
+
+        $parentIds = $this->parents->pluck('id');
+
+        if ($parentIds->isEmpty()) {
+            return collect();
+        }
+
+        $query = static::whereHas('parents', function ($q) use ($parentIds) {
+            $q->whereIn('parents.id', $parentIds);
+        })->where('student_id', '!=', $this->student_id);
+
+        if ($schoolYear) {
+            $query->where('school_year', $schoolYear);
+        }
+
+        return $query->get()->unique('student_id');
+    }
+
+    /**
+     * Count active siblings (Active/Irregular) in the same school year.
+     */
+    public function getActiveSiblingCountAttribute(): int
+    {
+        $this->loadMissing('parents');
+
+        $parentIds = $this->parents->pluck('id');
+
+        if ($parentIds->isEmpty()) {
+            return 0;
+        }
+
+        return static::whereHas('parents', function ($q) use ($parentIds) {
+            $q->whereIn('parents.id', $parentIds);
+        })
+            ->where('student_id', '!=', $this->student_id)
+            ->where('school_year', $this->school_year)
+            ->whereIn('enrollment_status', ['Active', 'Irregular'])
+            ->count();
     }
 
     /**

@@ -93,6 +93,52 @@
         <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider">Academic Information</h3>
         @endif
 
+        {{-- Student ID: editable on create, read-only on edit --}}
+        @if($mode === 'create')
+        <div x-data="{
+                studentId: '{{ old('student_id', '') }}',
+                loading: false,
+                errMsg: '',
+                async generate() {
+                    this.loading = true; this.errMsg = '';
+                    try {
+                        const res = await fetch('{{ route('admin.students.generateId') }}', { headers: {'X-Requested-With':'XMLHttpRequest'} });
+                        const d = await res.json();
+                        this.studentId = d.student_id;
+                    } catch(e) { this.errMsg = 'Failed. Please enter an ID manually.'; }
+                    finally { this.loading = false; }
+                }
+            }" x-init="if (!studentId) generate()" class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700">
+                Student ID
+                <span class="ml-1 text-xs font-normal text-slate-400">(auto-generated; you may edit)</span>
+            </label>
+            <div class="flex gap-2 items-stretch">
+                <input name="student_id" x-model="studentId" type="text"
+                       class="flex-1 rounded-xl border-slate-200 bg-white px-4 py-2.5 font-mono text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                       placeholder="e.g. STU-2025-0001" autocomplete="off" />
+                <button type="button" @click="generate()" :disabled="loading"
+                        class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 whitespace-nowrap text-sm shadow-sm">
+                    <svg x-show="loading" class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    <i x-show="!loading" class="fas fa-sync-alt text-xs"></i>
+                    <span x-show="!loading">Regenerate</span>
+                    <span x-show="loading" x-cloak>…</span>
+                </button>
+            </div>
+            @error('student_id') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
+            <p x-show="errMsg" x-text="errMsg" class="text-xs text-amber-600" x-cloak></p>
+        </div>
+        @else
+        <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700">Student ID</label>
+            <input type="text" value="{{ $student->student_id ?? '' }}" class="w-full rounded-xl border-slate-200 bg-slate-100 text-slate-600 px-4 py-2.5 font-mono shadow-sm cursor-not-allowed" readonly disabled />
+            <p class="text-xs text-slate-400">Student ID cannot be changed after enrollment.</p>
+        </div>
+        @endif
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-2">
                 <label class="text-sm font-semibold text-slate-700">Grade Level <span class="text-red-500">*</span></label>
@@ -174,6 +220,22 @@
                 </div>
                 @endforeach
             </div>
+
+            {{-- Sibling Quick Info --}}
+            @php
+                $siblingCount = $student->active_sibling_count;
+            @endphp
+            @if($siblingCount > 0)
+            <div class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-user-friends text-xs"></i>
+                </div>
+                <div class="text-xs text-purple-700">
+                    <strong>{{ $siblingCount }} linked sibling{{ $siblingCount > 1 ? 's' : '' }}</strong> via shared parent.
+                    <span class="text-purple-500">Go to the <strong>Siblings</strong> tab to manage sibling connections and family discounts.</span>
+                </div>
+            </div>
+            @endif
         </div>
         @endif
         @endif

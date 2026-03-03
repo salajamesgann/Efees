@@ -176,6 +176,11 @@
         mobileShowDetail: false,
         sectionModalOpen: false,
         strandModalOpen: false,
+        promoteModalOpen: false,
+        promoteTargetSection: '',
+        promoteStudentCount: 0,
+        promoteSkipCount: 0,
+        importModalOpen: false,
         async fetchSections() {
             if (!this.gradeLevel) { 
                 this.sections = []; 
@@ -302,6 +307,10 @@
                         <a href="{{ route('admin.students.index', ['create' => true, 'level' => $currentLevel, 'section' => $currentSection, 'strand' => $currentStrand ?? null, 'school_year' => $currentSchoolYear]) }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
                             <i class="fas fa-plus"></i> Add Student
                         </a>
+                        @elseif($viewState === 'levels')
+                        <button @click="importModalOpen = true" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
+                            <i class="fas fa-file-csv"></i> Import CSV
+                        </button>
                         @elseif($viewState === 'sections')
                         <button @click="sectionModalOpen = true" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
                             <i class="fas fa-plus"></i> Add Section
@@ -314,13 +323,18 @@
                     @endif
 
                     @if($viewState === 'levels')
-                    <form method="GET" action="{{ route('admin.students.index') }}" class="flex items-center">
-                        <select name="school_year" onchange="this.form.submit()" class="text-sm border-none bg-slate-50 rounded-lg text-slate-600 font-medium focus:ring-0 cursor-pointer hover:text-slate-900 py-1 pl-3 pr-8">
-                            @foreach($schoolYears as $sy)
-                                <option value="{{ $sy }}" {{ $currentSchoolYear == $sy ? 'selected' : '' }}>{{ $sy }}</option>
-                            @endforeach
-                        </select>
-                    </form>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-full whitespace-nowrap">
+                            {{ number_format($totalStudents) }} {{ Str::plural('student', $totalStudents) }}
+                        </span>
+                        <form method="GET" action="{{ route('admin.students.index') }}" class="flex items-center">
+                            <select name="school_year" onchange="this.form.submit()" class="text-sm border-none bg-slate-50 rounded-lg text-slate-600 font-medium focus:ring-0 cursor-pointer hover:text-slate-900 py-1 pl-3 pr-8">
+                                @foreach($schoolYears as $sy)
+                                    <option value="{{ $sy }}" {{ $currentSchoolYear == $sy ? 'selected' : '' }}>{{ $sy }}</option>
+                                @endforeach
+                            </select>
+                        </form>
+                    </div>
                     @endif
                 </div>
 
@@ -355,6 +369,9 @@
                         @endif
                         @if(isset($currentStrand))
                         <input type="hidden" name="strand" value="{{ $currentStrand }}">
+                        @endif
+                        @if(!empty($statusFilter))
+                        <input type="hidden" name="status" value="{{ $statusFilter }}">
                         @endif
                         <div class="flex gap-2">
                             <div class="relative flex-1">
@@ -396,6 +413,32 @@
                             </a>
                         </div>
                     </form>
+
+                    @if($viewState === 'students')
+                    @php
+                        $statusOptions = [
+                            ''           => ['label' => 'All',       'color' => 'bg-slate-100 text-slate-600 hover:bg-slate-200'],
+                            'active'     => ['label' => 'Active',    'color' => 'bg-green-100 text-green-700 hover:bg-green-200'],
+                            'irregular'  => ['label' => 'Irregular', 'color' => 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'],
+                            'withdrawn'  => ['label' => 'Withdrawn', 'color' => 'bg-orange-100 text-orange-700 hover:bg-orange-200'],
+                            'archived'   => ['label' => 'Archived',  'color' => 'bg-red-100 text-red-600 hover:bg-red-200'],
+                        ];
+                        $baseStatusParams = array_merge(request()->except(['status', 'page']), []);
+                    @endphp
+                    <div class="flex flex-wrap gap-1.5 px-1 pb-1">
+                        @foreach($statusOptions as $val => $opt)
+                            @php
+                                $isActive = strtolower($statusFilter ?? '') === $val;
+                                $params   = $val === '' ? $baseStatusParams : array_merge($baseStatusParams, ['status' => $val]);
+                            @endphp
+                            <a href="{{ route('admin.students.index', $params) }}"
+                               class="px-2.5 py-1 rounded-full text-xs font-semibold transition-colors {{ $opt['color'] }} {{ $isActive ? 'ring-2 ring-offset-1 ring-current' : '' }}">
+                                {{ $opt['label'] }}
+                            </a>
+                        @endforeach
+                    </div>
+                    @endif
+
                 </div>
 
                 <!-- List -->
@@ -403,6 +446,7 @@
                     <ul class="divide-y divide-slate-100">
                         @if($viewState === 'levels')
                             @forelse($levels as $lvl)
+                            @php $lvlCount = $levelStudentCounts[$lvl] ?? 0; @endphp
                             <li>
                                 <a href="{{ route('admin.students.index', array_merge(request()->query(), ['level' => $lvl])) }}" 
                                    class="block p-4 hover:bg-slate-50 transition-colors group">
@@ -411,9 +455,21 @@
                                             <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
                                                 <i class="fas fa-layer-group"></i>
                                             </div>
-                                            <span class="font-semibold text-slate-700 group-hover:text-blue-700 transition-colors">{{ $lvl }}</span>
+                                            <div>
+                                                <span class="font-semibold text-slate-700 group-hover:text-blue-700 transition-colors">{{ $lvl }}</span>
+                                                @if($lvlCount > 0)
+                                                <div class="text-xs text-slate-400 mt-0.5">{{ number_format($lvlCount) }} {{ Str::plural('student', $lvlCount) }} enrolled</div>
+                                                @else
+                                                <div class="text-xs text-slate-300 mt-0.5">No enrollments this SY</div>
+                                                @endif
+                                            </div>
                                         </div>
-                                        <i class="fas fa-chevron-right text-slate-300 group-hover:text-blue-400"></i>
+                                        <div class="flex items-center gap-2">
+                                            @if($lvlCount > 0)
+                                            <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full group-hover:bg-blue-100 transition-colors">{{ $lvlCount }}</span>
+                                            @endif
+                                            <i class="fas fa-chevron-right text-slate-300 group-hover:text-blue-400"></i>
+                                        </div>
                                     </div>
                                 </a>
                             </li>
@@ -443,36 +499,55 @@
 
                         @elseif($viewState === 'sections')
                             @forelse($sections as $sec)
+                            @php
+                                $secCount      = $sectionStudentCounts[$sec->name] ?? 0;
+                                $secPromotable = $sectionPromotableCounts[$sec->name] ?? 0;
+                                $secSkipped    = $secCount - $secPromotable;
+                            @endphp
                             <li>
                                 <div class="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group relative">
                                     <a href="{{ route('admin.students.index', array_merge(request()->query(), ['level' => $currentLevel, 'section' => $sec->name])) }}" 
-                                       class="flex-1 flex items-center justify-between pr-10">
+                                       class="flex-1 flex items-center justify-between pr-24">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
                                                 <i class="fas fa-users"></i>
                                             </div>
-                                            <span class="font-semibold text-slate-700 group-hover:text-indigo-700 transition-colors">{{ $sec->name }}</span>
+                                            <div>
+                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-700 transition-colors">{{ $sec->name }}</span>
+                                                <div class="text-xs text-slate-400 mt-0.5">
+                                                    {{ $secCount }} {{ Str::plural('student', $secCount) }}
+                                                </div>
+                                            </div>
                                         </div>
                                         <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-400"></i>
                                     </a>
                                     
-                                    <!-- Delete Button -->
-                                    @unless($isReadOnly)
-                                    <form action="{{ route('admin.students.sections.destroy', $sec->id) }}" method="POST" 
-                                          class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                          onsubmit="return confirm('Are you sure you want to delete section {{ $sec->name }}?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        @if(request()->query('strand'))
-                                        <input type="hidden" name="strand" value="{{ request()->query('strand') }}">
-                                        @endif
-                                        <button type="submit" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Section">
-                                            <i class="fas fa-trash-alt"></i>
+                                    <!-- Action Buttons -->
+                                    <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        @unless($isReadOnly)
+                                        @if($nextLevel)
+                                        <!-- Promote Button -->
+                                        <button type="button"
+                                            @click="promoteTargetSection = '{{ $sec->name }}'; promoteStudentCount = {{ $secPromotable }}; promoteSkipCount = {{ $secSkipped }}; promoteModalOpen = true"
+                                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                                            title="Promote to {{ $nextLevel }}">
+                                            <i class="fas fa-graduation-cap"></i>
                                         </button>
-                                    </form>
-                                    @endunless
-                                </div>
-                            </li>
+                                        @endif
+                                        <!-- Delete Button -->
+                                        <form action="{{ route('admin.students.sections.destroy', $sec->id) }}" method="POST"
+                                              onsubmit="return confirm('Are you sure you want to delete section {{ $sec->name }}?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            @if(request()->query('strand'))
+                                            <input type="hidden" name="strand" value="{{ request()->query('strand') }}">
+                                            @endif
+                                            <button type="submit" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Section">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                        @endunless
+                                    </div>
                             @empty
                             <li class="p-8 text-center text-slate-500 text-sm">No sections found for {{ $currentLevel }}.</li>
                             @endforelse
@@ -498,8 +573,19 @@
                                                     <i class="fas fa-ticket-alt mr-1"></i> Voucher
                                                 </span>
                                                 @endif
-                                                @if(strtolower($student->enrollment_status) === 'archived')
+                                                @php $es = strtolower($student->enrollment_status ?? ''); @endphp
+                                                @if($es === 'archived')
                                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 uppercase">Archived</span>
+                                                @elseif($es === 'irregular')
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700 uppercase">Irregular</span>
+                                                @elseif($es === 'withdrawn')
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 uppercase">Withdrawn</span>
+                                                @endif
+                                                @php $sibCount = $student->active_sibling_count; @endphp
+                                                @if($sibCount > 0)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700" title="{{ $sibCount }} linked sibling{{ $sibCount > 1 ? 's' : '' }}">
+                                                    <i class="fas fa-user-friends mr-0.5 text-[8px]"></i> {{ $sibCount }}
+                                                </span>
                                                 @endif
                                             </div>
                                             
@@ -611,37 +697,61 @@
                                                 <i class="fas fa-user-friends text-[10px]"></i> {{ $primaryParent->full_name }}
                                             </span>
                                         @endif
+
+                                        @php $headerSibCount = $selectedStudent->active_sibling_count; @endphp
+                                        @if($headerSibCount > 0)
+                                            <span>•</span>
+                                            <span class="flex items-center gap-1 text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full text-xs font-bold border border-purple-200" title="{{ $headerSibCount }} linked sibling{{ $headerSibCount > 1 ? 's' : '' }}">
+                                                <i class="fas fa-users text-[10px]"></i> {{ $headerSibCount }} Sibling{{ $headerSibCount > 1 ? 's' : '' }}
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                @if(strtolower($selectedStudent->enrollment_status) === 'archived')
-                                <form action="{{ route('admin.students.unarchive', $selectedStudent) }}" method="POST" onsubmit="return confirm('Are you sure you want to unarchive this student?');">
+                                <form action="{{ route('admin.students.changeStatus', $selectedStudent) }}" method="POST"
+                                      x-data="{ status: @js($selectedStudent->enrollment_status ?? 'Active'), original: @js($selectedStudent->enrollment_status ?? 'Active') }"
+                                      @submit.prevent="if(status !== original && confirm('Change enrollment status to ' + status + '?')) $el.submit()">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" class="text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors p-2 rounded-lg" title="Unarchive Student">
-                                        <i class="fas fa-box-open"></i>
-                                    </button>
+                                    <div class="flex items-center gap-1.5">
+                                        <label class="text-xs text-slate-500 font-medium whitespace-nowrap">Status:</label>
+                                        <select name="enrollment_status" x-model="status"
+                                                :class="{
+                                                    'bg-green-50 text-green-700 border-green-200':   status === 'Active',
+                                                    'bg-yellow-50 text-yellow-700 border-yellow-200': status === 'Irregular',
+                                                    'bg-orange-50 text-orange-700 border-orange-200': status === 'Withdrawn',
+                                                    'bg-red-50 text-red-600 border-red-200':         status === 'Archived',
+                                                }"
+                                                class="text-xs font-semibold border rounded-lg px-2 py-1.5 pr-6 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors appearance-none">
+                                            <option value="Active">Active</option>
+                                            <option value="Irregular">Irregular</option>
+                                            <option value="Withdrawn">Withdrawn</option>
+                                            <option value="Archived">Archived</option>
+                                        </select>
+                                        <button type="submit" x-show="status !== original"
+                                                class="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg transition-colors"
+                                                x-cloak>
+                                            Apply
+                                        </button>
+                                    </div>
                                 </form>
-                                @else
-                                <form action="{{ route('admin.students.archive', $selectedStudent) }}" method="POST" onsubmit="return confirm('Are you sure you want to archive this student?');">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors p-2 rounded-lg" title="Archive Student">
-                                        <i class="fas fa-archive"></i>
-                                    </button>
-                                </form>
-                                @endif
                             </div>
                         </div>
 
                         <!-- Tabs -->
-                        <div class="flex items-center gap-8 border-b border-transparent -mb-px">
-                            <button @click="activeTab = 'personal'" :class="activeTab === 'personal' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all">Personal</button>
-                            <button @click="activeTab = 'academic'" :class="activeTab === 'academic' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all">Academic</button>
-                            <button @click="activeTab = 'parent'" :class="activeTab === 'parent' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all">Parent / Guardian</button>
-                            <button @click="activeTab = 'fees'" :class="activeTab === 'fees' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all">Fees & Discounts</button>
-                            <button @click="activeTab = 'activity'" :class="activeTab === 'activity' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all">Recent Activity</button>
+                        <div class="flex items-center gap-8 border-b border-transparent -mb-px overflow-x-auto">
+                            <button @click="activeTab = 'personal'" :class="activeTab === 'personal' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap">Personal</button>
+                            <button @click="activeTab = 'academic'" :class="activeTab === 'academic' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap">Academic</button>
+                            <button @click="activeTab = 'parent'" :class="activeTab === 'parent' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap">Parent / Guardian</button>
+                            <button @click="activeTab = 'siblings'" :class="activeTab === 'siblings' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5">
+                                Siblings
+                                @if($selectedStudent && $selectedStudent->active_sibling_count > 0)
+                                <span class="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-700">{{ $selectedStudent->active_sibling_count }}</span>
+                                @endif
+                            </button>
+                            <button @click="activeTab = 'fees'" :class="activeTab === 'fees' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap">Fees & Discounts</button>
+                            <button @click="activeTab = 'activity'" :class="activeTab === 'activity' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'" class="pb-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap">Recent Activity</button>
                         </div>
                     </div>
 
@@ -656,105 +766,512 @@
                             </div>
 
                             <!-- Fees & Discounts Tab -->
-                            <div x-show="activeTab === 'fees'" class="space-y-6" x-cloak>
-                                <!-- Current Fee Assignment Summary -->
+                            <div x-show="activeTab === 'fees'" class="space-y-6" x-cloak
+                                 x-data="{ showAddDiscount: false, showAddCharge: false, showAdjustment: false }">
                                 @if(isset($feeAssignment))
+                                    {{-- ── Summary Cards ── --}}
                                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                                        <div class="flex items-center justify-between mb-6">
+                                        <div class="flex items-center justify-between mb-5">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                                                     <i class="fas fa-file-invoice-dollar text-lg"></i>
                                                 </div>
                                                 <div>
                                                     <h3 class="text-lg font-bold text-slate-800">Fee Assignment</h3>
-                                                    <p class="text-sm text-slate-500">Current financial status</p>
+                                                    <p class="text-sm text-slate-500">{{ $feeAssignment->school_year }} &middot; {{ $feeAssignment->semester }}</p>
                                                 </div>
                                             </div>
-                                            <a href="{{ route('admin.enrollment.show', $selectedStudent) }}" class="text-sm text-blue-600 font-semibold hover:text-blue-700 hover:underline">
-                                                View Full Details <i class="fas fa-arrow-right ml-1"></i>
-                                            </a>
-                                        </div>
-
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Fees</p>
-                                                <p class="text-xl font-bold text-slate-800">₱{{ number_format($feeAssignment->total_amount, 2) }}</p>
-                                            </div>
-                                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Discounts</p>
-                                                <p class="text-xl font-bold text-emerald-600">-₱{{ number_format($feeAssignment->discounts_total, 2) }}</p>
-                                            </div>
-                                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Net Payable</p>
-                                                <p class="text-xl font-bold text-blue-600">₱{{ number_format($feeAssignment->total_amount, 2) }}</p>
+                                            <div class="flex items-center gap-2">
+                                                @unless($isReadOnly)
+                                                <form action="{{ route('admin.students.recalculateFees', $selectedStudent) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200">
+                                                        <i class="fas fa-sync-alt"></i> Recalculate
+                                                    </button>
+                                                </form>
+                                                @endunless
+                                                <a href="{{ route('admin.enrollment.show', $selectedStudent) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200">
+                                                    View Full Details <i class="fas fa-arrow-right ml-1"></i>
+                                                </a>
                                             </div>
                                         </div>
 
-                                        <!-- Applied Discounts List -->
-                                        <h4 class="text-sm font-bold text-slate-700 mb-3">Applied Discounts</h4>
                                         @php
-                                            $hasAppliedDiscounts = $feeAssignment->discounts->count() > 0;
-                                            $showSiblingExclusion = $selectedStudent->is_shs_voucher;
-                                            $siblingDiscountApplied = $feeAssignment->discounts->contains(function($d) {
-                                                return str_contains(strtolower($d->discount_name), 'sibling') || 
-                                                       collect($d->eligibility_rules)->contains('field', 'sibling_rank');
-                                            });
+                                            $remainingBalance = max(0, (float)$feeAssignment->total_amount - (float)($paidAmount ?? 0));
                                         @endphp
-
-                                        @if($hasAppliedDiscounts || $showSiblingExclusion)
-                                            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                                                <table class="min-w-full divide-y divide-slate-100">
-                                                    <thead class="bg-slate-50">
-                                                        <tr>
-                                                            <th scope="col" class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Discount</th>
-                                                            <th scope="col" class="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
-                                                            <th scope="col" class="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="divide-y divide-slate-100">
-                                                        @foreach($feeAssignment->discounts as $discount)
-                                                            <tr>
-                                                                <td class="px-4 py-3 text-sm text-slate-700 font-medium">
-                                                                    {{ $discount->discount_name }}
-                                                                    <span class="text-slate-400 text-xs font-normal ml-1">({{ $discount->type === 'percentage' ? $discount->value.'%' : 'Fixed' }})</span>
-                                                                </td>
-                                                                <td class="px-4 py-3 text-sm text-emerald-600 font-bold text-right">
-                                                                    -₱{{ number_format($discount->pivot->applied_amount ?? 0, 2) }}
-                                                                </td>
-                                                                <td class="px-4 py-3 text-right">
-                                                                    @unless($isReadOnly)
-                                                                    <form action="{{ route('admin.enrollment.discounts.destroy', ['student' => $selectedStudent, 'discount' => $discount->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this discount?');">
-                                                                        @csrf
-                                                                        @method('DELETE')
-                                                                        <button type="submit" class="text-slate-400 hover:text-red-600 transition-colors">
-                                                                            <i class="fas fa-trash-alt"></i>
-                                                                        </button>
-                                                                    </form>
-                                                                    @endunless
-                                                                </td>
-                                                            </tr>
-                                                        @endforeach
-                                                        
-                                                        @if($showSiblingExclusion && !$siblingDiscountApplied)
-                                                            <tr>
-                                                                <td class="px-4 py-3 text-sm text-slate-500 italic">
-                                                                    Sibling Discount
-                                                                </td>
-                                                                <td class="px-4 py-3 text-sm text-slate-400 italic text-right">
-                                                                    Not Applicable (SHS Voucher)
-                                                                </td>
-                                                                <td class="px-4 py-3 text-right">
-                                                                    <span class="text-slate-300" title="Excluded due to SHS Voucher"><i class="fas fa-ban"></i></span>
-                                                                </td>
-                                                            </tr>
-                                                        @endif
-                                                    </tbody>
-                                                </table>
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Base Tuition</p>
+                                                <p class="text-lg font-bold text-slate-800">₱{{ number_format($feeAssignment->base_tuition, 2) }}</p>
                                             </div>
-                                        @else
-                                            <p class="text-sm text-slate-500 italic">No discounts currently applied.</p>
+                                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">+ Charges</p>
+                                                <p class="text-lg font-bold text-amber-600">₱{{ number_format($feeAssignment->additional_charges_total, 2) }}</p>
+                                            </div>
+                                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">− Discounts</p>
+                                                <p class="text-lg font-bold text-emerald-600">-₱{{ number_format($feeAssignment->discounts_total, 2) }}</p>
+                                            </div>
+                                            <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                                <p class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Net Payable</p>
+                                                <p class="text-lg font-bold text-blue-700">₱{{ number_format($feeAssignment->total_amount, 2) }}</p>
+                                            </div>
+                                        </div>
+                                        @if(isset($paidAmount) && $paidAmount > 0)
+                                        <div class="grid grid-cols-2 gap-3 mt-3">
+                                            <div class="bg-green-50 p-3 rounded-xl border border-green-100">
+                                                <p class="text-[10px] font-bold text-green-400 uppercase tracking-wider mb-0.5">Total Paid</p>
+                                                <p class="text-lg font-bold text-green-700">₱{{ number_format($paidAmount, 2) }}</p>
+                                            </div>
+                                            <div class="{{ $remainingBalance > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100' }} p-3 rounded-xl border">
+                                                <p class="text-[10px] font-bold {{ $remainingBalance > 0 ? 'text-red-400' : 'text-green-400' }} uppercase tracking-wider mb-0.5">Remaining Balance</p>
+                                                <p class="text-lg font-bold {{ $remainingBalance > 0 ? 'text-red-700' : 'text-green-700' }}">₱{{ number_format($remainingBalance, 2) }}</p>
+                                            </div>
+                                        </div>
                                         @endif
                                     </div>
+
+                                    {{-- ── Fee Breakdown ── --}}
+                                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                        <h4 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                            <i class="fas fa-list text-slate-400"></i> Fee Breakdown
+                                        </h4>
+                                        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                            <table class="min-w-full divide-y divide-slate-100">
+                                                <thead class="bg-slate-50">
+                                                    <tr>
+                                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Item</th>
+                                                        <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-slate-50">
+                                                    {{-- Base Tuition --}}
+                                                    <tr>
+                                                        <td class="px-4 py-2.5 text-sm text-slate-700 font-medium">
+                                                            <i class="fas fa-graduation-cap text-blue-400 mr-1.5"></i>
+                                                            {{ $feeAssignment->tuitionFee->fee_name ?? ($feeAssignment->tuitionFee->notes ?? 'Base Tuition') }}
+                                                            @if($feeAssignment->tuitionFee)
+                                                                <span class="text-slate-400 text-xs ml-1">({{ $feeAssignment->tuitionFee->grade_level }})</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="px-4 py-2.5 text-sm font-bold text-slate-800 text-right">₱{{ number_format($feeAssignment->base_tuition, 2) }}</td>
+                                                    </tr>
+                                                    {{-- Additional Charges --}}
+                                                    @forelse($feeAssignment->additionalCharges as $charge)
+                                                        <tr class="group hover:bg-slate-50 transition-colors">
+                                                            <td class="px-4 py-2.5 text-sm text-slate-700">
+                                                                <i class="fas fa-plus-circle text-amber-400 mr-1.5"></i>
+                                                                {{ $charge->charge_name }}
+                                                                <span class="text-slate-400 text-xs ml-1">
+                                                                    @if($charge->applies_to === 'all') (All Levels) @else ({{ implode(', ', $charge->applicable_grades ?? []) }}) @endif
+                                                                </span>
+                                                            </td>
+                                                            <td class="px-4 py-2.5 text-sm font-bold text-amber-600 text-right flex items-center justify-end gap-2">
+                                                                +₱{{ number_format($charge->amount, 2) }}
+                                                                @unless($isReadOnly)
+                                                                <form action="{{ route('admin.students.charges.remove', ['student' => $selectedStudent, 'charge' => $charge->id]) }}" method="POST" class="inline opacity-0 group-hover:opacity-100 transition-opacity" onsubmit="return confirm('Remove this charge?');">
+                                                                    @csrf @method('DELETE')
+                                                                    <button type="submit" class="text-slate-400 hover:text-red-500 text-xs"><i class="fas fa-times"></i></button>
+                                                                </form>
+                                                                @endunless
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="2" class="px-4 py-2 text-xs text-slate-400 italic">No additional charges</td>
+                                                        </tr>
+                                                    @endforelse
+                                                    {{-- Adjustments (charge type) --}}
+                                                    @if(isset($feeAdjustments))
+                                                        @foreach($feeAdjustments->where('type', 'charge') as $adj)
+                                                        <tr>
+                                                            <td class="px-4 py-2.5 text-sm text-slate-700">
+                                                                <i class="fas fa-receipt text-orange-400 mr-1.5"></i>
+                                                                {{ $adj->name }}
+                                                                <span class="text-slate-400 text-xs ml-1">(Adjustment)</span>
+                                                            </td>
+                                                            <td class="px-4 py-2.5 text-sm font-bold text-amber-600 text-right">+₱{{ number_format($adj->amount, 2) }}</td>
+                                                        </tr>
+                                                        @endforeach
+                                                    @endif
+                                                    {{-- Discounts --}}
+                                                    @forelse($feeAssignment->discounts as $discount)
+                                                        <tr class="group hover:bg-slate-50 transition-colors">
+                                                            <td class="px-4 py-2.5 text-sm text-slate-700">
+                                                                <i class="fas fa-tag text-emerald-400 mr-1.5"></i>
+                                                                {{ $discount->discount_name }}
+                                                                <span class="text-slate-400 text-xs ml-1">({{ $discount->type === 'percentage' ? $discount->value.'%' : 'Fixed' }})</span>
+                                                            </td>
+                                                            <td class="px-4 py-2.5 text-sm font-bold text-emerald-600 text-right flex items-center justify-end gap-2">
+                                                                @php
+                                                                    $appliedAmt = $discount->pivot->applied_amount;
+                                                                    $displayAmt = ($appliedAmt !== null && (float)$appliedAmt > 0)
+                                                                        ? (float)$appliedAmt
+                                                                        : $discount->calculateDiscountAmount($feeAssignment->tuitionFee ? $feeAssignment->tuitionFee->amount : $feeAssignment->base_tuition);
+                                                                @endphp
+                                                                -₱{{ number_format($displayAmt, 2) }}
+                                                                @unless($isReadOnly)
+                                                                <form action="{{ route('admin.enrollment.discounts.destroy', ['student' => $selectedStudent, 'discount' => $discount->id]) }}" method="POST" class="inline opacity-0 group-hover:opacity-100 transition-opacity" onsubmit="return confirm('Remove this discount?');">
+                                                                    @csrf @method('DELETE')
+                                                                    <button type="submit" class="text-slate-400 hover:text-red-500 text-xs"><i class="fas fa-times"></i></button>
+                                                                </form>
+                                                                @endunless
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                    @endforelse
+                                                    {{-- Adjustments (discount type) --}}
+                                                    @if(isset($feeAdjustments))
+                                                        @foreach($feeAdjustments->where('type', 'discount') as $adj)
+                                                        <tr>
+                                                            <td class="px-4 py-2.5 text-sm text-slate-700">
+                                                                <i class="fas fa-percentage text-green-400 mr-1.5"></i>
+                                                                {{ $adj->name }}
+                                                                <span class="text-slate-400 text-xs ml-1">(Adjustment)</span>
+                                                            </td>
+                                                            <td class="px-4 py-2.5 text-sm font-bold text-emerald-600 text-right">-₱{{ number_format($adj->amount, 2) }}</td>
+                                                        </tr>
+                                                        @endforeach
+                                                    @endif
+                                                    {{-- SHS Voucher exclusion indicator --}}
+                                                    @php
+                                                        $showSiblingExclusion = $selectedStudent->is_shs_voucher;
+                                                        $siblingDiscountApplied = $feeAssignment->discounts->contains(function($d) {
+                                                            return str_contains(strtolower($d->discount_name), 'sibling');
+                                                        });
+                                                    @endphp
+                                                    @if($showSiblingExclusion && !$siblingDiscountApplied)
+                                                        <tr>
+                                                            <td class="px-4 py-2 text-sm text-slate-400 italic"><i class="fas fa-ban text-slate-300 mr-1.5"></i>Sibling Discount</td>
+                                                            <td class="px-4 py-2 text-sm text-slate-400 italic text-right">Not Applicable (SHS Voucher)</td>
+                                                        </tr>
+                                                    @endif
+                                                </tbody>
+                                                <tfoot class="bg-blue-50 border-t-2 border-blue-100">
+                                                    <tr>
+                                                        <td class="px-4 py-3 text-sm font-extrabold text-blue-800 uppercase tracking-wide">Total Payable</td>
+                                                        <td class="px-4 py-3 text-base font-extrabold text-blue-800 text-right">₱{{ number_format($feeAssignment->total_amount, 2) }}</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {{-- ── Quick Actions (Add Discount / Add Charge / Fee Adjustment) ── --}}
+                                    @unless($isReadOnly)
+                                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                        <h4 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                            <i class="fas fa-bolt text-amber-400"></i> Quick Actions
+                                        </h4>
+                                        <div class="flex flex-wrap gap-2 mb-4">
+                                            <button @click="showAddDiscount = !showAddDiscount; showAddCharge = false; showAdjustment = false"
+                                                    :class="showAddDiscount ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300' : 'bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700'"
+                                                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-all">
+                                                <i class="fas fa-tag"></i> Add Discount
+                                            </button>
+                                            <button @click="showAddCharge = !showAddCharge; showAddDiscount = false; showAdjustment = false"
+                                                    :class="showAddCharge ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300' : 'bg-slate-100 text-slate-700 hover:bg-amber-50 hover:text-amber-700'"
+                                                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-all">
+                                                <i class="fas fa-plus-circle"></i> Add Charge
+                                            </button>
+                                            <button @click="showAdjustment = !showAdjustment; showAddDiscount = false; showAddCharge = false"
+                                                    :class="showAdjustment ? 'bg-purple-100 text-purple-800 ring-1 ring-purple-300' : 'bg-slate-100 text-slate-700 hover:bg-purple-50 hover:text-purple-700'"
+                                                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-all">
+                                                <i class="fas fa-sliders-h"></i> Manual Adjustment
+                                            </button>
+                                        </div>
+
+                                        {{-- ── Add Discount Panel ── --}}
+                                        <div x-show="showAddDiscount" x-cloak x-transition class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-3">
+                                            <h5 class="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-3"><i class="fas fa-tag mr-1"></i> Apply a Discount</h5>
+                                            @if($availableDiscounts->count() > 0)
+                                                <form action="{{ route('admin.enrollment.discounts.store', $selectedStudent) }}" method="POST" class="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+                                                    @csrf
+                                                    <div class="flex-1 w-full">
+                                                        <label class="text-xs font-semibold text-slate-600 mb-1 block">Select Discount</label>
+                                                        <select name="discount_id" required class="w-full bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300">
+                                                            <option value="">— Choose a discount —</option>
+                                                            @foreach($availableDiscounts as $discount)
+                                                                <option value="{{ $discount->id }}">
+                                                                    {{ $discount->discount_name }}
+                                                                    ({{ $discount->type === 'percentage' ? $discount->value.'%' : '₱'.number_format($discount->value, 2) }})
+                                                                    {{ $discount->is_automatic ? '· Auto' : '· Manual' }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+                                                        <i class="fas fa-check"></i> Apply Discount
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <p class="text-xs text-emerald-700 italic">No eligible discounts available for this student's grade level, or all have already been applied.</p>
+                                            @endif
+                                        </div>
+
+                                        {{-- ── Add Charge Panel ── --}}
+                                        <div x-show="showAddCharge" x-cloak x-transition class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-3">
+                                            <h5 class="text-xs font-bold text-amber-800 uppercase tracking-wider mb-3"><i class="fas fa-plus-circle mr-1"></i> Attach Additional Charge</h5>
+                                            @if($availableCharges->count() > 0)
+                                                <form action="{{ route('admin.students.charges.add', $selectedStudent) }}" method="POST" class="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+                                                    @csrf
+                                                    <div class="flex-1 w-full">
+                                                        <label class="text-xs font-semibold text-slate-600 mb-1 block">Select Charge</label>
+                                                        <select name="charge_id" required class="w-full bg-white border border-amber-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
+                                                            <option value="">— Choose a charge —</option>
+                                                            @foreach($availableCharges as $charge)
+                                                                <option value="{{ $charge->id }}">
+                                                                    {{ $charge->charge_name }} — ₱{{ number_format($charge->amount, 2) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700 transition-colors shadow-sm">
+                                                        <i class="fas fa-plus"></i> Attach Charge
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <p class="text-xs text-amber-700 italic">All applicable charges are already attached, or no charges exist for this grade level.</p>
+                                            @endif
+                                        </div>
+
+                                        {{-- ── Manual Adjustment Panel ── --}}
+                                        <div x-show="showAdjustment" x-cloak x-transition class="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-3">
+                                            <h5 class="text-xs font-bold text-purple-800 uppercase tracking-wider mb-3"><i class="fas fa-sliders-h mr-1"></i> One-Off Fee Adjustment</h5>
+                                            <p class="text-xs text-purple-600 mb-3">Add a manual charge (e.g., late fee, lost-ID penalty) or a manual discount (e.g., scholarship override). This is a one-time adjustment to the student's account.</p>
+                                            <form action="{{ route('admin.students.adjustments.store', $selectedStudent) }}" method="POST" class="space-y-3">
+                                                @csrf
+                                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    <div>
+                                                        <label class="text-xs font-semibold text-slate-600 mb-1 block">Type</label>
+                                                        <select name="type" required class="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300">
+                                                            <option value="charge">Charge (+)</option>
+                                                            <option value="discount">Discount (−)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="sm:col-span-2">
+                                                        <label class="text-xs font-semibold text-slate-600 mb-1 block">Description</label>
+                                                        <input type="text" name="name" required placeholder="e.g., Late Enrollment Penalty" class="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300">
+                                                    </div>
+                                                </div>
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label class="text-xs font-semibold text-slate-600 mb-1 block">Amount (₱)</label>
+                                                        <input type="number" name="amount" required min="0.01" step="0.01" placeholder="500.00" class="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300">
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-xs font-semibold text-slate-600 mb-1 block">Remarks <span class="text-slate-400">(optional)</span></label>
+                                                        <input type="text" name="remarks" placeholder="Reason or notes" class="w-full bg-white border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300">
+                                                    </div>
+                                                </div>
+                                                <div class="flex justify-end">
+                                                    <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors shadow-sm">
+                                                        <i class="fas fa-check"></i> Apply Adjustment
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    @endunless
+
+                                    {{-- ── Adjustments History ── --}}
+                                    @if(isset($feeAdjustments) && $feeAdjustments->count() > 0)
+                                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                        <h4 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                            <i class="fas fa-history text-slate-400"></i> Fee Adjustments
+                                            <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{{ $feeAdjustments->count() }}</span>
+                                        </h4>
+                                        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                            <table class="min-w-full divide-y divide-slate-100">
+                                                <thead class="bg-slate-50">
+                                                    <tr>
+                                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Adjustment</th>
+                                                        <th class="px-4 py-2.5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                                                        <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
+                                                        <th class="px-4 py-2.5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-slate-50">
+                                                    @foreach($feeAdjustments as $adj)
+                                                    <tr>
+                                                        <td class="px-4 py-2.5 text-sm text-slate-700">
+                                                            {{ $adj->name }}
+                                                            @if($adj->remarks)
+                                                                <span class="block text-xs text-slate-400 mt-0.5">{{ $adj->remarks }}</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="px-4 py-2.5">
+                                                            @if($adj->type === 'charge')
+                                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-amber-100 text-amber-700"><i class="fas fa-plus text-[8px]"></i> Charge</span>
+                                                            @else
+                                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-100 text-emerald-700"><i class="fas fa-minus text-[8px]"></i> Discount</span>
+                                                            @endif
+                                                        </td>
+                                                        <td class="px-4 py-2.5 text-sm font-bold text-right {{ $adj->type === 'charge' ? 'text-amber-600' : 'text-emerald-600' }}">
+                                                            {{ $adj->type === 'charge' ? '+' : '-' }}₱{{ number_format($adj->amount, 2) }}
+                                                        </td>
+                                                        <td class="px-4 py-2.5 text-xs text-slate-400 text-right">{{ $adj->created_at->format('M d, Y') }}</td>
+                                                    </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    {{-- ── Fee History / Changelog ── --}}
+                                    @if(isset($feeHistory) && $feeHistory->count() > 0)
+                                    <div x-data="{ historyExpanded: false }" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                                <i class="fas fa-clock-rotate-left text-indigo-400"></i> Fee History
+                                                <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{{ $feeHistory->count() }}</span>
+                                            </h4>
+                                            @if($feeHistory->count() > 5)
+                                            <button @click="historyExpanded = !historyExpanded" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                                                <span x-text="historyExpanded ? 'Show Less' : 'Show All ({{ $feeHistory->count() }})'"></span>
+                                                <i class="fas fa-chevron-down ml-1 text-[10px] transition-transform" :class="historyExpanded && 'rotate-180'"></i>
+                                            </button>
+                                            @endif
+                                        </div>
+
+                                        <div class="relative">
+                                            {{-- Timeline line --}}
+                                            <div class="absolute left-[15px] top-0 bottom-0 w-px bg-gradient-to-b from-indigo-200 via-slate-200 to-transparent"></div>
+
+                                            <div class="space-y-0">
+                                                @foreach($feeHistory as $idx => $log)
+                                                <div x-show="historyExpanded || {{ $idx }} < 5"
+                                                     x-transition:enter="transition ease-out duration-200"
+                                                     x-transition:enter-start="opacity-0 translate-y-1"
+                                                     x-transition:enter-end="opacity-100 translate-y-0"
+                                                     class="relative flex items-start gap-3 py-2.5 pl-1 group">
+                                                    {{-- Timeline dot --}}
+                                                    @php
+                                                        $actionColors = [
+                                                            'Charge Added' => 'bg-amber-400 ring-amber-100',
+                                                            'Charge Removed' => 'bg-amber-300 ring-amber-50',
+                                                            'Discount Assigned' => 'bg-emerald-400 ring-emerald-100',
+                                                            'Discount Removed' => 'bg-red-400 ring-red-100',
+                                                            'Fee Adjustment Applied' => 'bg-purple-400 ring-purple-100',
+                                                            'Fees Recalculated' => 'bg-blue-400 ring-blue-100',
+                                                            'Student Enrolled' => 'bg-sky-400 ring-sky-100',
+                                                            'Fee Assignment Created' => 'bg-sky-400 ring-sky-100',
+                                                            'Payment Added' => 'bg-green-400 ring-green-100',
+                                                            'Payment Approved' => 'bg-green-500 ring-green-100',
+                                                        ];
+                                                        $actionIcons = [
+                                                            'Charge Added' => 'fa-plus',
+                                                            'Charge Removed' => 'fa-minus',
+                                                            'Discount Assigned' => 'fa-tag',
+                                                            'Discount Removed' => 'fa-tag',
+                                                            'Fee Adjustment Applied' => 'fa-sliders-h',
+                                                            'Fees Recalculated' => 'fa-calculator',
+                                                            'Student Enrolled' => 'fa-user-plus',
+                                                            'Fee Assignment Created' => 'fa-file-invoice',
+                                                            'Payment Added' => 'fa-money-bill-wave',
+                                                            'Payment Approved' => 'fa-check-circle',
+                                                        ];
+                                                        $dotColor = $actionColors[$log->action] ?? 'bg-slate-400 ring-slate-100';
+                                                        $icon = $actionIcons[$log->action] ?? 'fa-circle';
+                                                        $isError = str_contains($log->action, 'FAILED');
+                                                        if ($isError) {
+                                                            $dotColor = 'bg-red-500 ring-red-100';
+                                                            $icon = 'fa-exclamation-triangle';
+                                                        }
+                                                    @endphp
+                                                    <div class="relative z-10 flex-shrink-0 w-[30px] h-[30px] rounded-full {{ $dotColor }} ring-4 flex items-center justify-center shadow-sm">
+                                                        <i class="fas {{ $icon }} text-white text-[10px]"></i>
+                                                    </div>
+
+                                                    {{-- Content --}}
+                                                    <div class="flex-1 min-w-0 -mt-0.5">
+                                                        <div class="flex items-center gap-2 flex-wrap">
+                                                            <span class="text-xs font-bold text-slate-800">{{ str_replace('_', ' ', $log->action) }}</span>
+                                                            <span class="text-[10px] text-slate-400">{{ $log->created_at->diffForHumans() }}</span>
+                                                        </div>
+                                                        @if($log->details)
+                                                        <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">{{ $log->details }}</p>
+                                                        @endif
+
+                                                        {{-- Changed values (expandable) --}}
+                                                        @if($log->new_values || $log->old_values)
+                                                        <div x-data="{ showDetails: false }" class="mt-1">
+                                                            <button @click="showDetails = !showDetails" class="text-[10px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors">
+                                                                <i class="fas fa-code text-[8px] mr-0.5"></i>
+                                                                <span x-text="showDetails ? 'Hide details' : 'View details'"></span>
+                                                            </button>
+                                                            <div x-show="showDetails" x-cloak x-transition class="mt-1.5 bg-slate-50 border border-slate-100 rounded-lg p-2.5 text-[11px] font-mono text-slate-600 space-y-1">
+                                                                @if($log->old_values)
+                                                                <div>
+                                                                    <span class="text-red-400 font-bold text-[10px] uppercase tracking-wider">Before:</span>
+                                                                    <div class="mt-0.5 space-y-0.5">
+                                                                        @foreach((array)$log->old_values as $key => $val)
+                                                                            <div class="flex gap-2"><span class="text-slate-400">{{ $key }}:</span> <span class="text-slate-700">{{ is_array($val) ? json_encode($val) : $val }}</span></div>
+                                                                        @endforeach
+                                                                    </div>
+                                                                </div>
+                                                                @endif
+                                                                @if($log->new_values)
+                                                                <div>
+                                                                    <span class="text-emerald-500 font-bold text-[10px] uppercase tracking-wider">After:</span>
+                                                                    <div class="mt-0.5 space-y-0.5">
+                                                                        @foreach((array)$log->new_values as $key => $val)
+                                                                            <div class="flex gap-2"><span class="text-slate-400">{{ $key }}:</span> <span class="text-slate-700">{{ is_array($val) ? json_encode($val) : $val }}</span></div>
+                                                                        @endforeach
+                                                                    </div>
+                                                                </div>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                        @endif
+
+                                                        {{-- Performed-by & meta --}}
+                                                        <div class="flex items-center gap-3 mt-1">
+                                                            @if($log->user)
+                                                            <span class="text-[10px] text-slate-400">
+                                                                <i class="fas fa-user text-[8px] mr-0.5"></i>
+                                                                {{ $log->user->name ?? $log->user->email ?? 'System' }}
+                                                                @if($log->user_role)
+                                                                    <span class="ml-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-semibold uppercase">{{ $log->user_role }}</span>
+                                                                @endif
+                                                            </span>
+                                                            @else
+                                                            <span class="text-[10px] text-slate-400"><i class="fas fa-robot text-[8px] mr-0.5"></i> System</span>
+                                                            @endif
+                                                            <span class="text-[10px] text-slate-300">{{ $log->created_at->format('M d, Y h:i A') }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                @endforeach
+                                            </div>
+
+                                            {{-- Fade-out overlay when collapsed --}}
+                                            @if($feeHistory->count() > 5)
+                                            <div x-show="!historyExpanded" class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                                            @endif
+                                        </div>
+
+                                        @if($feeHistory->count() > 5)
+                                        <div x-show="!historyExpanded" class="text-center mt-2">
+                                            <button @click="historyExpanded = true" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                                                <i class="fas fa-arrow-down mr-1 text-[10px]"></i> Show {{ $feeHistory->count() - 5 }} more entries
+                                            </button>
+                                        </div>
+                                        @endif
+                                    </div>
+                                    @else
+                                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                        <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2 mb-3">
+                                            <i class="fas fa-clock-rotate-left text-indigo-400"></i> Fee History
+                                        </h4>
+                                        <div class="text-center py-6">
+                                            <i class="fas fa-history text-slate-200 text-3xl mb-2"></i>
+                                            <p class="text-xs text-slate-400">No fee-related activity recorded yet.</p>
+                                        </div>
+                                    </div>
+                                    @endif
+
                                 @else
                                     <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex items-start gap-3">
                                         <i class="fas fa-exclamation-triangle text-yellow-500 mt-0.5"></i>
@@ -765,6 +1282,282 @@
                                         </div>
                                     </div>
                                 @endif
+                            </div>
+
+                            <!-- Siblings Tab -->
+                            <div x-show="activeTab === 'siblings'" class="space-y-6" x-cloak
+                                 x-data="{
+                                    siblings: [],
+                                    familyCount: 0,
+                                    discountEligible: false,
+                                    discountName: '',
+                                    discountValue: '',
+                                    parentName: '',
+                                    parentId: null,
+                                    loading: true,
+                                    searchQuery: '',
+                                    searchResults: [],
+                                    searching: false,
+                                    showSearch: false,
+                                    linking: false,
+                                    unlinking: null,
+                                    message: '',
+                                    messageType: 'success',
+                                    async fetchSiblings() {
+                                        this.loading = true;
+                                        try {
+                                            const res = await fetch('{{ $selectedStudent ? route('admin.students.siblings', $selectedStudent) : '' }}');
+                                            const data = await res.json();
+                                            this.siblings = data.siblings || [];
+                                            this.familyCount = data.family_count || 0;
+                                            this.discountEligible = data.discount_eligible || false;
+                                            this.discountName = data.discount_name || '';
+                                            this.discountValue = data.discount_value || '';
+                                            this.parentName = data.parent_name || '';
+                                            this.parentId = data.parent_id;
+                                        } catch(e) { console.error(e); }
+                                        this.loading = false;
+                                    },
+                                    async searchSiblings() {
+                                        if (this.searchQuery.length < 2) { this.searchResults = []; return; }
+                                        this.searching = true;
+                                        try {
+                                            const res = await fetch('{{ route('admin.students.searchForSibling') }}?q=' + encodeURIComponent(this.searchQuery) + '&exclude={{ $selectedStudent?->student_id ?? '' }}');
+                                            this.searchResults = await res.json();
+                                        } catch(e) { this.searchResults = []; }
+                                        this.searching = false;
+                                    },
+                                    async linkSibling(siblingId) {
+                                        this.linking = true;
+                                        this.message = '';
+                                        try {
+                                            const res = await fetch('{{ $selectedStudent ? route('admin.students.siblings.link', $selectedStudent) : '' }}', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
+                                                body: JSON.stringify({ sibling_id: siblingId })
+                                            });
+                                            const data = await res.json();
+                                            if (data.error) {
+                                                this.message = data.error;
+                                                this.messageType = 'error';
+                                            } else {
+                                                this.message = data.message;
+                                                this.messageType = 'success';
+                                                this.searchQuery = '';
+                                                this.searchResults = [];
+                                                this.showSearch = false;
+                                                await this.fetchSiblings();
+                                            }
+                                        } catch(e) {
+                                            this.message = 'Failed to link sibling.';
+                                            this.messageType = 'error';
+                                        }
+                                        this.linking = false;
+                                        setTimeout(() => this.message = '', 5000);
+                                    },
+                                    async unlinkSibling(siblingId) {
+                                        if (!confirm('Are you sure you want to unlink this sibling? This will remove the shared parent connection and may affect family discount eligibility.')) return;
+                                        this.unlinking = siblingId;
+                                        this.message = '';
+                                        try {
+                                            const res = await fetch('{{ $selectedStudent ? route('admin.students.siblings.unlink', $selectedStudent) : '' }}', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
+                                                body: JSON.stringify({ sibling_id: siblingId })
+                                            });
+                                            const data = await res.json();
+                                            if (data.error) {
+                                                this.message = data.error;
+                                                this.messageType = 'error';
+                                            } else {
+                                                this.message = data.message;
+                                                this.messageType = 'success';
+                                                await this.fetchSiblings();
+                                            }
+                                        } catch(e) {
+                                            this.message = 'Failed to unlink sibling.';
+                                            this.messageType = 'error';
+                                        }
+                                        this.unlinking = null;
+                                        setTimeout(() => this.message = '', 5000);
+                                    }
+                                 }"
+                                 x-init="fetchSiblings()">
+
+                                <!-- Family Discount Status Banner -->
+                                <div :class="discountEligible ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'" class="rounded-2xl border p-5 flex items-start gap-4">
+                                    <div :class="discountEligible ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-500'" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-users text-lg"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h3 class="text-sm font-bold" :class="discountEligible ? 'text-green-800' : 'text-slate-700'">Family Discount Status</h3>
+                                            <span x-show="discountEligible" class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] uppercase font-bold">Eligible</span>
+                                            <span x-show="!discountEligible && !loading" class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px] uppercase font-bold">Not Eligible</span>
+                                        </div>
+                                        <p x-show="discountEligible" class="text-sm text-green-700">
+                                            <span x-text="discountName"></span> (<span x-text="discountValue"></span>) applies — 
+                                            <strong x-text="familyCount"></strong> enrolled family member(s) via parent <strong x-text="parentName"></strong>.
+                                        </p>
+                                        <p x-show="!discountEligible && !loading" class="text-sm text-slate-600">
+                                            <template x-if="familyCount < 2">
+                                                <span>Sibling discount requires at least 2 enrolled siblings sharing the same parent. Link a sibling below to enable family discounts.</span>
+                                            </template>
+                                            <template x-if="familyCount >= 2">
+                                                <span>Family has <strong x-text="familyCount"></strong> members but no active sibling discount is configured.</span>
+                                            </template>
+                                        </p>
+                                        <p x-show="loading" class="text-sm text-slate-400"><i class="fas fa-spinner fa-spin mr-1"></i> Loading family info...</p>
+                                    </div>
+                                </div>
+
+                                <!-- Flash Message -->
+                                <div x-show="message" x-transition class="rounded-xl px-4 py-3 text-sm font-medium border" :class="messageType === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'">
+                                    <span x-text="message"></span>
+                                </div>
+
+                                <!-- Linked Siblings List -->
+                                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                                    <div class="flex items-center justify-between mb-5">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600">
+                                                <i class="fas fa-user-friends text-lg"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-lg font-bold text-slate-800">Linked Siblings</h3>
+                                                <p class="text-sm text-slate-500">Students sharing a parent/guardian with this student</p>
+                                            </div>
+                                        </div>
+                                        @unless($isReadOnly ?? false)
+                                        <button @click="showSearch = !showSearch" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-purple-200 transition-all flex items-center gap-2">
+                                            <i class="fas fa-plus text-xs"></i>
+                                            Link Sibling
+                                        </button>
+                                        @endunless
+                                    </div>
+
+                                    <!-- Search & Link New Sibling -->
+                                    <div x-show="showSearch" x-transition class="mb-5 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
+                                        <label class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 block">Search Student to Link as Sibling</label>
+                                        <div class="relative">
+                                            <input type="text" x-model="searchQuery" @input.debounce.400ms="searchSiblings()"
+                                                   placeholder="Type student name or ID..."
+                                                   class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all shadow-sm text-sm" />
+                                            <div x-show="searching" class="absolute right-3 top-1/2 -translate-y-1/2">
+                                                <i class="fas fa-spinner fa-spin text-slate-400 text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-1.5">The selected student will be linked to the same parent as this student. Family discounts will be recalculated automatically.</p>
+
+                                        <!-- Search Results -->
+                                        <div x-show="searchResults.length > 0" class="mt-3 space-y-2 max-h-64 overflow-y-auto">
+                                            <template x-for="result in searchResults" :key="result.student_id">
+                                                <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 hover:border-purple-300 transition-colors">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
+                                                            <span x-text="result.full_name.charAt(0)"></span>
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-sm font-bold text-slate-800" x-text="result.full_name"></div>
+                                                            <div class="text-xs text-slate-500">
+                                                                <span x-text="result.student_id"></span> •
+                                                                <span x-text="result.level"></span> -
+                                                                <span x-text="result.section"></span> •
+                                                                <span x-text="result.school_year"></span>
+                                                            </div>
+                                                            <div x-show="result.parent_name" class="text-xs text-blue-600 mt-0.5">
+                                                                <i class="fas fa-user text-[9px] mr-0.5"></i> Parent: <span x-text="result.parent_name"></span>
+                                                                <template x-if="result.parent_id == parentId">
+                                                                    <span class="text-green-600 font-bold ml-1">(Same parent — already a sibling!)</span>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button @click="linkSibling(result.student_id)" :disabled="linking" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                                                        <i x-show="linking" class="fas fa-spinner fa-spin text-[10px]"></i>
+                                                        <i x-show="!linking" class="fas fa-link text-[10px]"></i>
+                                                        <span>Link</span>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <p x-show="searchQuery.length >= 2 && !searching && searchResults.length === 0" class="mt-2 text-xs text-slate-500 italic">No students found matching your search.</p>
+                                    </div>
+
+                                    <!-- Siblings Table -->
+                                    <div x-show="!loading && siblings.length > 0">
+                                        <div class="space-y-2">
+                                            <template x-for="sib in siblings" :key="sib.student_id">
+                                                <div class="flex items-center justify-between p-4 rounded-xl border transition-colors"
+                                                     :class="sib.same_year ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-100'">
+                                                    <div class="flex items-center gap-3.5">
+                                                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
+                                                             :class="sib.enrollment_status === 'Active' ? 'bg-purple-100 text-purple-700' : 'bg-slate-200 text-slate-500'">
+                                                            <span x-text="sib.full_name.charAt(0)"></span>
+                                                        </div>
+                                                        <div>
+                                                            <div class="flex items-center gap-2">
+                                                                <a :href="'{{ route('admin.students.index') }}?id=' + sib.student_id" class="text-sm font-bold text-slate-800 hover:text-blue-600 transition-colors" x-text="sib.full_name"></a>
+                                                                <span class="px-2 py-0.5 rounded-full text-[10px] uppercase font-bold"
+                                                                      :class="{
+                                                                          'bg-green-100 text-green-700': sib.enrollment_status === 'Active',
+                                                                          'bg-amber-100 text-amber-700': sib.enrollment_status === 'Irregular',
+                                                                          'bg-red-100 text-red-700': sib.enrollment_status === 'Withdrawn',
+                                                                          'bg-slate-200 text-slate-600': sib.enrollment_status === 'Archived'
+                                                                      }"
+                                                                      x-text="sib.enrollment_status"></span>
+                                                                <span x-show="!sib.same_year" class="px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 text-[10px] uppercase font-bold">Different SY</span>
+                                                            </div>
+                                                            <div class="text-xs text-slate-500 mt-0.5">
+                                                                <span x-text="sib.student_id"></span> •
+                                                                <span x-text="sib.level"></span> -
+                                                                <span x-text="sib.section"></span> •
+                                                                <span x-text="sib.school_year"></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    @unless($isReadOnly ?? false)
+                                                    <button @click="unlinkSibling(sib.student_id)" :disabled="unlinking === sib.student_id"
+                                                            class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Unlink sibling">
+                                                        <i x-show="unlinking !== sib.student_id" class="fas fa-unlink text-sm"></i>
+                                                        <i x-show="unlinking === sib.student_id" class="fas fa-spinner fa-spin text-sm"></i>
+                                                    </button>
+                                                    @endunless
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <!-- Empty State -->
+                                    <div x-show="!loading && siblings.length === 0" class="text-center py-8">
+                                        <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                                            <i class="fas fa-user-friends text-2xl text-slate-300"></i>
+                                        </div>
+                                        <h4 class="text-sm font-bold text-slate-600 mb-1">No Siblings Linked</h4>
+                                        <p class="text-xs text-slate-500 max-w-sm mx-auto">
+                                            This student has no linked siblings. Click "Link Sibling" above to associate another student sharing the same parent/guardian. 
+                                            Family discounts are automatically applied when 2+ siblings are linked.
+                                        </p>
+                                    </div>
+
+                                    <!-- Loading State -->
+                                    <div x-show="loading" class="flex items-center justify-center py-8">
+                                        <i class="fas fa-spinner fa-spin text-slate-400 text-lg mr-2"></i>
+                                        <span class="text-sm text-slate-500">Loading siblings...</span>
+                                    </div>
+                                </div>
+
+                                <!-- How It Works -->
+                                <div class="bg-amber-50 rounded-2xl border border-amber-200 p-5">
+                                    <h4 class="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2"><i class="fas fa-info-circle mr-1"></i> How Sibling Linking Works</h4>
+                                    <ul class="text-xs text-amber-700 space-y-1.5">
+                                        <li><i class="fas fa-check text-amber-500 mr-1.5"></i> Siblings are students who share the same parent/guardian contact</li>
+                                        <li><i class="fas fa-check text-amber-500 mr-1.5"></i> When you link a sibling, they are connected to this student's primary parent</li>
+                                        <li><i class="fas fa-check text-amber-500 mr-1.5"></i> <strong>Family discount is automatically recalculated</strong> for all family members when siblings are linked or unlinked</li>
+                                        <li><i class="fas fa-check text-amber-500 mr-1.5"></i> Sibling discount applies when 2+ active siblings are enrolled in the same school year</li>
+                                        <li><i class="fas fa-exclamation-triangle text-amber-500 mr-1.5"></i> SHS Voucher recipients are excluded from sibling discounts</li>
+                                    </ul>
+                                </div>
                             </div>
 
                             <!-- Activity Tab -->
@@ -872,6 +1665,110 @@
         </template>
         @endif
 
+        <!-- Promote Section Modal -->
+        @if($viewState === 'sections' && $nextLevel)
+        <template x-teleport="body">
+            <div x-show="promoteModalOpen" class="fixed inset-0 z-[100] overflow-y-auto" style="display: none;" x-cloak>
+                <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                    <div x-show="promoteModalOpen" @click="promoteModalOpen = false"
+                         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                         class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
+
+                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                    <div x-show="promoteModalOpen"
+                         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                         class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <form action="{{ route('admin.students.promoteSection') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="level"       value="{{ $currentLevel }}">
+                            <input type="hidden" name="school_year" value="{{ $currentSchoolYear }}">
+                            <input type="hidden" name="section"     :value="promoteTargetSection">
+
+                            <div class="px-4 pt-5 pb-4 bg-white sm:p-6 sm:pb-4">
+                                <div class="sm:flex sm:items-start">
+                                    <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 mx-auto bg-green-100 rounded-full sm:mx-0 sm:h-10 sm:w-10">
+                                        <i class="fas fa-graduation-cap text-green-600"></i>
+                                    </div>
+                                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                        <h3 class="text-lg font-medium leading-6 text-gray-900">Promote Section</h3>
+                                        <div class="mt-1">
+                                            <p class="text-sm text-gray-500">
+                                                Moving <strong x-text="promoteStudentCount"></strong> student(s) from
+                                                <strong>{{ $currentLevel }} – <span x-text="promoteTargetSection"></span></strong>
+                                                ({{ $currentSchoolYear }}) →
+                                                <span class="text-green-700 font-semibold">{{ $nextLevel }}</span>.
+                                            </p>
+                                        </div>
+
+                                        <div class="mt-4 space-y-4">
+                                            <!-- New School Year -->
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700">New School Year</label>
+                                                <select name="new_school_year" required
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm focus:ring-green-500 focus:border-green-500">
+                                                    @foreach($schoolYears as $sy)
+                                                        <option value="{{ $sy }}" {{ $sy === $activeSy ? 'selected' : '' }}>{{ $sy }}</option>
+                                                    @endforeach
+                                                    @php
+                                                        // Auto-suggest next school year (e.g. 2025-2026 → 2026-2027)
+                                                        $parts = explode('-', $currentSchoolYear);
+                                                        if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
+                                                            $suggestedSy = ($parts[0]+1) . '-' . ($parts[1]+1);
+                                                        } else {
+                                                            $suggestedSy = null;
+                                                        }
+                                                    @endphp
+                                                    @if($suggestedSy && !$schoolYears->contains($suggestedSy))
+                                                        <option value="{{ $suggestedSy }}" selected>{{ $suggestedSy }} (next year)</option>
+                                                    @endif
+                                                </select>
+                                                <p class="mt-1 text-xs text-gray-400">Choose the school year the promoted students will be enrolled in.</p>
+                                            </div>
+
+                                            <!-- Keep Section Name -->
+                                            <div class="flex items-start gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                                <div class="flex items-center h-5 mt-0.5">
+                                                    <input id="keep_section" name="keep_section" type="checkbox" value="1"
+                                                           class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                                                </div>
+                                                <div>
+                                                    <label for="keep_section" class="text-sm font-medium text-gray-700 cursor-pointer">Keep same section name</label>
+                                                    <p class="text-xs text-gray-500 mt-0.5">If unchecked, section is cleared so students can be re-assigned to new sections in {{ $nextLevel }}.</p>
+                                                </div>
+                                            </div>
+
+                                            <!-- Warning -->
+                                            <div class="flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-200 text-xs text-red-700">
+                                                <i class="fas fa-exclamation-triangle mt-0.5 flex-shrink-0"></i>
+                                                <span>This updates all <strong x-text="promoteStudentCount"></strong> eligible student(s) at once and <strong>cannot be undone in bulk</strong>. Existing fee records for {{ $currentSchoolYear }} are preserved. New fee assignments will be generated for {{ $nextLevel }} when each student is first viewed.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button type="submit"
+                                        class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                    <i class="fas fa-graduation-cap mr-2"></i> Promote Students
+                                </button>
+                                <button type="button" @click="promoteModalOpen = false"
+                                        class="inline-flex justify-center w-full px-4 py-2 mt-3 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </template>
+        @endif
+
         @if($viewState === 'strands')
         <!-- Add Strand Modal -->
         <template x-teleport="body">
@@ -916,6 +1813,129 @@
             </div>
         </template>
         @endif
+
+        <!-- CSV Import Modal (always available) -->
+        <template x-teleport="body">
+            <div x-show="importModalOpen" class="fixed inset-0 z-[110] overflow-y-auto" style="display: none;" x-cloak>
+                <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                    <div x-show="importModalOpen" @click="importModalOpen = false"
+                         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                         class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
+
+                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                    <div x-show="importModalOpen"
+                         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                         class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-xl sm:w-full">
+
+                        <form action="{{ route('admin.students.import') }}" method="POST" enctype="multipart/form-data" id="csvImportForm">
+                            @csrf
+                            <div class="px-6 pt-5 pb-4 bg-white">
+                                <div class="flex items-start gap-4">
+                                    <div class="flex-shrink-0 flex items-center justify-center w-10 h-10 bg-emerald-100 rounded-full">
+                                        <i class="fas fa-file-csv text-emerald-600"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-lg font-semibold text-gray-900 leading-6">Import Students from CSV</h3>
+                                        <p class="mt-1 text-sm text-gray-500">Upload a CSV file to enroll multiple students at once. Existing students (same name + school year) will be skipped.</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-5 space-y-4">
+
+                                    <!-- Download Template -->
+                                    <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <div class="flex items-center gap-2 text-sm text-blue-700">
+                                            <i class="fas fa-download text-blue-500"></i>
+                                            <span>Need a template? Download the sample CSV to get started.</span>
+                                        </div>
+                                        <a href="{{ route('admin.students.importTemplate') }}"
+                                           class="text-xs font-semibold text-blue-700 hover:text-blue-900 border border-blue-300 hover:border-blue-500 px-2.5 py-1 rounded-md bg-white hover:bg-blue-50 transition-colors whitespace-nowrap">
+                                            <i class="fas fa-file-download mr-1"></i> Template
+                                        </a>
+                                    </div>
+
+                                    <!-- School Year Override -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">School Year <span class="text-gray-400 font-normal">(used when CSV row is blank)</span></label>
+                                        <select name="school_year" class="block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm focus:ring-emerald-500 focus:border-emerald-500">
+                                            @foreach($schoolYears as $sy)
+                                                <option value="{{ $sy }}" {{ $sy === $activeSy ? 'selected' : '' }}>{{ $sy }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <!-- File Upload -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">CSV File <span class="text-red-500">*</span></label>
+                                        <div x-data="{ fileName: '' }" class="mt-1">
+                                            <label class="flex items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-colors group">
+                                                <div class="text-center">
+                                                    <i class="fas fa-cloud-upload-alt text-2xl text-gray-300 group-hover:text-emerald-500 transition-colors" x-show="!fileName"></i>
+                                                    <i class="fas fa-check-circle text-2xl text-emerald-500" x-show="fileName" x-cloak></i>
+                                                    <p class="mt-1 text-sm text-gray-500" x-text="fileName || 'Click to choose a CSV file'"></p>
+                                                    <p class="text-xs text-gray-400" x-show="!fileName">Max 5 MB · .csv format</p>
+                                                </div>
+                                                <input type="file" name="csv_file" accept=".csv,text/csv"
+                                                       @change="fileName = $event.target.files[0]?.name || ''"
+                                                       class="sr-only" required>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Column Reference -->
+                                    <details class="group">
+                                        <summary class="cursor-pointer text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 select-none">
+                                            <i class="fas fa-table text-gray-400 group-open:rotate-90 transition-transform"></i>
+                                            Expected CSV columns
+                                        </summary>
+                                        <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">
+                                            <span><code class="text-emerald-700">lrn</code> — Learner Reference No.</span>
+                                            <span><code class="text-emerald-700">first_name</code> <span class="text-red-400">*</span></span>
+                                            <span><code class="text-emerald-700">middle_name</code></span>
+                                            <span><code class="text-emerald-700">last_name</code> <span class="text-red-400">*</span></span>
+                                            <span><code class="text-emerald-700">suffix</code> — Jr., Sr., III…</span>
+                                            <span><code class="text-emerald-700">sex</code> <span class="text-red-400">*</span> Male/Female</span>
+                                            <span><code class="text-emerald-700">date_of_birth</code> — YYYY-MM-DD</span>
+                                            <span><code class="text-emerald-700">level</code> <span class="text-red-400">*</span> e.g. Grade 7</span>
+                                            <span><code class="text-emerald-700">section</code> <span class="text-red-400">*</span></span>
+                                            <span><code class="text-emerald-700">strand</code> — SHS only</span>
+                                            <span><code class="text-emerald-700">school_year</code> — e.g. 2025-2026</span>
+                                            <span><code class="text-emerald-700">parent_name</code></span>
+                                            <span><code class="text-emerald-700">parent_phone</code> — 11 digits</span>
+                                            <span><code class="text-emerald-700">parent_email</code></span>
+                                            <span><code class="text-emerald-700">relationship</code> — Mother…</span>
+                                            <span><code class="text-emerald-700">shs_voucher</code> — Yes/No</span>
+                                        </div>
+                                    </details>
+
+                                    <!-- Warning -->
+                                    <div class="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                                        <i class="fas fa-exclamation-triangle mt-0.5 flex-shrink-0"></i>
+                                        <span>Fee records are auto-generated per student (if enabled in settings). Parent accounts are <strong>not</strong> created automatically — link them manually afterwards if needed.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="px-6 py-3 bg-gray-50 flex flex-row-reverse gap-2">
+                                <button type="submit"
+                                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                                    <i class="fas fa-upload mr-2"></i> Import Students
+                                </button>
+                                <button type="button" @click="importModalOpen = false"
+                                        class="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 </body>
 </html>

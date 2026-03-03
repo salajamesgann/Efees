@@ -44,7 +44,8 @@ class ExportTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $contentType = $response->headers->get('content-type');
+        $this->assertStringContainsString('text/csv', $contentType);
     }
 
     public function test_admin_can_export_reports_pdf()

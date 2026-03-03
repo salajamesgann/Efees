@@ -43,14 +43,38 @@ Route::middleware('auth')->group(function () {
         Route::get('/metrics', [AuthLoginController::class, 'parent_metrics'])->middleware('ensureRole:parent')->name('metrics');
         Route::post('/link-student', [AuthLoginController::class, 'linkStudent'])->middleware('ensureRole:parent')->name('link_student');
         Route::post('/unlink-student', [AuthLoginController::class, 'unlinkStudent'])->middleware('ensureRole:parent')->name('unlink_student');
+
+        // Receipt routes (PDF first to avoid {payment} catching "pdf")
+        Route::get('/receipt/{payment}/pdf', [\App\Http\Controllers\ParentPaymentController::class, 'receiptPdf'])->middleware('ensureRole:parent')->name('receipt.pdf');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\ParentPaymentController::class, 'showReceipt'])->middleware('ensureRole:parent')->name('receipts.download');
+
         Route::get('/history', [\App\Http\Controllers\ParentPaymentController::class, 'history'])->middleware('ensureRole:parent')->name('history');
+
+        // SOA routes (PDF first to avoid {student} catching "pdf")
+        Route::get('/soa/{student}/pdf', [\App\Http\Controllers\ParentFeesController::class, 'soaPdf'])->middleware('ensureRole:parent')->name('soa.pdf');
         Route::get('/soa/{student}', [\App\Http\Controllers\ParentFeesController::class, 'soa'])->middleware('ensureRole:parent')->name('soa');
+
         Route::get('/pay', [\App\Http\Controllers\ParentPaymentController::class, 'show'])->middleware('ensureRole:parent')->name('pay');
         Route::post('/pay', [\App\Http\Controllers\ParentPaymentController::class, 'store'])->middleware('ensureRole:parent')->name('pay.store');
         Route::get('/pay/success', [\App\Http\Controllers\ParentPaymentController::class, 'success'])->middleware('ensureRole:parent')->name('pay.success');
         Route::get('/pay/cancel', [\App\Http\Controllers\ParentPaymentController::class, 'cancel'])->middleware('ensureRole:parent')->name('pay.cancel');
+
+        // Multi-Child Combined Payment
+        Route::get('/pay/multi', [\App\Http\Controllers\ParentPaymentController::class, 'multiShow'])->middleware('ensureRole:parent')->name('pay.multi');
+        Route::post('/pay/multi', [\App\Http\Controllers\ParentPaymentController::class, 'multiStore'])->middleware('ensureRole:parent')->name('pay.multi.store');
+        Route::get('/pay/multi/success', [\App\Http\Controllers\ParentPaymentController::class, 'multiSuccess'])->middleware('ensureRole:parent')->name('pay.multi.success');
+        Route::get('/pay/multi/cancel', [\App\Http\Controllers\ParentPaymentController::class, 'multiCancel'])->middleware('ensureRole:parent')->name('pay.multi.cancel');
+
         Route::get('/student/{student}/fees', [\App\Http\Controllers\ParentFeesController::class, 'show'])->middleware('ensureRole:parent')->name('fees.show');
+
+        // Payment Schedule
+        Route::get('/student/{student}/schedule', [\App\Http\Controllers\ParentFeesController::class, 'schedule'])->middleware('ensureRole:parent')->name('schedule');
+
+        // Notifications (static routes first to avoid {id} catching "read-all" / "unread-count")
+        Route::get('/notifications/unread-count', [\App\Http\Controllers\ParentNotificationController::class, 'unreadCount'])->middleware('ensureRole:parent')->name('notifications.unreadCount');
+        Route::post('/notifications/read-all', [\App\Http\Controllers\ParentNotificationController::class, 'markAllAsRead'])->middleware('ensureRole:parent')->name('notifications.readAll');
+        Route::get('/notifications', [\App\Http\Controllers\ParentNotificationController::class, 'index'])->middleware('ensureRole:parent')->name('notifications');
+        Route::post('/notifications/{id}/read', [\App\Http\Controllers\ParentNotificationController::class, 'markAsRead'])->middleware('ensureRole:parent')->name('notifications.read');
 
         // Parent Profile
         Route::get('/profile', [\App\Http\Controllers\ParentProfileController::class, 'edit'])->middleware('ensureRole:parent')->name('profile.edit');
@@ -102,6 +126,15 @@ Route::middleware('auth')->group(function () {
         // Fee Records (Editing)
         Route::post('/fee-records/{record}', [\App\Http\Controllers\StaffRecordsController::class, 'update'])->middleware('ensureRole:staff')->name('fee_records.update');
         Route::post('/fee-records', [\App\Http\Controllers\StaffRecordsController::class, 'store'])->middleware('ensureRole:staff')->name('fee_records.store');
+
+        // Notifications
+        Route::get('/notifications/unread-count', [\App\Http\Controllers\StaffNotificationController::class, 'unreadCount'])->middleware('ensureRole:staff')->name('notifications.unreadCount');
+        Route::post('/notifications/read-all', [\App\Http\Controllers\StaffNotificationController::class, 'markAllAsRead'])->middleware('ensureRole:staff')->name('notifications.readAll');
+        Route::get('/notifications', [\App\Http\Controllers\StaffNotificationController::class, 'index'])->middleware('ensureRole:staff')->name('notifications');
+        Route::post('/notifications/{id}/read', [\App\Http\Controllers\StaffNotificationController::class, 'markAsRead'])->middleware('ensureRole:staff')->name('notifications.read');
+
+        // Audit Trail / Activity Log
+        Route::get('/audit-trail', [\App\Http\Controllers\StaffAuditTrailController::class, 'index'])->middleware('ensureRole:staff')->name('audit_trail');
     });
 
     // Admin Audit Logs
@@ -110,14 +143,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/export', [\App\Http\Controllers\AdminAuditLogController::class, 'export'])->name('export');
     });
 
-    // Admin SMS delivery status callback (Twilio)
+    // Admin SMS delivery status callbacks
     Route::post('/webhooks/sms/twilio', [\App\Http\Controllers\AdminSmsController::class, 'twilioCallback'])->name('webhooks.sms.twilio');
+    Route::post('/webhooks/sms/philsms', [\App\Http\Controllers\AdminSmsController::class, 'philsmsCallback'])->name('webhooks.sms.philsms');
 
     // Admin Manage Students
     Route::prefix('admin/students')->name('admin.students.')->middleware('ensureRole:admin')->group(function () {
         Route::get('/export', [AdminStudentController::class, 'exportMasterList'])->name('export');
         Route::get('/search', [AdminStudentController::class, 'search'])->name('search');
         Route::get('/sections', [AdminStudentController::class, 'sectionsList'])->name('sections.list');
+        Route::get('/generate-id', [AdminStudentController::class, 'generateStudentId'])->name('generateId');
+        Route::get('/search-for-sibling', [AdminStudentController::class, 'searchForSibling'])->name('searchForSibling');
         Route::get('/', [AdminStudentController::class, 'index'])->name('index');
         Route::get('/create', [AdminStudentController::class, 'create'])->name('create');
         Route::post('/', [AdminStudentController::class, 'store'])->name('store');
@@ -125,10 +161,21 @@ Route::middleware('auth')->group(function () {
         Route::post('/strand', [AdminStudentController::class, 'storeStrand'])->name('storeStrand');
         Route::delete('/sections/{section}', [AdminStudentController::class, 'destroySection'])->name('sections.destroy');
         Route::get('/{student}/edit', [AdminStudentController::class, 'edit'])->name('edit');
+        Route::get('/{student}/siblings', [AdminStudentController::class, 'siblings'])->name('siblings');
+        Route::post('/{student}/siblings/link', [AdminStudentController::class, 'linkSibling'])->name('siblings.link');
+        Route::post('/{student}/siblings/unlink', [AdminStudentController::class, 'unlinkSibling'])->name('siblings.unlink');
+        Route::post('/{student}/charges', [AdminStudentController::class, 'addCharge'])->name('charges.add');
+        Route::delete('/{student}/charges/{charge}', [AdminStudentController::class, 'removeCharge'])->name('charges.remove');
+        Route::post('/{student}/adjustments', [AdminStudentController::class, 'storeAdjustment'])->name('adjustments.store');
+        Route::post('/{student}/recalculate-fees', [AdminStudentController::class, 'recalculateFees'])->name('recalculateFees');
         Route::put('/{student}', [AdminStudentController::class, 'update'])->name('update');
         Route::delete('/{student}', [AdminStudentController::class, 'destroy'])->name('destroy');
         Route::patch('/{student}/archive', [AdminStudentController::class, 'archive'])->name('archive');
         Route::patch('/{student}/unarchive', [AdminStudentController::class, 'unarchive'])->name('unarchive');
+        Route::patch('/{student}/status', [AdminStudentController::class, 'changeStatus'])->name('changeStatus');
+        Route::post('/promote-section', [AdminStudentController::class, 'promoteSection'])->name('promoteSection');
+        Route::get('/import-template', [AdminStudentController::class, 'downloadImportTemplate'])->name('importTemplate');
+        Route::post('/import', [AdminStudentController::class, 'importStudents'])->name('import');
     });
 
     // Admin Parent Management - DEPRECATED (Moved to Unified User Management)
@@ -190,6 +237,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/discounts/{discount}', [AdminFeeController::class, 'updateDiscount'])->name('update-discount');
         Route::delete('/discounts/{discount}', [AdminFeeController::class, 'destroyDiscount'])->name('destroy-discount');
         Route::post('/discounts/assign-group', [AdminFeeController::class, 'assignDiscountToGroup'])->name('assign-discount-group');
+        Route::post('/discounts/assign-students', [AdminFeeController::class, 'assignDiscountToStudents'])->name('assign-discount-students');
 
         // Fee Assignments
         Route::post('/assignments/generate', [AdminFeeController::class, 'generateFeeAssignments'])->name('assignments.generate');
@@ -244,11 +292,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/{payment}/reject', [\App\Http\Controllers\AdminPaymentApprovalController::class, 'reject'])->name('reject');
     });
 
+    // Admin Student Link Approvals
+    Route::prefix('admin/link-approvals')->name('admin.link_approvals.')->middleware('ensureRole:admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AdminLinkApprovalController::class, 'index'])->name('index');
+        Route::post('/{linkRequest}/approve', [\App\Http\Controllers\AdminLinkApprovalController::class, 'approve'])->name('approve');
+        Route::post('/{linkRequest}/reject', [\App\Http\Controllers\AdminLinkApprovalController::class, 'reject'])->name('reject');
+    });
+
     // Admin Reports
     Route::prefix('admin/reports')->name('admin.reports.')->middleware('ensureRole:admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminReportsController::class, 'index'])->name('index');
         Route::get('/metrics', [\App\Http\Controllers\AdminReportsController::class, 'metrics'])->name('metrics');
         Route::post('/export/csv', [\App\Http\Controllers\AdminReportsController::class, 'exportCsv'])->name('export.csv');
+        Route::post('/export/sms-csv', [\App\Http\Controllers\AdminReportsController::class, 'exportSmsCsv'])->name('export.sms-csv');
         Route::post('/schedule', [\App\Http\Controllers\AdminReportsController::class, 'schedule'])->name('schedule');
         Route::delete('/schedule/{id}', [\App\Http\Controllers\AdminReportsController::class, 'destroy'])->name('destroy');
         Route::get('/download/{id}', [\App\Http\Controllers\AdminReportsController::class, 'downloadReport'])->name('download');

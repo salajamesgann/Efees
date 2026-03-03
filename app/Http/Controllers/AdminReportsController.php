@@ -38,8 +38,9 @@ class AdminReportsController extends Controller
         $search = $request->get('search');
         $status = $request->get('status');
 
-        // Base student query for filtering dashboard stats
+        // Base student query for filtering dashboard stats (excludes Withdrawn/Archived)
         $statsStudentQuery = Student::query()
+            ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
             ->when($selectedYear, fn ($q) => $q->where('school_year', $selectedYear))
             ->when($selectedLevel, fn ($q) => $q->where('level', $selectedLevel))
             ->when($selectedSection, fn ($q) => $q->where('section', $selectedSection));
@@ -47,15 +48,21 @@ class AdminReportsController extends Controller
         $statsStudentIds = $statsStudentQuery->pluck('student_id');
 
         // Dashboard Stats (Filtered)
-        $totalCollected = Payment::whereIn('student_id', $statsStudentIds)->sum('amount_paid');
+        $totalCollected = Payment::whereIn('student_id', $statsStudentIds)->where('status', 'approved')->sum('amount_paid');
         $pendingApprovals = Payment::whereIn('student_id', $statsStudentIds)->where('status', 'pending')->sum('amount_paid');
-        // Pending Outstanding based on Net Payable per student (totalAmount - paidAmount)
+        // Pending Outstanding + Total Fees Payable computed in one pass per student
         $svc = app(\App\Services\FeeManagementService::class);
         $pendingOutstanding = 0.0;
-        Student::whereIn('student_id', $statsStudentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, $svc) {
+        $totalFeesPayable   = 0.0;
+        $studentTotals      = [];
+        Student::whereIn('student_id', $statsStudentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, &$totalFeesPayable, &$studentTotals, $svc) {
             foreach ($chunk as $stu) {
-                $t = $svc->computeTotalsForStudent($stu);
-                $pendingOutstanding += max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
+                $t           = $svc->computeTotalsForStudent($stu);
+                $total       = (float) ($t['totalAmount'] ?? 0);
+                $paid        = (float) ($t['paidAmount'] ?? 0);
+                $totalFeesPayable   += $total;
+                $pendingOutstanding += max(0.0, $total - $paid);
+                $studentTotals[$stu->student_id] = $t;
             }
         });
         $overdueBalances = FeeRecord::whereIn('student_id', $statsStudentIds)->overdue()->sum('balance');
@@ -101,6 +108,7 @@ class AdminReportsController extends Controller
         return view('auth.admin_reports_index', compact(
             'schoolYears', 'levels', 'sections',
             'totalCollected', 'pendingApprovals', 'pendingOutstanding', 'overdueBalances', 'remindersSent',
+            'totalFeesPayable', 'studentTotals',
             'students', 'recentSmsLogs', 'scheduledReports', 'generatedReports'
         ));
     }
@@ -183,15 +191,16 @@ class AdminReportsController extends Controller
         // ... apply other filters
 
         $students = $query->get();
+        $exportSvc = app(\App\Services\FeeManagementService::class);
         $rows = [];
         foreach ($students as $student) {
-            $assignment = $student->getCurrentFeeAssignment($student->school_year);
-            $tuition = $assignment ? $assignment->base_tuition : 0;
-            $charges = $assignment ? $assignment->additional_charges_total : 0;
-            $discounts = $assignment ? $assignment->discounts_total : 0;
-            $totalDue = $assignment ? $assignment->total_amount : 0;
-            $paid = $student->total_paid;
-            $balance = $student->current_balance;
+            $t         = $exportSvc->computeTotalsForStudent($student);
+            $tuition   = (float) ($t['baseTuition']    ?? 0);
+            $charges   = (float) ($t['chargesTotal']   ?? 0);
+            $discounts = (float) ($t['discountsTotal'] ?? 0);
+            $totalDue  = (float) ($t['totalAmount']    ?? 0);
+            $paid      = (float) ($t['paidAmount']     ?? 0);
+            $balance   = max(0.0, $totalDue - $paid);
             $status = 'Pending';
             if ($balance <= 0 && $totalDue > 0) {
                 $status = 'Paid';
@@ -267,10 +276,14 @@ class AdminReportsController extends Controller
             ->sum('balance');
         $svc = app(\App\Services\FeeManagementService::class);
         $pendingOutstanding = 0.0;
-        Student::whereIn('student_id', $studentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, $svc) {
+        $totalFeesPayable   = 0.0;
+        Student::whereIn('student_id', $studentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, &$totalFeesPayable, $svc) {
             foreach ($chunk as $stu) {
-                $t = $svc->computeTotalsForStudent($stu);
-                $pendingOutstanding += max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
+                $t     = $svc->computeTotalsForStudent($stu);
+                $total = (float) ($t['totalAmount'] ?? 0);
+                $paid  = (float) ($t['paidAmount'] ?? 0);
+                $totalFeesPayable   += $total;
+                $pendingOutstanding += max(0.0, $total - $paid);
             }
         });
         $overdueBalances = FeeRecord::whereIn('student_id', $studentIds)->overdue()->sum('balance');
@@ -347,15 +360,16 @@ class AdminReportsController extends Controller
         ];
 
         return response()->json([
-            'totalCollected' => (float) $totalCollected,
-            'pendingApprovals' => (float) $pendingApprovals,
-            'pendingPayments' => (float) $pendingPayments,
+            'totalCollected'    => (float) $totalCollected,
+            'pendingApprovals'  => (float) $pendingApprovals,
+            'pendingPayments'   => (float) $pendingPayments,
             'pendingOutstanding' => (float) $pendingOutstanding,
-            'overdueBalances' => (float) $overdueBalances,
-            'remindersSent' => (int) $remindersSent,
+            'totalFeesPayable'  => (float) $totalFeesPayable,
+            'overdueBalances'   => (float) $overdueBalances,
+            'remindersSent'     => (int) $remindersSent,
             'collectionsByGrade' => $collectionsByGrade,
-            'paymentTrends' => $paymentTrends,
-            'statusOverview' => $statusOverview,
+            'paymentTrends'     => $paymentTrends,
+            'statusOverview'    => $statusOverview,
         ]);
     }
 

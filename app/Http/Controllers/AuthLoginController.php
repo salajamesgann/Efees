@@ -40,10 +40,26 @@ class AuthLoginController extends Controller
             'password' => ['required'],
         ]);
 
+        // Check lockout before attempting authentication
+        $user = User::where('email', $credentials['email'])->first();
+        if ($user && $user->lockout_until && now()->lt($user->lockout_until)) {
+            return back()->withErrors([
+                'email' => 'Account locked. Try again later.',
+            ])->onlyInput('email');
+        }
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
             $user = Auth::user();
+
+            // Reset failed login attempts on successful login
+            if ($user->failed_login_attempts > 0) {
+                $user->failed_login_attempts = 0;
+                $user->lockout_until = null;
+                $user->save();
+            }
+
             if (! $user->is_active) {
                 Auth::logout();
 
@@ -51,6 +67,12 @@ class AuthLoginController extends Controller
                     'email' => 'Your account is inactive.',
                 ])->onlyInput('email');
             }
+
+            // Check password expiry
+            if ($user->password_expires_at && now()->gt($user->password_expires_at)) {
+                return redirect()->route('auth.password.change');
+            }
+
             $roleName = optional($user->role)->role_name;
 
             // Fallback: Check roleable_type if role_name is missing
@@ -75,6 +97,21 @@ class AuthLoginController extends Controller
                     return redirect()->intended('user_dashboard');
                 default:
                     return redirect()->intended('user_dashboard');
+            }
+        }
+
+        // Increment failed login attempts
+        if ($user) {
+            $user->failed_login_attempts = ($user->failed_login_attempts ?? 0) + 1;
+            if ($user->failed_login_attempts >= 5) {
+                $user->lockout_until = now()->addMinutes(15);
+            }
+            $user->save();
+
+            if ($user->failed_login_attempts >= 5) {
+                return back()->withErrors([
+                    'email' => 'Account locked. Try again later.',
+                ])->onlyInput('email');
             }
         }
 
@@ -420,9 +457,9 @@ class AuthLoginController extends Controller
             $totalExpected = \App\Models\FeeRecord::sum('amount');
             $expectedCollection = $totalCollected + $pendingOutstanding;
 
-            // 3. Students Count
-            $studentsCount = \App\Models\Student::count();
-            $prevStudentsCount = \App\Models\Student::where('created_at', '<', $startOfMonth)->count();
+            // 3. Students Count (excludes Withdrawn/Archived — only active/irregular students)
+            $studentsCount = \App\Models\Student::whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])->count();
+            $prevStudentsCount = \App\Models\Student::where('created_at', '<', $startOfMonth)->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])->count();
 
             // 4. SMS Sent (This Week vs Last Week)
             $smsSentThisWeek = \App\Models\SmsLog::where('status', 'sent')
@@ -461,32 +498,60 @@ class AuthLoginController extends Controller
                     ];
                 });
 
-            // Pending Payments (mapped for server-side render)
-            $pendingPayments = \App\Models\FeeRecord::where('balance', '>', 0)
-                ->with(['student.parents'])
-                ->orderBy('balance', 'desc')
-                ->limit(10)
+            // Pending Payments — filtered by active school year, aggregated per student
+            $activeSyStudentIds = \App\Models\Student::where('school_year', $activeSy)
+                ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
+                ->pluck('student_id');
+            $allPending = \App\Models\FeeRecord::where('balance', '>', 0)
+                ->whereIn('student_id', $activeSyStudentIds)
+                ->where('record_type', '!=', 'adjustment')
+                ->with(['student.parents', 'student.feeAssignments'])
                 ->get()
-                ->map(function ($rec) {
-                    $dueDate = $rec->payment_date ? \Carbon\Carbon::parse($rec->payment_date) : $rec->created_at;
-                    $daysOverdue = $dueDate && $dueDate->isPast() ? $dueDate->diffInDays(now()) : 0;
+                ->groupBy('student_id')
+                ->map(function ($records) {
+                    $rec          = $records->first();
+                    $totalBalance = (float) $records->sum(fn ($r) => (float) $r->balance);
+                    $earliest     = $records->filter(fn ($r) => $r->payment_date)->sortBy('payment_date')->first() ?? $rec;
+                    $dueDate      = $earliest->payment_date
+                        ? \Carbon\Carbon::parse($earliest->payment_date)
+                        : $earliest->created_at;
+                    $daysOverdue  = $dueDate && $dueDate->isPast() ? (int) $dueDate->diffInDays(now()) : 0;
 
                     $parentName = 'N/A';
                     if ($rec->student && $rec->student->parents->isNotEmpty()) {
-                        $primary = $rec->student->parents->where('pivot.is_primary', true)->first() ?? $rec->student->parents->first();
+                        $primary    = $rec->student->parents->where('pivot.is_primary', true)->first()
+                            ?? $rec->student->parents->first();
                         $parentName = $primary->full_name ?? 'N/A';
                     }
 
+                    $rawLevel  = $rec->student->level ?? '';
+                    $levelAbbr = $rawLevel ? preg_replace('/Grade\s*/i', 'G', $rawLevel) : '—';
+
+                    // Whole tuition payable from fee assignment
+                    $feeAssignment = $rec->student ? $rec->student->feeAssignments->sortByDesc('created_at')->first() : null;
+                    $totalTuition  = $feeAssignment ? (float) $feeAssignment->total_amount : 0;
+
+                    // Actual payments made by the student
+                    $totalPaid = (float) \App\Models\Payment::where('student_id', $rec->student_id)
+                        ->whereIn('status', ['approved', 'paid'])
+                        ->sum('amount_paid');
+
                     return [
-                        'student_id' => $rec->student_id,
-                        'record_type' => $rec->record_type ?? 'Fee',
-                        'balance' => (float) ($rec->balance ?? 0),
-                        'student_name' => $rec->student ? $rec->student->full_name : 'Unknown',
-                        'parent_name' => $parentName,
-                        'due_date' => $dueDate ? $dueDate->format('M d, Y') : 'N/A',
-                        'days_overdue' => (int) $daysOverdue,
+                        'student_id'    => $rec->student_id,
+                        'record_type'   => 'Total',
+                        'total_tuition' => $totalTuition,
+                        'total_paid'    => $totalPaid,
+                        'balance'       => max(0, $totalTuition - $totalPaid),
+                        'student_name'  => $rec->student ? $rec->student->full_name : 'Unknown',
+                        'parent_name'   => $parentName,
+                        'level'         => $levelAbbr,
+                        'due_date'      => $dueDate ? $dueDate->format('M d, Y') : 'N/A',
+                        'days_overdue'  => $daysOverdue,
                     ];
-                });
+                })
+                ->sortByDesc('balance');
+            $pendingPaymentsTotal = $allPending->count();
+            $pendingPayments       = $allPending->take(10)->values();
         }
 
         return view('auth.admin_dashboard', [
@@ -501,6 +566,7 @@ class AuthLoginController extends Controller
             'smsSentLastWeek' => (int) $smsSentLastWeek,
             'recentTransactions' => $recentTransactions,
             'pendingPayments' => $pendingPayments,
+            'pendingPaymentsTotal' => $pendingPaymentsTotal ?? 0,
             'schoolYears' => $schoolYears,
             'levels' => $levels,
             'sections' => $sections,
@@ -528,7 +594,8 @@ class AuthLoginController extends Controller
             ],
         ]);
 
-        $studentQuery = \App\Models\Student::query();
+        $studentQuery = \App\Models\Student::query()
+            ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived']);
         if ($schoolYear) {
             $studentQuery->where('school_year', $schoolYear);
         }
@@ -672,16 +739,24 @@ class AuthLoginController extends Controller
             ]);
         }
 
-        // 7. Recent Pending Payments
+        // 7. Recent Pending Payments — aggregated per student with whole tuition balance
+        $pendingPaymentsTotal = \App\Models\FeeRecord::where('balance', '>', 0)
+            ->whereIn('student_id', $studentIds)
+            ->where('record_type', '!=', 'adjustment')
+            ->distinct('student_id')
+            ->count('student_id');
         $pendingPayments = \App\Models\FeeRecord::where('balance', '>', 0)
             ->whereIn('student_id', $studentIds)
-            ->with(['student.parents'])
-            ->orderBy('balance', 'desc')
-            ->limit(10)
+            ->where('record_type', '!=', 'adjustment')
+            ->with(['student.parents', 'student.feeAssignments'])
             ->get()
-            ->map(function ($rec) {
-                $dueDate = $rec->payment_date ? \Carbon\Carbon::parse($rec->payment_date) : $rec->created_at;
-                $daysOverdue = $dueDate && $dueDate->isPast() ? $dueDate->diffInDays(now()) : 0;
+            ->groupBy('student_id')
+            ->map(function ($records) {
+                $rec          = $records->first();
+                $totalBalance = (float) $records->sum(fn ($r) => (float) $r->balance);
+                $earliest     = $records->filter(fn ($r) => $r->payment_date)->sortBy('payment_date')->first() ?? $rec;
+                $dueDate      = $earliest->payment_date ? \Carbon\Carbon::parse($earliest->payment_date) : $earliest->created_at;
+                $daysOverdue  = $dueDate && $dueDate->isPast() ? (int) $dueDate->diffInDays(now()) : 0;
 
                 $parentName = 'N/A';
                 if ($rec->student && $rec->student->parents->isNotEmpty()) {
@@ -689,16 +764,34 @@ class AuthLoginController extends Controller
                     $parentName = $parent->full_name ?? 'N/A';
                 }
 
+                $rawLevel  = $rec->student->level ?? '';
+                $levelAbbr = $rawLevel ? preg_replace('/Grade\s*/i', 'G', $rawLevel) : '—';
+
+                // Whole tuition payable from fee assignment
+                $feeAssignment = $rec->student ? $rec->student->feeAssignments->sortByDesc('created_at')->first() : null;
+                $totalTuition  = $feeAssignment ? (float) $feeAssignment->total_amount : 0;
+
+                // Actual payments made by the student
+                $totalPaid = (float) \App\Models\Payment::where('student_id', $rec->student_id)
+                    ->whereIn('status', ['approved', 'paid'])
+                    ->sum('amount_paid');
+
                 return [
-                    'student_id' => $rec->student_id,
-                    'record_type' => $rec->record_type ?? 'Fee',
-                    'balance' => (float) ($rec->balance ?? 0),
-                    'student_name' => $rec->student ? $rec->student->full_name : 'Unknown',
-                    'parent_name' => $parentName,
-                    'due_date' => $dueDate ? $dueDate->format('M d, Y') : 'N/A',
-                    'days_overdue' => (int) $daysOverdue,
+                    'student_id'    => $rec->student_id,
+                    'record_type'   => 'Total',
+                    'total_tuition' => $totalTuition,
+                    'total_paid'    => $totalPaid,
+                    'balance'       => max(0, $totalTuition - $totalPaid),
+                    'student_name'  => $rec->student ? $rec->student->full_name : 'Unknown',
+                    'parent_name'   => $parentName,
+                    'level'         => $levelAbbr,
+                    'due_date'      => $dueDate ? $dueDate->format('M d, Y') : 'N/A',
+                    'days_overdue'  => (int) $daysOverdue,
                 ];
-            });
+            })
+            ->sortByDesc('balance')
+            ->take(10)
+            ->values();
 
         // 8. Recent Transactions
         $recentTransactions = \App\Models\Payment::whereIn('student_id', $studentIds)
@@ -743,8 +836,9 @@ class AuthLoginController extends Controller
             'smsSentLastWeek' => (int) $smsSentLastWeek,
             'collectionsByGrade' => $collectionsByGrade,
             'paymentTrends' => $paymentTrends,
-            'pendingPayments' => $pendingPayments,
-            'recentTransactions' => $recentTransactions,
+            'pendingPayments'      => $pendingPayments,
+            'pendingPaymentsTotal' => (int) $pendingPaymentsTotal,
+            'recentTransactions'   => $recentTransactions,
         ]);
     }
 
@@ -948,12 +1042,14 @@ class AuthLoginController extends Controller
     }
 
     /**
-     * Link a student to the parent account.
+     * Submit a link-student request (pending admin approval).
      */
     public function linkStudent(Request $request)
     {
         $request->validate([
             'student_id' => 'required|string|exists:students,student_id',
+            'relationship' => 'nullable|string|max:50',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         $user = Auth::user();
@@ -970,25 +1066,54 @@ class AuthLoginController extends Controller
             return back()->with('error', 'Student is already linked to your account.');
         }
 
-        // Attach student
-        $parent->students()->attach($studentId, [
-            'relationship' => 'Parent', // Default relationship
-            'is_primary' => false,
-            'created_at' => now(),
-            'updated_at' => now(),
+        // Check if a pending request already exists
+        $pendingExists = \App\Models\StudentLinkRequest::where('parent_id', $parent->id)
+            ->where('student_id', $studentId)
+            ->where('type', 'link')
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($pendingExists) {
+            return back()->with('error', 'You already have a pending link request for this student.');
+        }
+
+        \App\Models\StudentLinkRequest::create([
+            'parent_id' => $parent->id,
+            'student_id' => $studentId,
+            'type' => 'link',
+            'relationship' => $request->input('relationship', 'Parent'),
+            'reason' => $request->input('reason'),
+            'status' => 'pending',
         ]);
 
-        return redirect()->route('parent.dashboard', ['student_id' => $studentId])
-            ->with('success', 'Student linked successfully.');
+        // Notify admins
+        try {
+            $student = \App\Models\Student::where('student_id', $studentId)->first();
+            $adminUsers = \App\Models\User::whereHas('role', fn ($q) => $q->where('role_name', 'admin'))->get();
+            foreach ($adminUsers as $admin) {
+                \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                    'user_id' => $admin->user_id,
+                    'title' => 'Student Link Request',
+                    'body' => $parent->full_name . ' requests to link student ' . ($student ? $student->full_name : $studentId) . '.',
+                    'created_at' => now(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Link request notification failed: ' . $e->getMessage());
+        }
+
+        return redirect()->route('parent.dashboard')
+            ->with('success', 'Link request submitted! An administrator will review your request shortly.');
     }
 
     /**
-     * Unlink a student from the parent account.
+     * Submit an unlink-student request (pending admin approval).
      */
     public function unlinkStudent(Request $request)
     {
         $request->validate([
             'student_id' => 'required|string',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         $user = Auth::user();
@@ -1000,10 +1125,31 @@ class AuthLoginController extends Controller
 
         $studentId = $request->input('student_id');
 
-        // Detach student
-        $parent->students()->detach($studentId);
+        // Must be currently linked
+        if (! $parent->students()->where('students.student_id', $studentId)->exists()) {
+            return back()->with('error', 'Student is not linked to your account.');
+        }
+
+        // Check if a pending request already exists
+        $pendingExists = \App\Models\StudentLinkRequest::where('parent_id', $parent->id)
+            ->where('student_id', $studentId)
+            ->where('type', 'unlink')
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($pendingExists) {
+            return back()->with('error', 'You already have a pending unlink request for this student.');
+        }
+
+        \App\Models\StudentLinkRequest::create([
+            'parent_id' => $parent->id,
+            'student_id' => $studentId,
+            'type' => 'unlink',
+            'reason' => $request->input('reason'),
+            'status' => 'pending',
+        ]);
 
         return redirect()->route('parent.dashboard', ['section' => 'students'])
-            ->with('success', 'Student unlinked successfully.');
+            ->with('success', 'Unlink request submitted! An administrator will review your request shortly.');
     }
 }

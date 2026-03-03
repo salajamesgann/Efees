@@ -183,6 +183,21 @@
             <label class="block text-sm font-medium text-gray-700">Semester</label>
             <input type="text" name="semester" value="{{ old('semester', optional($settings['semester'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. First Semester" />
         </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Student ID Format</label>
+            <input type="text" name="student_id_format"
+                   value="{{ old('student_id_format', optional($settings['student_id_format'] ?? null)->value ?? 'STU-{SY}-{####}') }}"
+                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono"
+                   placeholder="e.g. STU-{SY}-{####}" />
+            <p class="mt-1.5 text-xs text-gray-500 space-x-2">
+                Available tokens:
+                <code class="bg-gray-100 px-1 rounded">{SY}</code> start year of active SY (e.g. 2025) &nbsp;
+                <code class="bg-gray-100 px-1 rounded">{YYYY}</code> current 4-digit year &nbsp;
+                <code class="bg-gray-100 px-1 rounded">{YY}</code> 2-digit year &nbsp;
+                <code class="bg-gray-100 px-1 rounded">{####}</code> auto-incrementing number (number of # sets zero-pad width)
+            </p>
+            <p class="mt-1 text-xs text-amber-600">&#9888; Changing this format only affects <strong>new</strong> students. Existing IDs are not renamed.</p>
+        </div>
         
         <div class="mb-6 pt-4 border-t border-gray-200 space-y-4">
             <h2 class="text-lg font-semibold mb-2">System Behavior</h2>
