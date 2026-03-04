@@ -107,12 +107,36 @@
               <span class="text-sm font-medium">Payment Approvals</span>
           </a>
 
+          <!-- Link Approvals -->
+          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.link_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.link_approvals.index') }}">
+              <div class="w-8 flex justify-center">
+                  <i class="fas fa-link text-lg {{ request()->routeIs('admin.link_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+              </div>
+              <span class="text-sm font-medium">Link Approvals</span>
+              @php try { $pendingLinks = \App\Models\StudentLinkRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingLinks = 0; } @endphp
+              @if($pendingLinks > 0)
+                <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingLinks }}</span>
+              @endif
+          </a>
+
           <!-- Payment Approvals -->
           <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.payment_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.payment_approvals.index') }}">
               <div class="w-8 flex justify-center">
                   <i class="fas fa-check-double text-lg {{ request()->routeIs('admin.payment_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
               </div>
               <span class="text-sm font-medium">Payment Approvals</span>
+          </a>
+
+          <!-- Link Approvals -->
+          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.link_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.link_approvals.index') }}">
+              <div class="w-8 flex justify-center">
+                  <i class="fas fa-link text-lg {{ request()->routeIs('admin.link_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+              </div>
+              <span class="text-sm font-medium">Link Approvals</span>
+              @php try { $pendingLinks = \App\Models\StudentLinkRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingLinks = 0; } @endphp
+              @if($pendingLinks > 0)
+                <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingLinks }}</span>
+              @endif
           </a>
 
           <!-- Reports & Analytics -->
