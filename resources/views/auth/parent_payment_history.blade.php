@@ -15,8 +15,87 @@
         </div>
     </div>
 
-    <!-- Payment List -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <!-- Mobile Card Layout (< 768px) -->
+    <div class="md:hidden space-y-4">
+        @forelse($payments as $payment)
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4">
+                    <!-- Top Row: Student + Amount -->
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                {{ substr($payment->student->first_name, 0, 1) }}{{ substr($payment->student->last_name, 0, 1) }}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-semibold text-gray-900 truncate">{{ $payment->student->full_name }}</p>
+                                <p class="text-xs text-gray-500 font-mono">{{ $payment->student->student_id }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-lg font-bold text-gray-900">₱{{ number_format($payment->amount_paid, 2) }}</p>
+                            @if($payment->status === 'approved' || $payment->status === 'paid' || $payment->status === null)
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
+                                    <i class="fas fa-check-circle"></i> Paid
+                                </span>
+                            @elseif($payment->status === 'pending')
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700">
+                                    {{ ucfirst($payment->status) }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Details Row -->
+                    <div class="flex items-center gap-4 text-xs text-gray-500 mb-3 bg-gray-50 rounded-lg px-3 py-2">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-hashtag text-gray-400"></i>
+                            <span class="font-mono">{{ $payment->reference_number ?? 'REC-'.str_pad($payment->id, 8, '0', STR_PAD_LEFT) }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-wallet text-gray-400"></i>
+                            <span class="capitalize">{{ str_replace('_', ' ', $payment->method) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Date + Actions Row -->
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs text-gray-400">
+                            <i class="fas fa-calendar-alt mr-1"></i>
+                            {{ $payment->paid_at->format('M d, Y \a\t h:i A') }}
+                        </p>
+                        <div class="flex items-center gap-1">
+                            <a href="{{ route('parent.receipts.download', $payment->id) }}" class="inline-flex items-center gap-1.5 text-blue-600 font-medium px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors text-xs">
+                                <i class="fas fa-receipt"></i> Receipt
+                            </a>
+                            <a href="{{ route('parent.receipt.pdf', $payment->id) }}" class="inline-flex items-center justify-center text-green-600 font-medium w-8 h-8 rounded-lg bg-green-50 hover:bg-green-100 transition-colors text-xs" title="Download PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-xl mx-auto mb-3">
+                    <i class="fas fa-history"></i>
+                </div>
+                <p class="text-gray-500">No payment history found.</p>
+            </div>
+        @endforelse
+
+        @if($payments->hasPages())
+            <div class="pt-2">
+                {{ $payments->links() }}
+            </div>
+        @endif
+    </div>
+
+    <!-- Desktop Table Layout (>= 768px) -->
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-[720px] w-full text-left text-sm text-gray-600">
                 <thead class="bg-gray-50 border-b border-gray-100">
@@ -84,7 +163,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                                 <div class="flex flex-col items-center justify-center gap-3">
                                     <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-xl">
                                         <i class="fas fa-history"></i>

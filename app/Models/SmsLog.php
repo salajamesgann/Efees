@@ -28,6 +28,7 @@ class SmsLog extends Model
     protected $casts = [
         'sent_at' => 'datetime',
         'scheduled_at' => 'datetime',
+        'provider_response' => 'json',
     ];
 
     public function student(): BelongsTo

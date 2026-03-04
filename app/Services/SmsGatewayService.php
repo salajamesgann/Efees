@@ -66,14 +66,20 @@ class SmsGatewayService
             $to = substr($to, 1); // Remove leading +
         }
 
+        $url = rtrim($baseUrl, '/').'/sms/send';
+
+        Log::info("PhilSMS: Sending to {$to} via {$url} with sender_id={$senderId}");
+
         $response = Http::retry(3, 500)
-            ->withToken($apiToken)
-            ->post(rtrim($baseUrl, '/').'/sms/send', [
+            ->withToken(trim($apiToken))
+            ->post($url, [
                 'recipient' => $to,
                 'sender_id' => $senderId,
                 'type' => 'plain',
                 'message' => $message,
             ]);
+
+        Log::info("PhilSMS Response: Status={$response->status()}, Body={$response->body()}");
 
         if ($response->successful()) {
             $data = $response->json();
@@ -86,7 +92,7 @@ class SmsGatewayService
             ];
         }
 
-        throw new \Exception('PhilSMS Error: '.$response->body());
+        throw new \Exception('PhilSMS Error (HTTP '.$response->status().'): '.$response->body());
     }
 
     /**
