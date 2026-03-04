@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Illuminate\Support\Facades\Hash;
 
 class Staff extends Model
 {
@@ -146,9 +145,10 @@ class Staff extends Model
         $staff = static::create($staffData);
 
         // Create user account
+        // NOTE: Do NOT Hash::make() here — the User model's 'hashed' cast handles it automatically
         $userPayload = [
             'email' => $userData['email'],
-            'password' => Hash::make($userData['password']),
+            'password' => $userData['password'],
             'role_id' => $userData['role_id'] ?? null,
             'roleable_type' => self::class,
             'roleable_id' => (string) $staff->staff_id,
@@ -185,7 +185,8 @@ class Staff extends Model
             }
 
             if (isset($userData['password'])) {
-                $userPayload['password'] = Hash::make($userData['password']);
+                // NOTE: Do NOT Hash::make() — the User model's 'hashed' cast handles it automatically
+                $userPayload['password'] = $userData['password'];
             }
 
             if (isset($userData['role_id'])) {
@@ -205,8 +206,7 @@ class Staff extends Model
      */
     public function scopeActive($query)
     {
-        // Since is_active column may not exist, return all records for now
-        return $query;
+        return $query->where('is_active', true);
     }
 
     /**
@@ -214,7 +214,6 @@ class Staff extends Model
      */
     public function scopeInactive($query)
     {
-        // Since is_active column may not exist, return empty result for now
-        return $query->whereRaw('1 = 0');
+        return $query->where('is_active', false);
     }
 }

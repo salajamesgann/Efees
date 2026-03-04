@@ -14,7 +14,6 @@ Route::get('/', function () {
 // Authentication Routes
 Route::get('/login', [AuthLoginController::class, 'login'])->name('login');
 Route::post('/authenticate', [AuthLoginController::class, 'authenticate'])
-    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class, \App\Http\Middleware\VerifyCsrfToken::class])
     ->name('authenticate');
 Route::get('/authenticate', function () {
     return redirect()->route('login');

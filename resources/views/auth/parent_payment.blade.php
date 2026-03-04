@@ -40,7 +40,9 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('parent.pay.store') }}" class="space-y-6">
+            <form method="POST" action="{{ route('parent.pay.store') }}" class="space-y-6"
+                  x-data="{ submitting: false, showConfirm: false }"
+                  @submit.prevent="showConfirm = true">
                 @csrf
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -88,11 +90,6 @@
                         </select>
                     </div>
 
-                    <div class="col-span-1 md:col-span-2 hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Reference Number <span class="text-gray-400 font-normal">(Optional)</span></label>
-                        <input type="text" name="reference_number" value="{{ old('reference_number') }}" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5" placeholder="e.g. TRX-123456789" />
-                    </div>
-
                     <div class="col-span-1 md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Remarks <span class="text-gray-400 font-normal">(Optional)</span></label>
                         <textarea name="remarks" rows="3" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5" placeholder="Add any additional notes here...">{{ old('remarks') }}</textarea>
@@ -101,9 +98,39 @@
 
                 <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
                     <a href="{{ route('parent.dashboard') }}" class="w-full sm:w-auto text-center px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Cancel</a>
-                    <button type="submit" class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5 flex items-center gap-2">
-                        <i class="fas fa-lock"></i> Secure Pay
+                    <button type="submit"
+                            :disabled="submitting"
+                            class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                        <template x-if="!submitting">
+                            <span class="flex items-center gap-2"><i class="fas fa-lock"></i> Secure Pay</span>
+                        </template>
+                        <template x-if="submitting">
+                            <span class="flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Processing…</span>
+                        </template>
                     </button>
+                </div>
+
+                <!-- Confirmation Modal -->
+                <div x-show="showConfirm" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.4);">
+                    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" @click.away="showConfirm = false">
+                        <div class="text-center mb-4">
+                            <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-shield-alt text-blue-600 text-xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900">Confirm Payment</h3>
+                            <p class="text-gray-500 text-sm mt-1">Are you sure you want to proceed with this payment?</p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button type="button"
+                                    @click="showConfirm = false; submitting = true; $el.closest('form').submit();"
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-check"></i> Yes, Pay Now
+                            </button>
+                            <button type="button" @click="showConfirm = false" class="w-full border border-gray-300 text-gray-700 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>

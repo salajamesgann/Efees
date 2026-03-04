@@ -203,29 +203,11 @@ class AuthLoginController extends Controller
         if ($isParent) {
             $svc = app(FeeManagementService::class);
 
-            // Determine current and previous school year for YoY comparison
-            $activeSy = SystemSetting::getActiveSchoolYear();
-            $prevSy = null;
-            if ($activeSy) {
-                $parts = explode('-', $activeSy);
-                if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
-                    $prevSy = ((int) $parts[0] - 1).'-'.((int) $parts[1] - 1);
-                }
-            }
-
             // $myChildren is already fetched above
-            $childrenSummaries = $myChildren->map(function ($child) use ($svc, $activeSy, $prevSy) {
+            $childrenSummaries = $myChildren->map(function ($child) use ($svc) {
                 $totals = $svc->computeTotalsForStudent($child);
                 $childTotalPaid = (float) ($totals['paidAmount'] ?? 0.0);
                 $childBalanceDue = (float) ($totals['remainingBalance'] ?? max(((float) ($totals['totalAmount'] ?? 0.0)) - $childTotalPaid, 0.0));
-
-                // Year-over-year fee comparison
-                $currentTuition = $activeSy ? TuitionFee::forGrade($child->level)->forSchoolYear($activeSy)->first() : null;
-                $prevTuition = $prevSy ? TuitionFee::forGrade($child->level)->forSchoolYear($prevSy)->first() : null;
-                $currentBaseFee = $currentTuition ? (float) $currentTuition->amount : (float) ($totals['baseTuition'] ?? 0.0);
-                $prevBaseFee = $prevTuition ? (float) $prevTuition->amount : null;
-                $changeAmount = $prevBaseFee !== null ? $currentBaseFee - $prevBaseFee : null;
-                $changePercent = ($prevBaseFee !== null && $prevBaseFee > 0) ? round(($changeAmount / $prevBaseFee) * 100, 1) : null;
 
                 // Optimized fetching for summary
                 $childUpcoming = FeeRecord::where('student_id', $child->student_id)
@@ -249,14 +231,6 @@ class AuthLoginController extends Controller
                     'totalPaid' => (float) $childTotalPaid,
                     'totalAmount' => (float) ($totals['totalAmount'] ?? 0.0),
                     'upcomingFees' => $childUpcoming,
-                    'feeComparison' => [
-                        'currentYear' => $activeSy,
-                        'previousYear' => $prevSy,
-                        'currentBaseFee' => $currentBaseFee,
-                        'previousBaseFee' => $prevBaseFee,
-                        'changeAmount' => $changeAmount,
-                        'changePercent' => $changePercent,
-                    ],
                 ];
             });
             $consolidatedBalanceDue = (float) $childrenSummaries->sum('balanceDue');

@@ -3,7 +3,7 @@
 @section('content')
 <div class="max-w-6xl mx-auto">
     <!-- Header -->
-    <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Payment History</h1>
             <p class="text-gray-600 mt-1">View past transactions and download receipts.</p>
@@ -14,6 +14,45 @@
             </a>
         </div>
     </div>
+
+    <!-- Filters -->
+    <form method="GET" action="{{ route('parent.history') }}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="flex flex-col sm:flex-row items-end gap-3">
+            @if($myChildren->count() > 1)
+            <div class="w-full sm:w-auto sm:min-w-[180px]">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Student</label>
+                <select name="student_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2">
+                    <option value="">All Students</option>
+                    @foreach($myChildren as $child)
+                        <option value="{{ $child->student_id }}" {{ ($filterStudentId ?? '') == $child->student_id ? 'selected' : '' }}>
+                            {{ $child->full_name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+            <div class="w-full sm:w-auto">
+                <label class="block text-xs font-medium text-gray-500 mb-1">From</label>
+                <input type="date" name="date_from" value="{{ $filterDateFrom ?? '' }}"
+                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2">
+            </div>
+            <div class="w-full sm:w-auto">
+                <label class="block text-xs font-medium text-gray-500 mb-1">To</label>
+                <input type="date" name="date_to" value="{{ $filterDateTo ?? '' }}"
+                       class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2">
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button type="submit" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-filter text-xs"></i> Filter
+                </button>
+                @if(($filterStudentId ?? '') !== '' || ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== '')
+                <a href="{{ route('parent.history') }}" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-times text-xs"></i> Clear
+                </a>
+                @endif
+            </div>
+        </div>
+    </form>
 
     <!-- Mobile Card Layout (< 768px) -->
     <div class="md:hidden space-y-4">
@@ -33,19 +72,7 @@
                         </div>
                         <div class="text-right flex-shrink-0">
                             <p class="text-lg font-bold text-gray-900">₱{{ number_format($payment->amount_paid, 2) }}</p>
-                            @if($payment->status === 'approved' || $payment->status === 'paid' || $payment->status === null)
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
-                                    <i class="fas fa-check-circle"></i> Paid
-                                </span>
-                            @elseif($payment->status === 'pending')
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700">
-                                    <i class="fas fa-clock"></i> Pending
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700">
-                                    {{ ucfirst($payment->status) }}
-                                </span>
-                            @endif
+                            <x-payment-status-badge :status="$payment->status" size="xs" />
                         </div>
                     </div>
 
@@ -133,19 +160,7 @@
                                 ₱{{ number_format($payment->amount_paid, 2) }}
                             </td>
                             <td class="px-6 py-4">
-                                @if($payment->status === 'approved' || $payment->status === 'paid' || $payment->status === null)
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        <i class="fas fa-check-circle"></i> Paid
-                                    </span>
-                                @elseif($payment->status === 'pending')
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                        <i class="fas fa-clock"></i> Pending
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                        {{ ucfirst($payment->status) }}
-                                    </span>
-                                @endif
+                                <x-payment-status-badge :status="$payment->status" size="sm" />
                             </td>
                             <td class="px-6 py-4 capitalize">
                                 {{ str_replace('_', ' ', $payment->method) }}

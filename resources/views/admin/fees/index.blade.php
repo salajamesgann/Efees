@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;family=Noto+Sans:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -187,7 +188,7 @@
         <!-- Main Content -->
         <main class="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8 custom-scrollbar">
             <header class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Fee Management</h1>
+                <h1 class="text-3xl font-bold text-slate-900">Fee Management</h1>
             </header>
 
             @php
@@ -223,7 +224,7 @@
                         </a>
                     </nav>
                 </div>
-                <div class="border-b border-gray-200 dark:border-gray-700"></div>
+                <div class="border-b border-gray-200"></div>
             </div>
 
             @if(($currentTab ?? 'tuition') === 'tuition')

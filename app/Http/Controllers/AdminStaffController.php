@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Models\Admin;
 use App\Models\ParentContact;
 use App\Models\Role;
 use App\Models\Staff;
@@ -34,9 +37,32 @@ class AdminStaffController extends Controller
                 $q->whereIn('role_name', ['staff', 'admin', 'parent']);
             })
             ->when($query !== '', function ($q) use ($query) {
-                $q->where(function ($sub) use ($query) {
-                    $sub->where('name', 'like', "%{$query}%")
-                        ->orWhere('email', 'like', "%{$query}%");
+                $operator = DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
+                $q->where(function ($sub) use ($query, $operator) {
+                    $sub->where('email', $operator, "%{$query}%")
+                        ->orWhere(function ($sq) use ($query, $operator) {
+                            $sq->where(function ($sq1) use ($query, $operator) {
+                                $sq1->whereIn('roleable_type', [Staff::class, Admin::class])
+                                    ->whereHasMorph('roleable', [Staff::class, Admin::class], function ($q) use ($query, $operator) {
+                                        $q->where('first_name', $operator, "%{$query}%")
+                                            ->orWhere('last_name', $operator, "%{$query}%");
+                                    });
+                            })->orWhere(function ($sq2) use ($query, $operator) {
+                                $sq2->where('roleable_type', ParentContact::class)
+                                    ->whereExists(function ($exists) use ($query, $operator) {
+                                        $exists->select(DB::raw(1))
+                                            ->from('parents')
+                                            ->where(function ($q) {
+                                                if (DB::connection()->getDriverName() === 'pgsql') {
+                                                    $q->whereRaw('CAST(parents.id AS VARCHAR) = users.roleable_id');
+                                                } else {
+                                                    $q->whereColumn('parents.id', 'users.roleable_id');
+                                                }
+                                            })
+                                            ->where('full_name', $operator, "%{$query}%");
+                                    });
+                            });
+                        });
                 });
             })
             ->when($status === 'active', function ($q) {
@@ -64,6 +90,8 @@ class AdminStaffController extends Controller
                                     ->where('account_status', 'Active');
                             });
                     });
+                    // Admin-type users are always considered active (no is_active field)
+                    $sub->orWhere('roleable_type', Admin::class);
                 });
             })
             ->when($status === 'inactive', function ($q) {
@@ -91,11 +119,12 @@ class AdminStaffController extends Controller
                                     ->where('account_status', '!=', 'Active');
                             });
                     });
+                    // Admin-type users are always active, so exclude them from inactive filter
                 });
             })
             ->orderBy('user_id', 'desc');
 
-        $users = $usersQuery->paginate(15);
+        $users = $usersQuery->paginate(15)->withQueryString();
 
         return view('auth.admin_staff_index', [
             'users' => $users,
@@ -117,65 +146,12 @@ class AdminStaffController extends Controller
     /**
      * Store a newly created user account in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'first_name' => ['required', 'string', 'max:255'],
-            'middle_initial' => ['nullable', 'string', 'max:5'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'phone_number' => ['nullable', 'string', 'max:20'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'role_name' => ['required', 'string', 'exists:roles,role_name'],
-            'password' => [
-                'required_if:role_name,staff,admin', // Required for staff/admin, optional for parents
-                'nullable', // Allow null for parents
-            ],
-        ], [
-            'password.required_if' => 'Password is required for staff and admin accounts.',
-            'email.unique' => 'This email address is already registered.',
-        ]);
-
-        // Add password complexity rules only if password is provided
-        if ($request->filled('password')) {
-            $validator->sometimes('password', [
-                'string',
-                'min:8',
-                'confirmed',
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
-            ], function ($input) {
-                return $input->filled('password');
-            }, [
-                'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
-            ]);
-        }
-
-        // Add phone number uniqueness validation only for parent accounts
-        if ($request->input('role_name') === 'parent' && $request->filled('phone_number')) {
-            $validator->sometimes('phone_number', [
-                'unique:parents,phone',
-            ], function ($input) {
-                return $input->role_name === 'parent' && $input->filled('phone_number');
-            }, [
-                'phone_number.unique' => 'This phone number is already registered.',
-            ]);
-        }
-
-        if ($validator->fails()) {
-            return redirect()
-                ->route('admin.staff.create')
-                ->withErrors($validator)
-                ->withInput();
-        }
-
         try {
             $roleName = $request->input('role_name');
-            $validated = $validator->validated();
+            $validated = $request->validated();
             $email = strtolower($validated['email']); // Define email here for use in success message
-
-            // Pre-transaction checks (outside transaction to avoid failed transaction issues)
-            if (User::where('email', $email)->exists()) {
-                throw new \Exception('A user with this email already exists.');
-            }
 
             if ($roleName === 'parent') {
                 // Check if parent already exists by email
@@ -223,9 +199,10 @@ class AdminStaffController extends Controller
                     }
 
                     // Create User Account
+                    // NOTE: Do NOT Hash::make() — the User model's 'hashed' cast handles it automatically
                     $user = User::create([
                         'email' => $email,
-                        'password' => Hash::make($validated['password'] ?? \Illuminate\Support\Str::random(32)),
+                        'password' => $validated['password'] ?? \Illuminate\Support\Str::random(32),
                         'must_change_password' => empty($validated['password']),
                         'role_id' => $role->role_id,
                         'roleable_type' => ParentContact::class,
@@ -274,11 +251,6 @@ class AdminStaffController extends Controller
                     }
 
                 } else {
-                    // Check if staff user already exists
-                    if (User::where('email', $email)->exists()) {
-                        throw new \Exception('A user with this email already exists.');
-                    }
-
                     // Create Staff/Admin
                     $staffData = [
                         'first_name' => $validated['first_name'],
@@ -354,55 +326,25 @@ class AdminStaffController extends Controller
     /**
      * Update the specified user account.
      */
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         $user->load(['role', 'roleable']);
         $roleable = $user->roleable;
 
-        $rules = [
-            'phone_number' => ['nullable', 'string', 'max:20'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->user_id.',user_id'],
-            'password' => [
-                'nullable',
-                'string',
-                'min:8',
-                'confirmed',
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
-            ],
-        ];
-
-        // Conditional validation based on user type
-        if ($user->roleable_type === ParentContact::class) {
-            $rules['first_name'] = ['required', 'string', 'max:255'];
-            $rules['middle_initial'] = ['nullable', 'string', 'max:5'];
-            $rules['last_name'] = ['required', 'string', 'max:255'];
-        } else {
-            $rules['first_name'] = ['required', 'string', 'max:255'];
-            $rules['middle_initial'] = ['nullable', 'string', 'max:5'];
-            $rules['last_name'] = ['required', 'string', 'max:255'];
-        }
-
-        $validator = Validator::make($request->all(), $rules);
-
-        if ($validator->fails()) {
-            return redirect()
-                ->route('admin.staff.edit', $user)
-                ->withErrors($validator)
-                ->withInput();
-        }
+        $validated = $request->validated();
 
         try {
-            DB::transaction(function () use ($user, $roleable, $validator) {
-                $validated = $validator->validated();
+            DB::transaction(function () use ($user, $roleable, $validated) {
                 $fullName = $validated['first_name'].' '.($validated['middle_initial'] ?? '').' '.$validated['last_name'];
                 $fullName = trim(str_replace('  ', ' ', $fullName));
 
                 // Update User
+                // NOTE: Do NOT Hash::make() — the User model's 'hashed' cast handles it automatically
                 $userData = [
                     'email' => strtolower($validated['email']),
                 ];
                 if (! empty($validated['password'])) {
-                    $userData['password'] = Hash::make($validated['password']);
+                    $userData['password'] = $validated['password'];
                 }
                 $user->update($userData);
 
@@ -413,7 +355,7 @@ class AdminStaffController extends Controller
                         'phone' => $validated['phone_number'] ?? null,
                         'email' => strtolower($validated['email']),
                     ]);
-                } elseif ($user->roleable_type === Staff::class) {
+                } elseif ($user->roleable_type === Staff::class || $user->roleable_type === Admin::class) {
                     $roleable->update([
                         'first_name' => $validated['first_name'],
                         'MI' => $validated['middle_initial'] ?? null,
@@ -531,16 +473,37 @@ class AdminStaffController extends Controller
     public function resetPassword(User $user): RedirectResponse
     {
         try {
-            // Generate a random password
-            $newPassword = 'User@'.rand(1000, 9999);
+            // Generate a cryptographically secure random password (16 chars, mixed complexity)
+            $newPassword = \Illuminate\Support\Str::password(16);
 
+            // NOTE: Do NOT Hash::make() — the User model's 'hashed' cast handles it automatically
             $user->update([
-                'password' => Hash::make($newPassword),
+                'password' => $newPassword,
+                'must_change_password' => true,
             ]);
 
-            return redirect()
-                ->route('admin.staff.show', $user)
-                ->with('success', "Password reset successfully. New password: {$newPassword}");
+            // Attempt to email the new password to the user instead of showing in flash
+            try {
+                Mail::raw(
+                    "Your password has been reset by an administrator.\n\nNew password: {$newPassword}\n\nPlease log in and change your password immediately.",
+                    function ($message) use ($user) {
+                        $message->to($user->email)
+                            ->subject('Your Password Has Been Reset');
+                    }
+                );
+
+                return redirect()
+                    ->route('admin.staff.show', $user)
+                    ->with('success', 'Password reset successfully. The new password has been sent to the user\'s email.');
+            } catch (\Throwable $mailError) {
+                Log::warning('Password reset email failed for user '.$user->email.': '.$mailError->getMessage());
+
+                // Only show password in flash as last resort if email fails
+                return redirect()
+                    ->route('admin.staff.show', $user)
+                    ->with('success', 'Password reset successfully but email delivery failed. New temporary password: '.$newPassword)
+                    ->with('temp_password', $newPassword);
+            }
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.staff.show', $user)

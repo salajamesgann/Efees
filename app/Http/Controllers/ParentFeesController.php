@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FeeAssignment;
 use App\Models\FeeRecord;
 use App\Models\ParentContact;
 use App\Models\Payment;
 use App\Models\Student;
+use App\Models\SystemSetting;
 use App\Services\FeeManagementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,11 +59,34 @@ class ParentFeesController extends Controller
         $svc = app(FeeManagementService::class);
         $totals = $svc->computeTotalsForStudent($student);
 
-        // Fetch all transactions for running balance
+        // Fee assignment with eager-loaded charges & discounts for breakdown table
+        $assignment = FeeAssignment::where('student_id', $student->student_id)
+            ->where('school_year', $student->school_year)
+            ->with(['additionalCharges', 'discounts'])
+            ->latest()
+            ->first();
+
+        // Fetch all transactions for running balance (computed server-side)
         $transactions = $student->feeRecords()
             ->orderBy('payment_date')
             ->orderBy('created_at')
             ->get();
+
+        // Compute running balance server-side
+        $runningBalance = 0;
+        foreach ($transactions as $trx) {
+            if ($trx->record_type !== 'payment') {
+                $runningBalance += $trx->amount;
+            } else {
+                $runningBalance -= $trx->amount;
+            }
+            $trx->running_balance = $runningBalance;
+        }
+
+        // School info for the SOA header
+        $schoolName = (string) (SystemSetting::where('key', 'school_name')->value('value') ?: config('app.name'));
+        $schoolAddress = (string) (SystemSetting::where('key', 'school_address')->value('value') ?: '');
+        $schoolEmail = (string) (SystemSetting::where('key', 'school_email')->value('value') ?: '');
 
         // Data for sidebar/layout
         $myChildren = $parent->students()->get();
@@ -69,11 +94,15 @@ class ParentFeesController extends Controller
         return view('auth.parent_soa', [
             'student' => $student,
             'totals' => $totals,
+            'assignment' => $assignment,
             'transactions' => $transactions,
             'parent' => $parent,
             'isParent' => true,
             'myChildren' => $myChildren,
             'selectedChild' => $student,
+            'schoolName' => $schoolName,
+            'schoolAddress' => $schoolAddress,
+            'schoolEmail' => $schoolEmail,
         ]);
     }
 

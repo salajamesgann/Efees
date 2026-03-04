@@ -81,7 +81,7 @@
           </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.users.update', $user) }}" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 card-hover">
+        <form method="POST" action="{{ route('admin.users.update', $user) }}" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 card-hover" x-data="{ submitting: false }" @submit="submitting = true">
           @csrf
           @method('PUT')
 
@@ -171,8 +171,12 @@
             <a href="{{ route('admin.users.index') }}" class="px-6 py-2.5 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 transition-colors duration-200">
               Cancel
             </a>
-            <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 transition-all duration-200 transform hover:-translate-y-0.5">
-              Update User
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="submitting">
+              <span x-show="!submitting">Update User</span>
+              <span x-show="submitting" class="inline-flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                Updating...
+              </span>
             </button>
           </div>
         </form>

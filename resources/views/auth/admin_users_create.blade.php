@@ -84,7 +84,7 @@
                 </div>
 
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" x-data="{ role: '{{ old('role_name', request('role', '')) }}' }">
-                    <form action="{{ route('admin.users.store') }}" method="POST" class="p-6 space-y-6">
+                    <form action="{{ route('admin.users.store') }}" method="POST" class="p-6 space-y-6" x-data="{ submitting: false }" @submit="submitting = true">
                         @csrf
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -190,7 +190,13 @@
 
                         <div class="flex items-center justify-end gap-4 pt-4 border-t border-slate-100">
                             <a href="{{ route('admin.users.index') }}" class="px-4 py-2 text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg font-medium transition-colors">Cancel</a>
-                            <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm">Create User</button>
+                            <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" :disabled="submitting">
+                                <span x-show="!submitting">Create User</span>
+                                <span x-show="submitting" class="inline-flex items-center gap-2">
+                                    <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                                    Creating...
+                                </span>
+                            </button>
                         </div>
                     </form>
                 </div>

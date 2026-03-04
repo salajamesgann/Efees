@@ -28,10 +28,13 @@
                 <p class="text-gray-500 mt-1">Generated on {{ now()->format('F d, Y') }}</p>
             </div>
             <div class="text-left md:text-right">
-                <h2 class="text-xl font-bold text-blue-900">EFees School Management</h2>
-                <p class="text-gray-600 text-sm mt-1">123 Education Lane</p>
-                <p class="text-gray-600 text-sm">Knowledge City, KC 12345</p>
-                <p class="text-gray-600 text-sm">finance@efees.edu</p>
+                <h2 class="text-xl font-bold text-blue-900">{{ $schoolName ?? 'EFees School Management' }}</h2>
+                @if(!empty($schoolAddress))
+                <p class="text-gray-600 text-sm mt-1">{{ $schoolAddress }}</p>
+                @endif
+                @if(!empty($schoolEmail))
+                <p class="text-gray-600 text-sm">{{ $schoolEmail }}</p>
+                @endif
             </div>
         </div>
 
@@ -74,9 +77,6 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                         @php
-                            $assignment = $student->feeAssignments()->where('school_year', $student->school_year)->latest()->first();
-                         @endphp
                          @if($assignment)
                             <tr>
                                 <td class="px-6 py-4 text-gray-900">Base Tuition</td>
@@ -119,10 +119,50 @@
             </div>
         </div>
 
-        <!-- Transaction Table -->
+        <!-- Transaction History -->
         <div class="mb-8">
             <h3 class="text-lg font-bold text-gray-900 mb-4">Transaction History</h3>
-            <div class="overflow-x-auto border border-gray-200 rounded-lg">
+
+            <!-- Mobile Card Layout (< md) -->
+            <div class="md:hidden space-y-3">
+                @forelse($transactions as $trx)
+                    <div class="bg-white rounded-xl border border-gray-200 p-4">
+                        <div class="flex items-start justify-between gap-3 mb-2">
+                            <div class="min-w-0">
+                                <p class="font-medium text-gray-900 text-sm">{{ $trx->description }}</p>
+                                @if($trx->record_type === 'payment')
+                                    <p class="text-xs text-gray-500 font-mono">Ref: {{ $trx->reference_number }}</p>
+                                @endif
+                            </div>
+                            <span class="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{{ $trx->created_at->format('M d, Y') }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm pt-2 border-t border-gray-100">
+                            @if($trx->record_type !== 'payment')
+                                <div>
+                                    <span class="text-xs text-gray-500">Debit (Fee)</span>
+                                    <p class="font-medium text-gray-900">₱{{ number_format($trx->amount, 2) }}</p>
+                                </div>
+                            @else
+                                <div>
+                                    <span class="text-xs text-gray-500">Credit (Payment)</span>
+                                    <p class="font-medium text-green-600">₱{{ number_format($trx->amount, 2) }}</p>
+                                </div>
+                            @endif
+                            <div class="text-right">
+                                <span class="text-xs text-gray-500">Balance</span>
+                                <p class="font-bold text-gray-900">₱{{ number_format($trx->running_balance, 2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+                        No transactions found.
+                    </div>
+                @endforelse
+            </div>
+
+            <!-- Desktop Table Layout (>= md) -->
+            <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-lg">
                 <table class="min-w-[820px] w-full text-sm text-left">
                     <thead class="bg-gray-50 text-gray-900 font-semibold border-b border-gray-200">
                         <tr>
@@ -134,19 +174,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @php $runningBalance = 0; @endphp
                         @forelse($transactions as $trx)
-                            @php
-                                $debit = $trx->record_type !== 'payment' ? $trx->amount : 0;
-                                $credit = $trx->record_type === 'payment' ? $trx->amount : 0;
-                                // Simple logic: Fee increases balance, Payment decreases it
-                                // Assuming transactions are ordered correctly (oldest first)
-                                if ($trx->record_type !== 'payment') {
-                                    $runningBalance += $debit;
-                                } else {
-                                    $runningBalance -= $credit;
-                                }
-                            @endphp
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-gray-600">
                                     {{ $trx->created_at->format('M d, Y') }}
@@ -158,21 +186,21 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-right text-gray-600">
-                                    @if($debit > 0)
-                                        ₱{{ number_format($debit, 2) }}
+                                    @if($trx->record_type !== 'payment')
+                                        ₱{{ number_format($trx->amount, 2) }}
                                     @else
                                         -
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-right text-green-600 font-medium">
-                                    @if($credit > 0)
-                                        ₱{{ number_format($credit, 2) }}
+                                    @if($trx->record_type === 'payment')
+                                        ₱{{ number_format($trx->amount, 2) }}
                                     @else
                                         -
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-right font-bold text-gray-900">
-                                    ₱{{ number_format($runningBalance, 2) }}
+                                    ₱{{ number_format($trx->running_balance, 2) }}
                                 </td>
                             </tr>
                         @empty
@@ -184,6 +212,7 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
         

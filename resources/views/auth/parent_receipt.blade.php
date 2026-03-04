@@ -38,11 +38,13 @@
         <!-- Content -->
         <div class="px-6 pt-9 pb-4">
             <!-- Contact Pill -->
+            @if(!empty($contactNumber))
             <div class="flex justify-center mb-2">
                 <span class="bg-blue-400 text-white px-3 py-0.5 rounded-full text-xs font-bold shadow-sm">
-                    +63 993 269 7592
+                    {{ $contactNumber }}
                 </span>
             </div>
+            @endif
 
             <div class="text-center mb-3">
                 <h2 class="text-lg font-bold text-gray-900">Payment Successful</h2>
@@ -55,9 +57,9 @@
                 <div class="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
                     <div class="flex items-center gap-1.5">
                         <i class="fas fa-school text-green-600 text-sm"></i>
-                        <span class="font-bold text-gray-900 text-xs">{{ \App\Models\SystemSetting::where('key', 'school_name')->value('value') ?: 'E-Fees School' }}</span>
+                        <span class="font-bold text-gray-900 text-xs">{{ $schoolName ?? 'E-Fees School' }}</span>
                     </div>
-                    <span class="text-xs text-gray-500">{{ \App\Models\SystemSetting::where('key', 'school_year')->value('value') ?: date('Y') . '-' . (date('Y') + 1) }}</span>
+                    <span class="text-xs text-gray-500">{{ $schoolYear ?: date('Y') . '-' . (date('Y') + 1) }}</span>
                 </div>
 
                 <!-- Student Info -->
@@ -76,7 +78,7 @@
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <div>
                         <span class="text-gray-500 block">Bill Type</span>
-                        <span class="font-bold text-gray-900">Tuition Fee</span>
+                        <span class="font-bold text-gray-900">{{ $payment->remarks ?: 'Tuition Fee' }}</span>
                     </div>
                     <div class="text-right">
                         <span class="text-gray-500 block">Method</span>
@@ -96,6 +98,7 @@
             </div>
 
             <!-- Notification Box -->
+            @if(isset($smsWasSent) && $smsWasSent)
             <div class="bg-blue-50 rounded-lg p-2 flex items-start gap-2 mb-3">
                 <div class="bg-blue-100 rounded-full p-1 shrink-0 mt-0.5">
                     <i class="fas fa-envelope text-blue-600 text-xs"></i>
@@ -105,6 +108,7 @@
                     <p class="text-blue-700 text-[10px] leading-tight">Confirmation sent to registered mobile.</p>
                 </div>
             </div>
+            @endif
 
             <!-- Footer -->
             <div class="text-center">
@@ -125,11 +129,11 @@
                     Download PDF <i class="fas fa-file-pdf"></i>
                 </span>
             </a>
-            <div class="bg-blue-600 p-3 no-print hover:bg-blue-700 transition-colors cursor-pointer text-center" onclick="window.print()">
+            <button type="button" class="bg-blue-600 p-3 no-print hover:bg-blue-700 transition-colors cursor-pointer text-center w-full" onclick="window.print()">
                 <span class="text-white font-bold text-sm flex items-center justify-center gap-2">
                     Print receipt <i class="fas fa-print"></i>
                 </span>
-            </div>
+            </button>
         </div>
         </div>
     </div>

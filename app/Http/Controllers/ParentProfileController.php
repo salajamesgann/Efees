@@ -69,11 +69,19 @@ class ParentProfileController extends Controller
                 'max:255',
             ],
             'address_street' => ['nullable', 'string', 'max:500'],
+            'current_password' => ['nullable', 'string', 'required_with:password'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'sms_reminders' => ['boolean'],
             'email_notifications' => ['boolean'],
             'payment_reminders' => ['boolean'],
         ]);
+
+        // Verify current password before allowing change
+        if (! empty($validated['password'])) {
+            if (! Hash::check($validated['current_password'] ?? '', $user->password)) {
+                return back()->withErrors(['current_password' => 'The current password is incorrect.'])->withInput();
+            }
+        }
 
         // Update Parent Contact Info
         $parent->update([
@@ -93,10 +101,10 @@ class ParentProfileController extends Controller
             ]
         );
 
-        // Update User Password if provided
+        // Update User Password if provided (current_password already verified above)
         if (! empty($validated['password'])) {
             $user->update([
-                'password' => Hash::make($validated['password']),
+                'password' => $validated['password'],
             ]);
         }
 

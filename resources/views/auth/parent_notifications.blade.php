@@ -120,7 +120,7 @@
                 fetch(`/parent/notifications/${id}/read`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
                     },
@@ -130,15 +130,19 @@
                     if (data.success) {
                         const el = document.getElementById(`notification-${id}`);
                         if (el) {
+                            // Remove unread styling
                             el.classList.remove('border-blue-200', 'ring-1', 'ring-blue-100');
                             el.classList.add('border-gray-200');
-                            // Remove the mark read button & dot, replace with "Read"
-                            const actionDiv = el.querySelector('.flex-shrink-0:last-child');
+
+                            // Replace the "Mark read" button + dot with a "Read" label
+                            const actionArea = el.querySelector('.flex-shrink-0.flex');
+                            if (actionArea) {
+                                actionArea.outerHTML = `<span class="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap"><i class="fas fa-check"></i> Read</span>`;
+                            }
                         }
                         this.unreadCount = Math.max(0, this.unreadCount - 1);
                         this.updateBadge();
-                        // Reload to update the UI cleanly
-                        location.reload();
+                        this.updateSubtitle();
                     }
                 })
                 .catch(err => console.error('Error marking notification as read:', err));
@@ -148,7 +152,7 @@
                 fetch('/parent/notifications/read-all', {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
                     },
@@ -156,12 +160,36 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
+                        // Update all unread notifications in the DOM
+                        document.querySelectorAll('[id^="notification-"].border-blue-200').forEach(el => {
+                            el.classList.remove('border-blue-200', 'ring-1', 'ring-blue-100');
+                            el.classList.add('border-gray-200');
+                            const actionArea = el.querySelector('.flex-shrink-0.flex');
+                            if (actionArea) {
+                                actionArea.outerHTML = `<span class="text-xs text-gray-400 flex-shrink-0 whitespace-nowrap"><i class="fas fa-check"></i> Read</span>`;
+                            }
+                        });
                         this.unreadCount = 0;
                         this.updateBadge();
-                        location.reload();
+                        this.updateSubtitle();
+
+                        // Hide the "Mark All as Read" button
+                        const markAllBtn = document.querySelector('[\\@click="markAllRead()"]');
+                        if (markAllBtn) markAllBtn.style.display = 'none';
                     }
                 })
                 .catch(err => console.error('Error marking all notifications as read:', err));
+            },
+
+            updateSubtitle() {
+                const subtitle = this.$el.querySelector('p.text-gray-600');
+                if (subtitle) {
+                    if (this.unreadCount > 0) {
+                        subtitle.innerHTML = `You have <span class="font-bold text-blue-600">${this.unreadCount}</span> unread notification${this.unreadCount > 1 ? 's' : ''}.`;
+                    } else {
+                        subtitle.textContent = 'All caught up!';
+                    }
+                }
             },
 
             updateBadge() {

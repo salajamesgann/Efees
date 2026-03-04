@@ -63,7 +63,7 @@
             </a>
         </div>
     @else
-        <form method="POST" action="{{ route('parent.pay.multi.store') }}" @submit="handleSubmit($event)">
+        <form method="POST" action="{{ route('parent.pay.multi.store') }}" x-data="{ showConfirm: false }" @submit.prevent="showConfirm = true">
             @csrf
 
             <!-- Student Selection Cards -->
@@ -118,7 +118,7 @@
                                     </div>
                                     <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                                         <div class="text-right">
-                                            <p class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Balance</p>
+                                            <p class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Balance</p>
                                             <p class="font-bold text-gray-900">₱{{ number_format($data['balance'], 2) }}</p>
                                         </div>
                                     </div>
@@ -240,14 +240,56 @@
             </div>
 
             <!-- Actions -->
-            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
-                <a href="{{ route('parent.dashboard') }}" class="w-full sm:w-auto text-center px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Cancel</a>
-                <button type="submit"
-                        :disabled="selectedCount === 0 || grandTotal < 20"
-                        class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
-                    <i class="fas fa-lock"></i>
-                    <span x-text="selectedCount > 0 ? 'Pay ₱' + formatNumber(grandTotal) + ' for ' + selectedCount + ' Student' + (selectedCount > 1 ? 's' : '') : 'Select Students to Pay'"></span>
-                </button>
+            <div class="flex flex-col gap-3">
+                <!-- Minimum amount warning -->
+                <div x-show="selectedCount > 0 && grandTotal > 0 && grandTotal < 20" x-cloak
+                     class="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Minimum payment amount is <span class="font-bold">₱20.00</span>. Please increase the amount to proceed.
+                </div>
+
+                <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+                    <a href="{{ route('parent.dashboard') }}" class="w-full sm:w-auto text-center px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Cancel</a>
+                    <button type="submit"
+                            :disabled="selectedCount === 0 || grandTotal < 20 || submitting"
+                            class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                        <template x-if="!submitting">
+                            <span class="flex items-center gap-2">
+                                <i class="fas fa-lock"></i>
+                                <span x-text="selectedCount > 0 ? 'Pay ₱' + formatNumber(grandTotal) + ' for ' + selectedCount + ' Student' + (selectedCount > 1 ? 's' : '') : 'Select Students to Pay'"></span>
+                            </span>
+                        </template>
+                        <template x-if="submitting">
+                            <span class="flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Processing…</span>
+                        </template>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Confirmation Modal -->
+            <div x-show="showConfirm" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.4);">
+                <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" @click.away="showConfirm = false">
+                    <div class="text-center mb-4">
+                        <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-shield-alt text-blue-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Confirm Payment</h3>
+                        <p class="text-gray-500 text-sm mt-1">
+                            Pay <span class="font-bold text-blue-600" x-text="'₱' + formatNumber(grandTotal)"></span>
+                            for <span class="font-bold" x-text="selectedCount"></span> student<span x-show="selectedCount > 1">s</span>?
+                        </p>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button type="button"
+                                @click="showConfirm = false; submitting = true; $el.closest('form').submit();"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center gap-2">
+                            <i class="fas fa-check"></i> Yes, Pay Now
+                        </button>
+                        <button type="button" @click="showConfirm = false" class="w-full border border-gray-300 text-gray-700 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
             </div>
         </form>
     @endif
@@ -269,6 +311,7 @@ function multiChildPayment() {
         ],
         grandTotal: 0,
         selectedCount: 0,
+        submitting: false,
 
         get allSelected() {
             return this.children.length > 0 && this.children.every(c => c.selected);
@@ -305,14 +348,6 @@ function multiChildPayment() {
         formatNumber(num) {
             return parseFloat(num || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
-
-        handleSubmit(e) {
-            // Filter out unselected children before submit
-            if (this.selectedCount === 0 || this.grandTotal < 20) {
-                e.preventDefault();
-                return;
-            }
-        }
     };
 }
 </script>

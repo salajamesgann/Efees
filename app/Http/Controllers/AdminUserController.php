@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\Admin;
 use App\Models\ParentContact;
 use App\Models\Role;
@@ -97,6 +99,10 @@ class AdminUserController extends Controller
                                     });
                             });
                     });
+                    // Admin-type users are always considered active (no is_active field)
+                    if ($isActive) {
+                        $sub->orWhere('roleable_type', Admin::class);
+                    }
                 });
             })
             ->orderBy('user_id', 'desc');
@@ -126,41 +132,9 @@ class AdminUserController extends Controller
     /**
      * Store a newly created user (Admin/Staff only).
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
-        $rules = [
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'phone_number' => ['nullable', 'string', 'min:7', 'max:15'],
-            'password' => [
-                'required',
-                'string',
-                'min:8',
-                'confirmed',
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
-            ],
-            'role_name' => ['required', 'string', 'in:staff,admin,parent'],
-        ];
-
-        // Conditional validation rules
-        if ($request->input('role_name') === 'parent') {
-            $rules['full_name'] = ['required', 'string', 'max:100'];
-        } else {
-            $rules['first_name'] = ['required', 'string', 'max:100'];
-            $rules['last_name'] = ['required', 'string', 'max:100'];
-            $rules['middle_initial'] = ['nullable', 'string', 'max:1'];
-        }
-
-        $validator = Validator::make($request->all(), $rules, [
-            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
-            'email.unique' => 'This email address is already registered.',
-            'full_name.required' => 'Parent Name is required.',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $validated = $validator->validated();
+        $validated = $request->validated();
 
         try {
             DB::transaction(function () use ($validated) {
@@ -173,16 +147,14 @@ class AdminUserController extends Controller
                 if ($roleName === 'parent') {
                     $email = strtolower($validated['email']);
 
-                    // Check if parent user already exists
-                    if (User::where('email', $email)->exists()) {
-                        throw new \Exception('A user with this email already exists.');
-                    }
-
                     // Check if parent already exists by email
                     $parent = ParentContact::where('email', $email)->first();
 
+                    $fullName = trim($validated['first_name'].' '.($validated['middle_initial'] ?? '').' '.$validated['last_name']);
+                    $fullName = trim(str_replace('  ', ' ', $fullName));
+
                     $parentData = [
-                        'full_name' => $validated['full_name'],
+                        'full_name' => $fullName,
                         'email' => $email,
                         'phone' => $validated['phone_number'] ?? null,
                         'account_status' => 'Active',
@@ -197,9 +169,10 @@ class AdminUserController extends Controller
                     }
 
                     // Create User linked to ParentContact
+                    // NOTE: Do NOT Hash::make() — the User model's 'hashed' cast handles it automatically
                     User::create([
                         'email' => $email,
-                        'password' => Hash::make($validated['password']),
+                        'password' => $validated['password'],
                         'role_id' => $role->role_id,
                         'roleable_type' => ParentContact::class,
                         'roleable_id' => (string) $parent->id,
@@ -208,11 +181,6 @@ class AdminUserController extends Controller
                     $auditSubject = $parent;
                 } else {
                     $email = strtolower($validated['email']);
-
-                    // Check if staff user already exists
-                    if (User::where('email', $email)->exists()) {
-                        throw new \Exception('A user with this email already exists.');
-                    }
 
                     // Create Staff
                     $position = $roleName === 'admin' ? 'Admin' : 'Staff';
@@ -279,53 +247,25 @@ class AdminUserController extends Controller
     /**
      * Update the specified user.
      */
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $rules = [
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->user_id.',user_id'],
-            'phone_number' => ['nullable', 'string', 'min:7', 'max:15'],
-            'password' => [
-                'nullable',
-                'string',
-                'min:8',
-                'confirmed',
-                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
-            ],
-        ];
-
-        // Conditional validation based on user type
-        if ($user->roleable_type === Staff::class || $user->roleable_type === Student::class) {
-            $rules['first_name'] = ['required', 'string', 'max:100'];
-            $rules['last_name'] = ['required', 'string', 'max:100'];
-            $rules['middle_initial'] = ['nullable', 'string', 'max:1'];
-        } elseif ($user->roleable_type === ParentContact::class) {
-            $rules['full_name'] = ['required', 'string', 'max:100'];
-        }
-
-        $validator = Validator::make($request->all(), $rules, [
-            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $validated = $validator->validated();
+        $validated = $request->validated();
 
         try {
             DB::transaction(function () use ($validated, $user) {
                 // Update User email/password
+                // NOTE: Do NOT Hash::make() — the User model's 'hashed' cast handles it automatically
                 $userData = [
                     'email' => strtolower($validated['email']),
                 ];
                 if (! empty($validated['password'])) {
-                    $userData['password'] = Hash::make($validated['password']);
+                    $userData['password'] = $validated['password'];
                 }
                 $user->update($userData);
 
                 // Update Roleable details
                 if ($user->roleable) {
-                    if ($user->roleable_type === Staff::class) {
+                    if ($user->roleable_type === Staff::class || $user->roleable_type === Admin::class) {
                         $user->roleable->update([
                             'first_name' => $validated['first_name'],
                             'last_name' => $validated['last_name'],
@@ -339,8 +279,10 @@ class AdminUserController extends Controller
                             'middle_initial' => $validated['middle_initial'] ?? null,
                         ]);
                     } elseif ($user->roleable_type === ParentContact::class) {
+                        $fullName = trim($validated['first_name'].' '.($validated['middle_initial'] ?? '').' '.$validated['last_name']);
+                        $fullName = trim(str_replace('  ', ' ', $fullName));
                         $user->roleable->update([
-                            'full_name' => $validated['full_name'],
+                            'full_name' => $fullName,
                             'phone' => $validated['phone_number'] ?? null,
                         ]);
                     }

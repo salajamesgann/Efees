@@ -1,4 +1,8 @@
-  <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none" id="sidebar">
+<!-- Mobile Sidebar Overlay -->
+<div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/80 z-40 md:hidden" style="display: none;"></div>
+
+<!-- Sidebar -->
+<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-50 w-72 h-screen bg-white text-slate-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:inset-0 border-r border-slate-200 flex flex-col shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] custom-scrollbar" id="sidebar">
       <!-- Header -->
       <div class="flex items-center justify-between gap-3 px-8 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
           <div class="flex items-center gap-3">
@@ -39,9 +43,9 @@
 
           
             <!-- User Management -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.users.index') }}">
+            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ (request()->routeIs('admin.users.*') || request()->routeIs('admin.staff.*')) ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.staff.index') }}">
                 <div class="w-8 flex justify-center">
-                    <i class="fas fa-chalkboard-teacher text-lg {{ request()->routeIs('admin.users.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+                    <i class="fas fa-chalkboard-teacher text-lg {{ (request()->routeIs('admin.users.*') || request()->routeIs('admin.staff.*')) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
                 </div>
                 <span class="text-sm font-medium">User Management</span>
             </a>

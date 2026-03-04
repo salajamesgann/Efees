@@ -61,8 +61,79 @@
         <p class="text-xs text-gray-500 mt-2">{{ $progressPercent }}% complete</p>
     </div>
 
-    <!-- Installments Table -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+    <!-- Mobile Card Layout (< md) -->
+    <div class="md:hidden space-y-3 mb-6">
+        @foreach($installments as $index => $installment)
+            @php
+                $isPaid = $installment->status === 'paid';
+                $isPartial = $installment->status === 'partial';
+                $isOverdue = !$isPaid && $installment->payment_date && \Carbon\Carbon::parse($installment->payment_date)->isPast();
+            @endphp
+            <div class="bg-white rounded-xl shadow-sm border {{ $isOverdue ? 'border-red-200 bg-red-50/30' : 'border-gray-200' }} p-4">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+                            {{ $isPaid ? 'bg-green-100 text-green-700' : ($isOverdue ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') }}">
+                            @if($isPaid)
+                                <i class="fas fa-check"></i>
+                            @else
+                                {{ $index + 1 }}
+                            @endif
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900 text-sm">{{ $installment->notes ?: 'Installment ' . ($index + 1) }}</p>
+                            <p class="text-xs {{ $isOverdue ? 'text-red-600 font-semibold' : 'text-gray-500' }}">
+                                @if($installment->payment_date)
+                                    Due: {{ \Carbon\Carbon::parse($installment->payment_date)->format('M d, Y') }}
+                                    @if($isOverdue) &mdash; <span class="font-bold">Overdue</span> @endif
+                                @else
+                                    Due: TBD
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                    @if($isPaid)
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 flex-shrink-0">
+                            <i class="fas fa-check-circle"></i> Paid
+                        </span>
+                    @elseif($isPartial)
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-800 flex-shrink-0">
+                            <i class="fas fa-adjust"></i> Partial
+                        </span>
+                    @elseif($isOverdue)
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle"></i> Overdue
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 flex-shrink-0">
+                            <i class="fas fa-clock"></i> Upcoming
+                        </span>
+                    @endif
+                </div>
+                <div class="flex items-center justify-between text-sm mt-2 pt-2 border-t border-gray-100">
+                    <div>
+                        <span class="text-xs text-gray-500">Amount</span>
+                        <p class="font-medium text-gray-900">₱{{ number_format((float) $installment->amount, 2) }}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-gray-500">Balance</span>
+                        <p class="font-bold {{ $isPaid ? 'text-green-600' : ($isOverdue ? 'text-red-600' : 'text-gray-900') }}">₱{{ number_format((float) $installment->balance, 2) }}</p>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+        <!-- Mobile Total -->
+        <div class="bg-gray-50 rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+            <span class="font-bold text-gray-900">Total</span>
+            <div class="text-right">
+                <p class="text-sm text-gray-500">Amount: <span class="font-bold text-gray-900">₱{{ number_format($installments->sum('amount'), 2) }}</span></p>
+                <p class="text-sm text-gray-500">Balance: <span class="font-bold text-blue-600">₱{{ number_format($installments->sum('balance'), 2) }}</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desktop Table Layout (>= md) -->
+    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm text-left">
                 <thead class="bg-gray-50 text-gray-900 font-semibold border-b border-gray-200">
@@ -101,7 +172,7 @@
                                 @if($installment->payment_date)
                                     {{ \Carbon\Carbon::parse($installment->payment_date)->format('M d, Y') }}
                                     @if($isOverdue)
-                                        <span class="block text-[10px] text-red-500 font-bold uppercase tracking-wider">Overdue</span>
+                                        <span class="block text-xs text-red-500 font-bold uppercase tracking-wider">Overdue</span>
                                     @endif
                                 @else
                                     <span class="text-gray-400">TBD</span>

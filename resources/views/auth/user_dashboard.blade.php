@@ -39,6 +39,37 @@
         .fab-pay:active {
             transform: scale(0.92);
         }
+        /* Summary hero card effects */
+        .summary-hero {
+            animation: heroEntrance 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        @keyframes heroEntrance {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .summary-shimmer {
+            background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 55%, transparent 60%);
+            background-size: 200% 100%;
+            animation: shimmerSweep 4s ease-in-out infinite;
+        }
+        @keyframes shimmerSweep {
+            0%, 100% { background-position: 200% center; }
+            50% { background-position: -200% center; }
+        }
+        .gauge-entrance {
+            animation: gaugeIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+        }
+        @keyframes gaugeIn {
+            from { opacity: 0; transform: scale(0.6) rotate(-20deg); }
+            to { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        .gauge-fill {
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.5s;
+        }
+        .progress-bar-glow {
+            box-shadow: 0 0 8px rgba(52, 211, 153, 0.3), 0 0 16px rgba(34, 211, 238, 0.15);
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+        }
     </style>
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-800" x-data="{ sidebarOpen: false }">
@@ -251,38 +282,84 @@
             @if((isset($selectedChild) && $selectedChild) || request('section') == 'students')
                 @include('auth.student_dashboard_content')
             @else
-            <!-- Consolidated Summary -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                <!-- Total Balance Card -->
-                <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg p-6 text-white transform transition-all hover:scale-[1.01]">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-red-100 font-medium text-sm uppercase tracking-wider">Total Balance Due</p>
-                            <h2 id="consolidatedBalanceDue" class="text-4xl font-bold mt-2">₱{{ number_format($consolidatedBalanceDue, 2) }}</h2>
-                        </div>
-                        <div class="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                            <i class="fas fa-exclamation-circle text-2xl text-white"></i>
-                        </div>
-                    </div>
-                    <p class="mt-4 text-red-100 text-sm">
-                        Total outstanding across all students
-                    </p>
-                </div>
+            <!-- Financial Overview — Hero Card -->
+            @php
+                $totalFees = $consolidatedBalanceDue + $consolidatedTotalPaid;
+                $overallPct = $totalFees > 0 ? min(round(($consolidatedTotalPaid / $totalFees) * 100), 100) : 0;
+                $gaugeCirc = 2 * 3.14159 * 46;
+                $gaugeOffset = $gaugeCirc - ($gaugeCirc * $overallPct / 100);
+            @endphp
+            <div class="summary-hero relative overflow-hidden rounded-2xl mb-8" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 35%, #4338ca 65%, #6366f1 100%);">
+                <!-- Decorative orbs -->
+                <div class="absolute top-0 right-0 w-40 sm:w-72 h-40 sm:h-72 bg-white/[0.04] rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl pointer-events-none"></div>
+                <div class="absolute bottom-0 left-0 w-32 sm:w-56 h-32 sm:h-56 bg-purple-400/[0.08] rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl pointer-events-none"></div>
 
-                <!-- Total Paid Card -->
-                <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg p-6 text-white transform transition-all hover:scale-[1.01]">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-green-100 font-medium text-sm uppercase tracking-wider">Total Amount Paid</p>
-                            <h2 id="consolidatedTotalPaid" class="text-4xl font-bold mt-2">₱{{ number_format($consolidatedTotalPaid, 2) }}</h2>
+                <!-- Shimmer sweep -->
+                <div class="summary-shimmer absolute inset-0 pointer-events-none"></div>
+
+                <div class="relative z-10 p-4 sm:p-7">
+                    <!-- Header row -->
+                    <div class="flex items-center justify-between mb-3 sm:mb-6">
+                        <div class="flex items-center gap-1.5 sm:gap-2">
+                            <span class="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-emerald-400"></span>
+                            </span>
+                            <span class="text-indigo-200/80 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.15em]">Financial Overview</span>
                         </div>
-                        <div class="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                            <i class="fas fa-check-circle text-2xl text-white"></i>
+                        <span class="text-indigo-300/50 text-[10px] sm:text-[11px] font-medium tracking-wide">SY {{ date('Y') }}–{{ date('Y') + 1 }}</span>
+                    </div>
+
+                    <!-- Content: always horizontal row -->
+                    <div class="flex items-center gap-3 sm:gap-8">
+                        <!-- Gauge ring — compact on mobile -->
+                        <div class="relative flex-shrink-0 gauge-entrance">
+                            <svg viewBox="0 0 120 120" class="w-[72px] h-[72px] sm:w-[130px] sm:h-[130px]">
+                                <circle cx="60" cy="60" r="55" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+                                <circle cx="60" cy="60" r="46" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="7" stroke-linecap="round"/>
+                                <circle cx="60" cy="60" r="46" fill="none" stroke="url(#heroGaugeGrad)" stroke-width="7"
+                                    stroke-dasharray="{{ $gaugeCirc }}" stroke-dashoffset="{{ $gaugeOffset }}"
+                                    stroke-linecap="round" class="gauge-fill" transform="rotate(-90 60 60)"/>
+                                <defs>
+                                    <linearGradient id="heroGaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#34d399"/>
+                                        <stop offset="50%" stop-color="#22d3ee"/>
+                                        <stop offset="100%" stop-color="#a78bfa"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-lg sm:text-4xl font-black text-white tracking-tight leading-none" id="overallPct">{{ $overallPct }}</span>
+                                <span class="text-[7px] sm:text-[10px] text-indigo-300/80 uppercase font-bold tracking-[0.2em] mt-0.5">% paid</span>
+                            </div>
+                        </div>
+
+                        <!-- Stats column — tighter on mobile -->
+                        <div class="flex-1 min-w-0 space-y-1.5 sm:space-y-3">
+                            <!-- Balance Due & Total Paid — inline on mobile, stacked on sm+ -->
+                            <div class="grid grid-cols-2 sm:grid-cols-1 gap-1.5 sm:gap-3">
+                                <div class="bg-white/[0.07] backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 py-2 sm:px-4 sm:py-3.5 border border-white/[0.08]">
+                                    <p class="text-indigo-300/70 text-[8px] sm:text-[10px] font-semibold uppercase tracking-[0.12em] mb-0.5 leading-tight">Balance Due</p>
+                                    <p id="consolidatedBalanceDue" class="text-sm sm:text-2xl font-black text-white truncate tracking-tight leading-snug">₱{{ number_format($consolidatedBalanceDue, 2) }}</p>
+                                </div>
+                                <div class="bg-white/[0.07] backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 py-2 sm:px-4 sm:py-3.5 border border-white/[0.08]">
+                                    <p class="text-indigo-300/70 text-[8px] sm:text-[10px] font-semibold uppercase tracking-[0.12em] mb-0.5 leading-tight">Total Paid</p>
+                                    <p id="consolidatedTotalPaid" class="text-sm sm:text-2xl font-black text-emerald-400 truncate tracking-tight leading-snug">₱{{ number_format($consolidatedTotalPaid, 2) }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Gradient progress bar -->
+                            <div class="pt-0 sm:pt-1">
+                                <div class="flex items-center justify-between text-[9px] sm:text-[11px] mb-1">
+                                    <span class="text-indigo-200/60 font-medium">₱{{ number_format($consolidatedTotalPaid, 2) }} of ₱{{ number_format($totalFees, 2) }}</span>
+                                    <span class="text-indigo-300/40 font-medium hidden sm:inline">total fees</span>
+                                </div>
+                                <div class="w-full bg-white/[0.08] rounded-full h-1 sm:h-[7px] overflow-hidden">
+                                    <div class="h-full rounded-full progress-bar-glow" style="width: {{ $overallPct }}%; background: linear-gradient(90deg, #34d399, #22d3ee, #a78bfa);"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <p class="mt-4 text-green-100 text-sm">
-                        Total payments made this school year
-                    </p>
                 </div>
             </div>
 
@@ -297,11 +374,11 @@
                     @foreach($childrenSummaries as $child)
                         <div id="child-card-{{ $child['student_id'] }}" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                             <!-- Card Header -->
-                            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                            <div class="bg-gray-50 px-5 py-3 sm:px-6 sm:py-4 border-b border-gray-100 flex justify-between items-center">
                                 <div>
-                                    <h3 class="font-bold text-lg text-gray-900">{{ $child['full_name'] }}</h3>
-                                    <p class="text-sm text-gray-500">
-                                        {{ $child['full_name'] }} • {{ $child['level'] ?? 'N/A' }} • {{ $child['section'] ?? 'N/A' }}
+                                    <h3 class="font-bold text-base sm:text-lg text-gray-900">{{ $child['full_name'] }}</h3>
+                                    <p class="text-xs sm:text-sm text-gray-500">
+                                        {{ $child['level'] ?? 'N/A' }} • {{ $child['section'] ?? 'N/A' }}
                                     </p>
                                 </div>
                                 <div class="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 font-bold text-sm border border-gray-200">
@@ -310,7 +387,7 @@
                             </div>
 
                             <!-- Card Body -->
-                            <div class="p-6">
+                            <div class="p-4 sm:p-6">
                                 <!-- Payment Progress Ring -->
                                 @php
                                     $totalAmt = $child['totalAmount'] ?? 0;
@@ -320,16 +397,16 @@
                                     $dashOffset = $circumference - ($circumference * $paidPct / 100);
                                     $ringColor = $paidPct >= 100 ? '#16a34a' : ($paidPct >= 50 ? '#2563eb' : ($paidPct >= 25 ? '#f59e0b' : '#ef4444'));
                                 @endphp
-                                <div class="flex items-center gap-5 mb-6 p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100">
+                                <div class="flex items-center gap-4 sm:gap-5 mb-5 p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100">
                                     <div class="relative flex-shrink-0" id="child-ring-{{ $child['student_id'] }}">
-                                        <svg width="96" height="96" viewBox="0 0 96 96" class="transform -rotate-90">
+                                        <svg width="80" height="80" viewBox="0 0 96 96" class="transform -rotate-90 w-[72px] h-[72px] sm:w-[80px] sm:h-[80px]">
                                             <circle cx="48" cy="48" r="40" fill="none" stroke="#e5e7eb" stroke-width="7"/>
                                             <circle cx="48" cy="48" r="40" fill="none" stroke="{{ $ringColor }}" stroke-width="7"
                                                 stroke-dasharray="{{ $circumference }}" stroke-dashoffset="{{ $dashOffset }}"
                                                 stroke-linecap="round" class="transition-all duration-700"/>
                                         </svg>
                                         <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span class="text-lg font-bold text-gray-900" id="child-pct-{{ $child['student_id'] }}">{{ $paidPct }}%</span>
+                                            <span class="text-base sm:text-lg font-bold text-gray-900" id="child-pct-{{ $child['student_id'] }}">{{ $paidPct }}%</span>
                                             <span class="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">paid</span>
                                         </div>
                                     </div>
@@ -339,76 +416,23 @@
                                         <div class="w-full bg-gray-200 rounded-full h-2">
                                             <div class="h-2 rounded-full transition-all duration-700" style="width: {{ $paidPct }}%; background-color: {{ $ringColor }};"></div>
                                         </div>
-                                        <div class="flex justify-between text-[11px] text-gray-500 mt-1">
+                                        <div class="flex justify-between text-xs text-gray-500 mt-1">
                                             <span>₱{{ number_format($child['totalPaid'], 2) }} paid</span>
                                             <span>₱{{ number_format($child['balanceDue'], 2) }} left</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-2 gap-4 mb-6">
-                                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                                <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-5">
+                                    <div class="bg-red-50 p-3 sm:p-4 rounded-xl border border-red-100">
                                         <p class="text-xs text-red-600 uppercase font-bold tracking-wide mb-1">Balance</p>
                                         <p id="child-balance-{{ $child['student_id'] }}" class="text-xl font-bold text-red-700">₱{{ number_format($child['balanceDue'], 2) }}</p>
                                     </div>
-                                    <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                                    <div class="bg-green-50 p-3 sm:p-4 rounded-xl border border-green-100">
                                         <p class="text-xs text-green-600 uppercase font-bold tracking-wide mb-1">Paid</p>
                                         <p id="child-paid-{{ $child['student_id'] }}" class="text-xl font-bold text-green-700">₱{{ number_format($child['totalPaid'], 2) }}</p>
                                     </div>
                                 </div>
-
-                                <!-- Year-over-Year Fee Comparison -->
-                                @php $cmp = $child['feeComparison'] ?? []; @endphp
-                                @if(!empty($cmp['previousBaseFee']) && !empty($cmp['currentBaseFee']))
-                                <div id="child-yoy-{{ $child['student_id'] }}" class="mb-6 p-4 rounded-xl border border-gray-100 bg-gradient-to-r from-indigo-50/60 to-purple-50/60">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
-                                            <i class="fas fa-chart-line text-indigo-500"></i>
-                                            Fee Comparison
-                                        </h4>
-                                        @if($cmp['changePercent'] !== null)
-                                            @if($cmp['changePercent'] > 0)
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
-                                                    <i class="fas fa-arrow-up"></i> +{{ $cmp['changePercent'] }}%
-                                                </span>
-                                            @elseif($cmp['changePercent'] < 0)
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200">
-                                                    <i class="fas fa-arrow-down"></i> {{ $cmp['changePercent'] }}%
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                                                    <i class="fas fa-equals"></i> No change
-                                                </span>
-                                            @endif
-                                        @endif
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div class="text-center p-2.5 bg-white/70 rounded-lg border border-gray-100">
-                                            <p class="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1">{{ $cmp['previousYear'] ?? 'Last Year' }}</p>
-                                            <p class="text-base font-bold text-gray-700">₱{{ number_format($cmp['previousBaseFee'], 2) }}</p>
-                                        </div>
-                                        <div class="text-center p-2.5 bg-white/70 rounded-lg border border-indigo-100">
-                                            <p class="text-[10px] text-indigo-600 font-semibold uppercase tracking-wider mb-1">{{ $cmp['currentYear'] ?? 'This Year' }}</p>
-                                            <p class="text-base font-bold text-indigo-700">₱{{ number_format($cmp['currentBaseFee'], 2) }}</p>
-                                        </div>
-                                    </div>
-                                    @if($cmp['changeAmount'] !== null && $cmp['changeAmount'] != 0)
-                                        <p class="text-center text-[11px] text-gray-500 mt-2.5">
-                                            Base tuition for {{ $child['level'] ?? 'this level' }}
-                                            @if($cmp['changeAmount'] > 0)
-                                                increased by <span class="font-bold text-red-600">₱{{ number_format(abs($cmp['changeAmount']), 2) }}</span>
-                                            @else
-                                                decreased by <span class="font-bold text-green-600">₱{{ number_format(abs($cmp['changeAmount']), 2) }}</span>
-                                            @endif
-                                            year-over-year.
-                                        </p>
-                                    @else
-                                        <p class="text-center text-[11px] text-gray-500 mt-2.5">
-                                            Base tuition for {{ $child['level'] ?? 'this level' }} is unchanged from last year.
-                                        </p>
-                                    @endif
-                                </div>
-                                @endif
 
                                 <!-- Upcoming Fees -->
                                 <div class="mb-6">
@@ -690,9 +714,22 @@
             // Update Consolidated Totals
             const balanceEl = document.getElementById('consolidatedBalanceDue');
             const paidEl = document.getElementById('consolidatedTotalPaid');
+            const pctEl = document.getElementById('overallPct');
             
             if (balanceEl) balanceEl.innerText = '₱' + Number(data.consolidatedBalanceDue).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             if (paidEl) paidEl.innerText = '₱' + Number(data.consolidatedTotalPaid).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            // Update hero gauge
+            const totalFees = Number(data.consolidatedBalanceDue) + Number(data.consolidatedTotalPaid);
+            const newPct = totalFees > 0 ? Math.min(Math.round((data.consolidatedTotalPaid / totalFees) * 100), 100) : 0;
+            if (pctEl) pctEl.innerText = newPct;
+            const heroGauge = document.querySelector('.gauge-fill');
+            if (heroGauge) {
+                const circ = 2 * Math.PI * 46;
+                heroGauge.setAttribute('stroke-dashoffset', circ - (circ * newPct / 100));
+            }
+            const heroBar = document.querySelector('.progress-bar-glow');
+            if (heroBar) heroBar.style.width = newPct + '%';
 
             // Update Children Cards
             if (data.children && Array.isArray(data.children)) {

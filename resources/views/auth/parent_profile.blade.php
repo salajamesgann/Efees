@@ -50,7 +50,7 @@
                         <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
                             <i class="fas fa-child"></i>
                         </div>
-                        <span>{{ $parent->students()->count() }} Linked Students</span>
+                        <span>{{ $myChildren->count() }} Linked Students</span>
                     </div>
                 </div>
             </div>
@@ -147,6 +147,15 @@
                             <i class="fas fa-lock text-gray-400"></i> Change Password
                         </h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="col-span-1 md:col-span-2">
+                                <label for="current_password" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                                <input type="password" name="current_password" id="current_password" autocomplete="current-password"
+                                       class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5"
+                                       placeholder="Required to change password">
+                                @error('current_password')
+                                    <p class="text-sm text-red-600 mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
                             <div>
                                 <label for="password" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
                                 <input type="password" name="password" id="password" autocomplete="new-password"

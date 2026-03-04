@@ -76,16 +76,28 @@ class ParentPaymentController extends Controller
             $studentIds = collect([$filterStudentId]);
         }
 
-        $payments = Payment::whereIn('student_id', $studentIds)
-            ->with('student')
-            ->orderBy('paid_at', 'desc')
-            ->paginate(15);
+        $query = Payment::whereIn('student_id', $studentIds)->with('student');
+
+        // Date range filters
+        if ($request->filled('date_from')) {
+            $query->whereDate('paid_at', '>=', $request->query('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('paid_at', '<=', $request->query('date_to'));
+        }
+
+        $payments = $query->orderBy('paid_at', 'desc')
+            ->paginate(15)
+            ->appends($request->query());
 
         return view('auth.parent_payment_history', [
             'payments' => $payments,
             'isParent' => true,
             'myChildren' => $students,
-            'selectedChild' => null, // No specific child selected for sidebar context unless filtered
+            'selectedChild' => null,
+            'filterStudentId' => $filterStudentId,
+            'filterDateFrom' => $request->query('date_from', ''),
+            'filterDateTo' => $request->query('date_to', ''),
         ]);
     }
 
@@ -112,7 +124,12 @@ class ParentPaymentController extends Controller
         $contactNumber = (string) ($parent->phone ?? '');
         $schoolYear = (string) (SystemSetting::where('key', 'school_year')->value('value') ?: '');
 
-        return view('auth.parent_receipt', compact('payment', 'myChildren', 'isParent', 'selectedChild', 'schoolName', 'contactNumber', 'schoolYear'));
+        // Check if an SMS confirmation was actually sent for this payment
+        $smsWasSent = \App\Models\SmsLog::where('student_id', $payment->student_id)
+            ->where('message', 'like', '%' . ($payment->reference_number ?? $payment->id) . '%')
+            ->exists();
+
+        return view('auth.parent_receipt', compact('payment', 'myChildren', 'isParent', 'selectedChild', 'schoolName', 'contactNumber', 'schoolYear', 'smsWasSent'));
     }
 
     public function store(Request $request): RedirectResponse
