@@ -62,7 +62,7 @@
     @include('layouts.staff_sidebar')
 
     <!-- Main Content -->
-    <main class="flex-1 p-6 md:p-8 overflow-y-auto main-scrollbar" x-data="{ 
+    <main class="flex-1 p-6 md:p-8 md:h-screen overflow-y-auto main-scrollbar" x-data="{ 
         activeTab: 'send', 
         selectedStudents: [], 
         selectAll: false,

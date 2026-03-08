@@ -48,7 +48,7 @@
     <div x-show="sidebarOpen" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden" x-cloak></div>
 
     <!-- Sidebar -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:static inset-y-0 left-0 z-40 w-72 h-screen bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none">
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:sticky md:top-0 inset-y-0 left-0 z-40 w-72 h-screen overflow-y-auto bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none">
         <div class="flex items-center gap-3 px-8 py-6 border-b border-slate-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
             <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
                 <i class="fas fa-user-shield text-lg"></i>
@@ -104,6 +104,18 @@
                     <i class="fas fa-check-double text-lg {{ request()->routeIs('admin.payment_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
                 </div>
                 <span class="text-sm font-medium">Payment Approvals</span>
+            </a>
+
+            <!-- Void Approvals -->
+            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.void_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.void_approvals.index') }}">
+                <div class="w-8 flex justify-center">
+                    <i class="fas fa-undo-alt text-lg {{ request()->routeIs('admin.void_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+                </div>
+                <span class="text-sm font-medium">Void Approvals</span>
+                @php try { $pendingVoids = \App\Models\PaymentVoidRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingVoids = 0; } @endphp
+                @if($pendingVoids > 0)
+                  <span class="ml-auto bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingVoids }}</span>
+                @endif
             </a>
 
             <!-- Link Approvals -->

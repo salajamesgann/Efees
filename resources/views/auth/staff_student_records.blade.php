@@ -66,7 +66,7 @@
     @include('layouts.staff_sidebar')
 
     <!-- Main Content -->
-    <main class="flex-1 p-6 md:p-8 overflow-y-auto main-scrollbar">
+    <main class="flex-1 p-6 md:p-8 md:h-screen overflow-y-auto main-scrollbar">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
             <div>
                 <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Student Records</h1>
@@ -281,8 +281,63 @@
             </div>
 
             @if($studentRecords->hasPages())
-                <div class="px-6 py-4 border-t border-gray-200">
-                    {{ $studentRecords->appends(request()->query())->links() }}
+                <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                    <p class="text-sm text-gray-500">
+                        Showing <span class="font-semibold text-gray-700">{{ $studentRecords->firstItem() }}</span> to <span class="font-semibold text-gray-700">{{ $studentRecords->lastItem() }}</span> of <span class="font-semibold text-gray-700">{{ $studentRecords->total() }}</span> students
+                    </p>
+                    <nav class="flex items-center gap-1">
+                        {{-- Previous --}}
+                        @if($studentRecords->onFirstPage())
+                            <span class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-300 cursor-not-allowed">
+                                <i class="fas fa-chevron-left text-xs"></i>
+                            </span>
+                        @else
+                            <a href="{{ $studentRecords->appends(request()->query())->previousPageUrl() }}" class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-chevron-left text-xs"></i>
+                            </a>
+                        @endif
+
+                        {{-- Page Numbers --}}
+                        @php
+                            $currentPage = $studentRecords->currentPage();
+                            $lastPage = $studentRecords->lastPage();
+                            $start = max(1, $currentPage - 2);
+                            $end = min($lastPage, $currentPage + 2);
+                        @endphp
+
+                        @if($start > 1)
+                            <a href="{{ $studentRecords->appends(request()->query())->url(1) }}" class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">1</a>
+                            @if($start > 2)
+                                <span class="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">...</span>
+                            @endif
+                        @endif
+
+                        @for($i = $start; $i <= $end; $i++)
+                            @if($i == $currentPage)
+                                <span class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-bold bg-blue-600 text-white shadow-sm">{{ $i }}</span>
+                            @else
+                                <a href="{{ $studentRecords->appends(request()->query())->url($i) }}" class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">{{ $i }}</a>
+                            @endif
+                        @endfor
+
+                        @if($end < $lastPage)
+                            @if($end < $lastPage - 1)
+                                <span class="w-9 h-9 flex items-center justify-center text-gray-400 text-sm">...</span>
+                            @endif
+                            <a href="{{ $studentRecords->appends(request()->query())->url($lastPage) }}" class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">{{ $lastPage }}</a>
+                        @endif
+
+                        {{-- Next --}}
+                        @if($studentRecords->hasMorePages())
+                            <a href="{{ $studentRecords->appends(request()->query())->nextPageUrl() }}" class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                            </a>
+                        @else
+                            <span class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-300 cursor-not-allowed">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                            </span>
+                        @endif
+                    </nav>
                 </div>
             @endif
         </section>

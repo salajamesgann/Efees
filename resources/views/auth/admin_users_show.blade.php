@@ -56,7 +56,7 @@
         </div>
 
         <!-- Main content -->
-        <main class="flex-1 p-6 lg:p-8 overflow-y-auto bg-gray-50 custom-scrollbar">
+        <main class="flex-1 p-6 lg:p-8 md:h-screen overflow-y-auto bg-gray-50 custom-scrollbar">
             <div class="max-w-3xl mx-auto space-y-6">
                 <!-- Breadcrumbs -->
                 <nav class="flex text-sm text-slate-500">

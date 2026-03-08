@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\FeeRecord;
 use App\Models\Payment;
 use App\Models\PaymentReceipt;
+use App\Models\PaymentVoidRequest;
 use App\Models\SmsLog;
 use App\Models\Student;
 use Illuminate\Support\Facades\DB;
@@ -171,6 +172,101 @@ class PaymentService
             }
         } catch (\Throwable $e) {
             Log::error('Payment SMS failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Void a payment: reverse all balance distributions, remove the ledger entry,
+     * mark the payment as voided, and recompute the student ledger.
+     */
+    public function voidPayment(PaymentVoidRequest $voidRequest): void
+    {
+        DB::transaction(function () use ($voidRequest) {
+            $payment = $voidRequest->payment;
+
+            // 1. Reverse the fee record distributions
+            $this->reversePaymentDistribution($payment);
+
+            // 2. Remove the payment ledger entry (record_type = 'payment')
+            FeeRecord::where('student_id', $payment->student_id)
+                ->where('record_type', 'payment')
+                ->where('reference_number', $payment->reference_number)
+                ->delete();
+
+            // 3. Mark payment as voided
+            $payment->update([
+                'status' => 'voided',
+                'remarks' => ($payment->remarks ? $payment->remarks . ' | ' : '') . 'VOIDED: ' . $voidRequest->reason,
+            ]);
+
+            // 4. Update the void request
+            $voidRequest->update([
+                'status' => 'approved',
+                'reviewed_by' => auth()->user()->user_id,
+                'reviewed_at' => now(),
+            ]);
+
+            // 5. Recompute student ledger
+            try {
+                $student = Student::find($payment->student_id);
+                if ($student) {
+                    app(\App\Services\FeeManagementService::class)->recomputeStudentLedger($student);
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to recompute ledger after void: ' . $e->getMessage());
+            }
+
+            // 6. Audit log
+            AuditService::log(
+                'Payment Voided',
+                $payment,
+                "Payment #{$payment->id} voided (₱" . number_format($payment->amount_paid, 2) . ") for {$payment->student_id} - Reason: {$voidRequest->reason}"
+            );
+        });
+    }
+
+    /**
+     * Reverse the balance distributions made by a payment.
+     * Adds the paid amounts back to the fee records that were reduced.
+     */
+    protected function reversePaymentDistribution(Payment $payment): void
+    {
+        $amountToRestore = (float) $payment->amount_paid;
+
+        // If the payment targeted a specific fee record, restore it first
+        if ($payment->fee_record_id) {
+            $targetFee = FeeRecord::find($payment->fee_record_id);
+            if ($targetFee && $targetFee->record_type !== 'payment') {
+                $restoreAmount = min($amountToRestore, (float) $payment->amount_paid);
+                $targetFee->balance = (float) $targetFee->balance + $restoreAmount;
+                $targetFee->status = $targetFee->balance >= (float) $targetFee->amount ? 'pending' : 'partial';
+                $targetFee->save();
+                $amountToRestore -= $restoreAmount;
+            }
+        }
+
+        // For remaining amount, restore to records that were paid/partial
+        // We restore in reverse order (newest first) to undo the distribution
+        if ($amountToRestore > 0) {
+            $records = FeeRecord::where('student_id', $payment->student_id)
+                ->whereNotIn('record_type', ['payment', 'refund', 'adjustment'])
+                ->where('balance', '<', DB::raw('amount'))
+                ->orderBy('payment_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            foreach ($records as $record) {
+                if ($amountToRestore <= 0) break;
+
+                $maxRestore = (float) $record->amount - (float) $record->balance;
+                $restoreAmount = min($maxRestore, $amountToRestore);
+
+                $record->balance = (float) $record->balance + $restoreAmount;
+                $record->status = $record->balance >= (float) $record->amount ? 'pending' : 'partial';
+                $record->save();
+
+                $amountToRestore -= $restoreAmount;
+            }
         }
     }
 }

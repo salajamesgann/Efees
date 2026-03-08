@@ -23,6 +23,7 @@ class Payment extends Model
         'reference_number',
         'remarks',
         'paid_at',
+        'batch_id',
     ];
 
     /**
@@ -61,5 +62,10 @@ class Payment extends Model
             ->where('model_type', self::class)
             ->where('action', 'Payment Submitted')
             ->latestOfMany();
+    }
+
+    public function voidRequests(): HasMany
+    {
+        return $this->hasMany(PaymentVoidRequest::class);
     }
 }

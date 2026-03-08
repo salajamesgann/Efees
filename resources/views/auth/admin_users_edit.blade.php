@@ -62,7 +62,7 @@
       </div>
 
       <!-- Main content -->
-      <main class="flex-1 p-8 overflow-y-auto bg-gray-50 custom-scrollbar">
+      <main class="flex-1 p-8 md:h-screen overflow-y-auto bg-gray-50 custom-scrollbar">
         <div class="flex justify-between items-center mb-8">
           <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Edit User Account</h1>
           <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-colors duration-200">

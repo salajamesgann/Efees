@@ -44,7 +44,7 @@
     @include('layouts.staff_sidebar')
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto main-scrollbar p-6 md:p-8">
+    <main class="flex-1 md:h-screen overflow-y-auto main-scrollbar p-6 md:p-8">
         <div class="max-w-6xl mx-auto">
             <!-- Header -->
             <div class="mb-8">

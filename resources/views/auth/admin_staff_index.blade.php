@@ -47,7 +47,7 @@
         </div>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-y-auto bg-slate-50 p-6 lg:p-8 custom-scrollbar">
+        <main class="flex-1 md:h-screen overflow-y-auto bg-slate-50 p-6 lg:p-8 custom-scrollbar">
             <div class="max-w-7xl mx-auto space-y-6">
                 <div class="flex items-center justify-between">
                     <div>

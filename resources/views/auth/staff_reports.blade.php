@@ -71,7 +71,7 @@
     </button>
 </div>
     @include('layouts.staff_sidebar')
-<main class="flex-1 overflow-y-auto main-scrollbar p-8">
+<main class="flex-1 md:h-screen overflow-y-auto main-scrollbar p-8">
 <header class="mb-8">
 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Payment History & Reports</h1>
 <p class="text-gray-600 dark:text-gray-400 mt-2">View payment history, generate reports, and analyze fee collection data</p>

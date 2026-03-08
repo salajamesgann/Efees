@@ -103,7 +103,7 @@
 </button>
 </div>
     @include('layouts.staff_sidebar')
-<main class="flex-1 overflow-y-auto main-scrollbar p-4 md:p-5">
+<main class="flex-1 md:h-screen overflow-y-auto main-scrollbar p-4 md:p-5">
 <header class="mb-4">
 <div class="flex justify-between items-center">
 <div>

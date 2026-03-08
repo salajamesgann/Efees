@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\PaymentVoidRequest;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -15,7 +16,7 @@ class StaffPaymentHistoryController extends Controller
         $to = $request->get('to');
         $method = $request->get('method');
 
-        $query = Payment::with(['student', 'receipt']);
+        $query = Payment::with(['student', 'receipt', 'voidRequests']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {

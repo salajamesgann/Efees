@@ -2,41 +2,41 @@
 <div x-data="{ showLinkModal: false, switching: false }" class="mb-8">
     <!-- Loading Overlay -->
     <div x-show="switching" 
-         class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center"
+         class="fixed inset-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm z-50 flex items-center justify-center"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
          style="display: none;">
         <div class="flex flex-col items-center">
             <div class="relative w-16 h-16">
-                <div class="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-gray-200 dark:border-gray-600 rounded-full"></div>
                 <div class="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
             </div>
-            <p class="mt-4 text-gray-600 font-medium animate-pulse">Loading Student Profile...</p>
+            <p class="mt-4 text-gray-600 dark:text-gray-400 font-medium animate-pulse">Loading Student Profile...</p>
         </div>
     </div>
 
     <!-- Student Tabs -->
-    <div class="flex items-center gap-4 overflow-x-auto pb-4 scrollbar-hide p-2">
+    <div class="flex items-center gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 scrollbar-hide p-1 sm:p-2 -mx-1 sm:mx-0">
         @foreach($myChildren as $child)
             <div class="relative group shrink-0">
                 <a href="{{ route('parent.dashboard', ['student_id' => $child->student_id]) }}" 
                    @click="switching = true"
-                   class="relative flex items-center gap-3 px-5 py-3 rounded-xl transition-all duration-300 min-w-[200px]
+                   class="relative flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl transition-all duration-300 min-w-[160px] sm:min-w-[200px]
                    {{ isset($selectedChild) && $selectedChild->student_id == $child->student_id 
-                      ? 'bg-gray-900 text-white shadow-lg ring-1 ring-black/5' 
-                      : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300 shadow-sm' }}">
+                      ? 'bg-gray-900 dark:bg-gray-600 text-white shadow-lg ring-1 ring-black/5' 
+                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 shadow-sm' }}">
                     
-                    <div class="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm transition-transform group-hover:scale-105
+                    <div class="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-transform group-hover:scale-105
                         {{ isset($selectedChild) && $selectedChild->student_id == $child->student_id 
                             ? 'bg-blue-500 text-white' 
-                            : 'bg-blue-50 text-blue-600' }}">
+                            : 'bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' }}">
                         {{ substr($child->first_name, 0, 1) }}
                     </div>
                     
                     <div class="flex-1 min-w-0 text-left">
                         <p class="font-bold text-sm truncate">{{ $child->first_name }}</p>
-                        <p class="text-xs truncate opacity-80">
+                        <p class="text-[10px] sm:text-xs truncate opacity-80">
                             {{ $child->level ?? 'Student' }}
                         </p>
                     </div>
@@ -50,7 +50,7 @@
                 <form action="{{ route('parent.unlink_student') }}" method="POST" class="absolute -top-2 -right-2 z-20" onsubmit="return confirm('This will submit an unlink request for admin approval. Continue?');">
                     @csrf
                     <input type="hidden" name="student_id" value="{{ $child->student_id }}">
-                    <button type="submit" class="bg-white text-red-500 border border-red-100 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100" title="Request to unlink student">
+                    <button type="submit" class="bg-white dark:bg-gray-700 text-red-500 border border-red-100 dark:border-red-800 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100" title="Request to unlink student">
                         <i class="fas fa-times"></i>
                     </button>
                 </form>
@@ -59,7 +59,7 @@
 
         <!-- Add Student Button -->
         <button @click="showLinkModal = true" 
-                class="flex items-center justify-center w-12 h-12 rounded-xl bg-white border border-dashed border-gray-300 text-gray-400 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm flex-shrink-0 group"
+                class="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-blue-500 dark:hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all shadow-sm flex-shrink-0 group active:bg-blue-100 dark:active:bg-blue-900/50"
                 title="Link another student">
             <i class="fas fa-plus text-lg group-hover:rotate-90 transition-transform duration-300"></i>
         </button>
@@ -79,18 +79,18 @@
         <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="showLinkModal = false"></div>
 
         <div class="flex min-h-full items-center justify-center p-4 text-center">
-            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-gray-100"
+            <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-gray-100 dark:border-gray-700"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
                 
-                <div class="bg-white p-8">
+                <div class="bg-white dark:bg-gray-800 p-8">
                     <div class="flex flex-col items-center text-center mb-6">
-                        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-                            <i class="fas fa-user-plus text-2xl text-blue-600"></i>
+                        <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                            <i class="fas fa-user-plus text-2xl text-blue-600 dark:text-blue-400"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900">Link Student</h3>
-                        <p class="text-sm text-gray-500 mt-2">Enter the unique Student ID provided by the school.</p>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">Link Student</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Enter the unique Student ID provided by the school.</p>
                     </div>
                     
                     <form action="{{ route('parent.link_student') }}" method="POST" class="space-y-5">
@@ -102,14 +102,14 @@
                                     <i class="fas fa-id-card text-gray-400"></i>
                                 </div>
                                 <input type="text" name="student_id" id="student_id" required 
-                                       class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors sm:text-sm"
+                                       class="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-xl leading-5 bg-gray-50 dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors sm:text-sm"
                                        placeholder="Student ID (e.g. 2023-0001)">
                             </div>
                         </div>
 
                         <div>
-                            <label for="relationship" class="block text-xs font-medium text-gray-600 mb-1">Relationship to Student</label>
-                            <select name="relationship" id="relationship" class="block w-full py-2.5 px-3 border border-gray-300 rounded-xl bg-gray-50 text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <label for="relationship" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Relationship to Student</label>
+                            <select name="relationship" id="relationship" class="block w-full py-2.5 px-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm focus:outline-none focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                                 <option value="">Select...</option>
                                 <option value="Mother">Mother</option>
                                 <option value="Father">Father</option>
@@ -119,16 +119,16 @@
                         </div>
 
                         <div>
-                            <label for="reason" class="block text-xs font-medium text-gray-600 mb-1">Reason (optional)</label>
-                            <textarea name="reason" id="reason" rows="2" class="block w-full py-2.5 px-3 border border-gray-300 rounded-xl bg-gray-50 text-sm placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="e.g. Enrolling my child for the new school year"></textarea>
+                            <label for="reason" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Reason (optional)</label>
+                            <textarea name="reason" id="reason" rows="2" class="block w-full py-2.5 px-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="e.g. Enrolling my child for the new school year"></textarea>
                         </div>
 
-                        <p class="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                        <p class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 rounded-lg px-3 py-2">
                             <i class="fas fa-info-circle mr-1"></i> Your request will be reviewed by an administrator before the student is linked to your account.
                         </p>
                         
                         <div class="grid grid-cols-2 gap-3">
-                            <button type="button" @click="showLinkModal = false" class="w-full justify-center rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors">
+                            <button type="button" @click="showLinkModal = false" class="w-full justify-center rounded-xl bg-gray-100 dark:bg-gray-700 px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                                 Cancel
                             </button>
                             <button type="submit" class="w-full justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5">
@@ -191,58 +191,58 @@
         <!-- Quick Stats Row -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <!-- Download Invoice -->
-            <button class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
-                <div class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+            <button class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
+                <div class="w-10 h-10 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     <i class="fas fa-file-invoice text-lg"></i>
                 </div>
-                <span class="text-xs font-bold text-gray-600">Invoice</span>
+                <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Invoice</span>
             </button>
             
             <!-- Payment Methods -->
-            <button class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
-                <div class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors">
+            <button class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
+                <div class="w-10 h-10 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-purple-50 dark:group-hover:bg-purple-900/30 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                     <i class="fas fa-wallet text-lg"></i>
                 </div>
-                <span class="text-xs font-bold text-gray-600">Methods</span>
+                <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Methods</span>
             </button>
 
             <!-- Support -->
-            <button class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
-                <div class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-green-50 group-hover:text-green-600 transition-colors">
+            <button class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
+                <div class="w-10 h-10 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-green-50 dark:group-hover:bg-green-900/30 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
                     <i class="fas fa-headset text-lg"></i>
                 </div>
-                <span class="text-xs font-bold text-gray-600">Support</span>
+                <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Support</span>
             </button>
 
             <!-- Settings -->
-            <a href="{{ route('parent.profile.edit') }}" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
-                <div class="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-600 group-hover:bg-orange-50 group-hover:text-orange-600 transition-colors">
+            <a href="{{ route('parent.profile.edit') }}" class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
+                <div class="w-10 h-10 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-orange-50 dark:group-hover:bg-orange-900/30 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                     <i class="fas fa-cog text-lg"></i>
                 </div>
-                <span class="text-xs font-bold text-gray-600">Settings</span>
+                <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Settings</span>
             </a>
         </div>
         
         <!-- Recent Transactions -->
-        <div id="transactions" class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-            <div class="px-6 py-5 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                <h3 class="font-bold text-gray-900">Recent Transactions</h3>
-                <a href="#" class="text-xs font-bold text-blue-600 hover:text-blue-700">View All</a>
+        <div id="transactions" class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-50 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/30">
+                <h3 class="font-bold text-gray-900 dark:text-gray-100">Recent Transactions</h3>
+                <a href="#" class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">View All</a>
             </div>
-            <div class="divide-y divide-gray-50">
+            <div class="divide-y divide-gray-50 dark:divide-gray-700">
                 @forelse($transactions as $transaction)
-                    <div class="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors group">
+                    <div class="p-5 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group">
                         <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-full bg-green-50 border border-green-100 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
+                            <div class="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 flex items-center justify-center text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
                                 <i class="fas fa-check"></i>
                             </div>
                             <div>
-                                <p class="font-bold text-gray-900 text-sm">{{ $transaction->remarks ?? 'Tuition/Fee Payment' }}</p>
-                                <p class="text-xs text-gray-500 font-medium">{{ \Carbon\Carbon::parse($transaction->paid_at)->format('F d, Y • h:i A') }}</p>
+                                <p class="font-bold text-gray-900 dark:text-gray-100 text-sm">{{ $transaction->remarks ?? 'Tuition/Fee Payment' }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">{{ \Carbon\Carbon::parse($transaction->paid_at)->format('F d, Y • h:i A') }}</p>
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="font-bold text-gray-900">₱{{ number_format((float) $transaction->amount_paid, 2) }}</p>
+                            <p class="font-bold text-gray-900 dark:text-gray-100">₱{{ number_format((float) $transaction->amount_paid, 2) }}</p>
                             <div class="flex items-center justify-end gap-2 mt-1">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                                     Successful
@@ -255,10 +255,10 @@
                     </div>
                 @empty
                     <div class="p-12 text-center">
-                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <i class="fas fa-receipt text-gray-300 text-xl"></i>
+                        <div class="w-16 h-16 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-receipt text-gray-300 dark:text-gray-500 text-xl"></i>
                         </div>
-                        <p class="text-gray-500 font-medium">No recent transactions found.</p>
+                        <p class="text-gray-500 dark:text-gray-400 font-medium">No recent transactions found.</p>
                     </div>
                 @endforelse
             </div>
@@ -269,11 +269,11 @@
     <div class="space-y-6">
         
         <!-- Notifications Card -->
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden relative group">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden relative group">
             <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-2xl -mr-10 -mt-10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
             
-            <div class="p-6 border-b border-gray-50 relative z-10 flex justify-between items-center">
-                <h3 class="font-bold text-gray-900 flex items-center gap-2">
+            <div class="p-6 border-b border-gray-50 dark:border-gray-700 relative z-10 flex justify-between items-center">
+                <h3 class="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <i class="fas fa-bell text-blue-500"></i> Notifications
                 </h3>
                 @if(count($notifications) > 0)
@@ -283,30 +283,30 @@
 
             <div class="p-4 space-y-2 relative z-10 max-h-[350px] overflow-y-auto custom-scrollbar">
                 @forelse($notifications as $notification)
-                    <div class="flex gap-3 p-3 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                    <div class="flex gap-3 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-600">
                         <div class="flex-shrink-0 mt-1">
-                            <div class="w-2 h-2 rounded-full bg-blue-500 ring-4 ring-blue-50"></div>
+                            <div class="w-2 h-2 rounded-full bg-blue-500 ring-4 ring-blue-50 dark:ring-blue-900/30"></div>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-800 font-medium leading-relaxed">{{ $notification->data ?? 'New notification' }}</p>
-                            <p class="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-wide">
+                            <p class="text-sm text-gray-800 dark:text-gray-200 font-medium leading-relaxed">{{ $notification->data ?? 'New notification' }}</p>
+                            <p class="text-[10px] text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-wide">
                                 {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
                             </p>
                         </div>
                     </div>
                 @empty
                     <div class="text-center py-8">
-                        <p class="text-sm text-gray-400 italic">You're all caught up!</p>
+                        <p class="text-sm text-gray-400 dark:text-gray-500 italic">You're all caught up!</p>
                     </div>
                 @endforelse
             </div>
         </div>
 
         <!-- Upcoming Fees -->
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="font-bold text-gray-900">Upcoming Due</h3>
-                <button class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
+                <h3 class="font-bold text-gray-900 dark:text-gray-100">Upcoming Due</h3>
+                <button class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                     <i class="fas fa-ellipsis-h"></i>
                 </button>
             </div>
@@ -319,30 +319,30 @@
                         $iconColor = $isOverdue ? 'text-red-500' : 'text-orange-500';
                         $bgColor = $isOverdue ? 'bg-red-50' : 'bg-orange-50';
                     @endphp
-                    <div class="flex items-center justify-between p-3 rounded-2xl border border-gray-50 hover:border-gray-200 hover:shadow-sm transition-all">
+                    <div class="flex items-center justify-between p-3 rounded-2xl border border-gray-50 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-xl {{ $bgColor }} flex items-center justify-center {{ $iconColor }}">
                                 <i class="fas fa-file-invoice-dollar"></i>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-gray-900">{{ Str::limit($fee['notes'], 15) }}</p>
+                                <p class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ Str::limit($fee['notes'], 15) }}</p>
                                 <p class="text-xs {{ $dateColor }} font-medium">
                                     {{ $fee['due_date'] ? \Carbon\Carbon::parse($fee['due_date'])->format('M d') : 'N/A' }}
                                     @if($isOverdue) <span class="text-[10px] font-bold bg-red-100 text-red-600 px-1 rounded ml-1">LATE</span> @endif
                                 </p>
                             </div>
                         </div>
-                        <p class="font-bold text-gray-900 text-sm">₱{{ number_format($fee['balance'], 2) }}</p>
+                        <p class="font-bold text-gray-900 dark:text-gray-100 text-sm">₱{{ number_format($fee['balance'], 2) }}</p>
                     </div>
                 @empty
-                    <div class="text-center py-6 border-2 border-dashed border-gray-100 rounded-2xl">
-                        <p class="text-sm text-gray-500">No upcoming fees.</p>
+                    <div class="text-center py-6 border-2 border-dashed border-gray-100 dark:border-gray-700 rounded-2xl">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">No upcoming fees.</p>
                     </div>
                 @endforelse
             </div>
             
             @if($upcomingFees->count() > 3)
-                <button class="w-full mt-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors">
+                <button class="w-full mt-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                     View All {{ $upcomingFees->count() }} Fees
                 </button>
             @endif
@@ -351,7 +351,7 @@
 </div>
 @else
 <!-- Empty State (Redesigned) -->
-<div class="min-h-[500px] flex flex-col items-center justify-center text-center p-8 bg-white rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden">
+<div class="min-h-[500px] flex flex-col items-center justify-center text-center p-8 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden">
     <div class="absolute inset-0 bg-grid-slate-50 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] bg-center"></div>
     
     <div class="relative z-10 max-w-md mx-auto">

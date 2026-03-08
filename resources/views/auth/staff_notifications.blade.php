@@ -44,7 +44,7 @@
     @include('layouts.staff_sidebar')
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto main-scrollbar p-4 md:p-5" x-data="notificationCenter()">
+    <main class="flex-1 md:h-screen overflow-y-auto main-scrollbar p-4 md:p-5" x-data="notificationCenter()">
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
             <div class="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3">

@@ -84,7 +84,7 @@
         @include('layouts.staff_sidebar')
 
         <!-- Main Content -->
-        <main class="flex-1 p-4 overflow-y-auto h-screen bg-gray-100 flex items-center justify-center main-scrollbar">
+        <main class="flex-1 p-4 overflow-y-auto md:h-screen bg-gray-100 flex items-center justify-center main-scrollbar">
             <div class="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl receipt-container border border-blue-100">
                 <!-- Header -->
                 <div class="bg-blue-600 p-4 text-center text-white relative">

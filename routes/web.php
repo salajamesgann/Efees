@@ -100,6 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('staff')->name('staff.')->middleware('auth')->group(function () {
         Route::get('/payment-processing', [\App\Http\Controllers\StaffPaymentController::class, 'index'])->middleware('ensureRole:staff')->name('payment_processing');
         Route::post('/payments', [\App\Http\Controllers\StaffPaymentController::class, 'store'])->middleware('ensureRole:staff')->name('payments.store');
+        Route::post('/payments/bulk', [\App\Http\Controllers\StaffPaymentController::class, 'bulkStore'])->middleware('ensureRole:staff')->name('payments.bulk_store');
         Route::get('/payments/{payment}/receipt', [\App\Http\Controllers\StaffPaymentController::class, 'showReceipt'])->middleware('ensureRole:staff')->name('payments.receipt');
 
         // SMS Reminders
@@ -117,6 +118,9 @@ Route::middleware('auth')->group(function () {
 
         // Payment History
         Route::get('/payment-history', [\App\Http\Controllers\StaffPaymentHistoryController::class, 'index'])->middleware('ensureRole:staff')->name('payment_history');
+
+        // Payment Void Requests
+        Route::post('/payments/{payment}/void', [\App\Http\Controllers\StaffPaymentVoidController::class, 'store'])->middleware('ensureRole:staff')->name('payments.void');
 
         // Student Details
         Route::get('/student-details/{student}', [\App\Http\Controllers\StaffStudentDetailsController::class, 'show'])->middleware('ensureRole:staff')->name('student_details');
@@ -289,6 +293,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminPaymentApprovalController::class, 'index'])->name('index');
         Route::post('/{payment}/approve', [\App\Http\Controllers\AdminPaymentApprovalController::class, 'approve'])->name('approve');
         Route::post('/{payment}/reject', [\App\Http\Controllers\AdminPaymentApprovalController::class, 'reject'])->name('reject');
+    });
+
+    // Admin Void Approvals
+    Route::prefix('admin/void-approvals')->name('admin.void_approvals.')->middleware('ensureRole:admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AdminPaymentVoidController::class, 'index'])->name('index');
+        Route::post('/{voidRequest}/approve', [\App\Http\Controllers\AdminPaymentVoidController::class, 'approve'])->name('approve');
+        Route::post('/{voidRequest}/reject', [\App\Http\Controllers\AdminPaymentVoidController::class, 'reject'])->name('reject');
     });
 
     // Admin Student Link Approvals

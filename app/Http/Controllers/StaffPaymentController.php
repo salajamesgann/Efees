@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -174,6 +175,70 @@ class StaffPaymentController extends Controller
             }
 
             return redirect()->route('staff.payment_processing')->with('success', 'Payment submitted successfully! Waiting for Admin Approval.');
+        });
+    }
+
+    public function bulkStore(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'payments' => ['required', 'array', 'min:1', 'max:50'],
+            'payments.*.student_id' => ['required', 'string', 'exists:students,student_id'],
+            'payments.*.amount_paid' => ['required', 'numeric', 'min:0.01'],
+            'payments.*.fee_record_id' => ['nullable', 'exists:fee_records,id'],
+            'method' => ['required', 'string', Rule::in(['Cash'])],
+            'remarks' => ['nullable', 'string'],
+            'paid_at' => ['nullable', 'date'],
+        ]);
+
+        $activeYear = SystemSetting::where('key', 'school_year')->value('value');
+        if (! $activeYear) {
+            return back()->with('error', 'Please set an active School Year to continue.');
+        }
+
+        // Validate all students belong to active school year
+        $studentIds = collect($data['payments'])->pluck('student_id')->unique();
+        $lockedStudents = Student::whereIn('student_id', $studentIds)
+            ->where('school_year', '!=', $activeYear)
+            ->pluck('student_id');
+
+        if ($lockedStudents->isNotEmpty()) {
+            return back()
+                ->with('error', 'The following students belong to a locked School Year and cannot be modified: ' . $lockedStudents->join(', '))
+                ->withInput();
+        }
+
+        return DB::transaction(function () use ($data) {
+            $batchId = Str::uuid()->toString();
+            $createdPayments = [];
+
+            foreach ($data['payments'] as $entry) {
+                $payment = Payment::create([
+                    'student_id' => $entry['student_id'],
+                    'amount_paid' => $entry['amount_paid'],
+                    'status' => 'pending',
+                    'method' => $data['method'],
+                    'fee_record_id' => $entry['fee_record_id'] ?? null,
+                    'reference_number' => null,
+                    'remarks' => $data['remarks'] ?? null,
+                    'paid_at' => $data['paid_at'] ?? now(),
+                    'batch_id' => $batchId,
+                ]);
+                $createdPayments[] = $payment;
+            }
+
+            try {
+                AuditService::log(
+                    'Bulk Payment Submitted',
+                    $createdPayments[0],
+                    'Bulk payment batch ' . $batchId . ' with ' . count($createdPayments) . ' payments submitted for approval.',
+                    null,
+                    ['batch_id' => $batchId, 'count' => count($createdPayments), 'total' => collect($createdPayments)->sum('amount_paid')]
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to create audit log for bulk payment: ' . $e->getMessage());
+            }
+
+            return redirect()->route('staff.payment_processing')->with('success', 'Bulk payment submitted! ' . count($createdPayments) . ' payments are waiting for Admin Approval.');
         });
     }
 

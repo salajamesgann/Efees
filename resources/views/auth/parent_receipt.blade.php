@@ -1,10 +1,10 @@
 @extends('auth.user_dashboard')
 
 @section('content')
-<div class="min-h-[calc(100vh-4rem)] p-6 flex flex-col">
+<div class="min-h-[calc(100vh-4rem)] p-3 sm:p-6 flex flex-col pb-20 md:pb-0">
     <!-- Back Link -->
-    <div class="w-full mb-6 no-print">
-        <a href="{{ route('parent.history') }}" class="text-slate-500 hover:text-blue-600 inline-flex items-center gap-2 font-medium transition-colors text-sm">
+    <div class="w-full mb-4 sm:mb-6 no-print">
+        <a href="{{ route('parent.history') }}" class="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 inline-flex items-center gap-2 font-medium transition-colors text-sm">
             <i class="fas fa-arrow-left"></i> Back to Payment History
         </a>
     </div>
@@ -12,14 +12,14 @@
     <!-- Receipt Container Wrapper -->
     <div class="flex-1 flex items-center justify-center pb-10">
         <!-- Receipt Container -->
-        <div class="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl receipt-container border border-blue-100 relative">
+        <div class="w-full max-w-sm bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-xl receipt-container border border-blue-100 dark:border-gray-700 relative">
         <!-- Header -->
         <div class="bg-blue-600 p-4 text-center text-white relative">
             <h1 class="text-lg font-bold mb-6">E-Fees Portal</h1>
             
             <!-- Avatar/Icon -->
             <div class="absolute left-1/2 transform -translate-x-1/2 -bottom-7">
-                <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center border-4 border-white shadow-sm overflow-hidden">
+                <div class="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-800 shadow-sm overflow-hidden">
                     @if(isset($payment->student->sex) && str_contains(strtolower($payment->student->sex), 'female'))
                         <!-- Female Silhouette -->
                         <svg class="w-full h-full text-gray-400" fill="currentColor" viewBox="0 0 24 24">
@@ -47,76 +47,76 @@
             @endif
 
             <div class="text-center mb-3">
-                <h2 class="text-lg font-bold text-gray-900">Payment Successful</h2>
-                <p class="text-blue-500 font-bold text-xs">E-Fees Portal</p>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Payment Successful</h2>
+                <p class="text-blue-500 dark:text-blue-400 font-bold text-xs">E-Fees Portal</p>
             </div>
 
             <!-- Compact Info Grid -->
-            <div class="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-3 border border-gray-100 dark:border-gray-600">
                 <!-- Paid To -->
-                <div class="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
+                <div class="flex items-center justify-between mb-2 pb-2 border-b border-gray-200 dark:border-gray-600">
                     <div class="flex items-center gap-1.5">
-                        <i class="fas fa-school text-green-600 text-sm"></i>
-                        <span class="font-bold text-gray-900 text-xs">{{ $schoolName ?? 'E-Fees School' }}</span>
+                        <i class="fas fa-school text-green-600 dark:text-green-400 text-sm"></i>
+                        <span class="font-bold text-gray-900 dark:text-gray-100 text-xs">{{ $schoolName ?? 'E-Fees School' }}</span>
                     </div>
-                    <span class="text-xs text-gray-500">{{ $schoolYear ?: date('Y') . '-' . (date('Y') + 1) }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ $schoolYear ?: date('Y') . '-' . (date('Y') + 1) }}</span>
                 </div>
 
                 <!-- Student Info -->
                 <div class="grid grid-cols-2 gap-2 text-xs mb-2">
                     <div>
-                        <span class="text-gray-500 block">Student Name</span>
-                        <span class="font-bold text-gray-900 truncate block" title="{{ $payment->student->full_name }}">{{ $payment->student->full_name }}</span>
+                        <span class="text-gray-500 dark:text-gray-400 block">Student Name</span>
+                        <span class="font-bold text-gray-900 dark:text-gray-100 truncate block" title="{{ $payment->student->full_name }}">{{ $payment->student->full_name }}</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-gray-500 block">Student ID</span>
-                        <span class="font-bold text-gray-900">{{ $payment->student->student_id }}</span>
+                        <span class="text-gray-500 dark:text-gray-400 block">Student ID</span>
+                        <span class="font-bold text-gray-900 dark:text-gray-100">{{ $payment->student->student_id }}</span>
                     </div>
                 </div>
                 
                 <!-- Payment Details -->
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                        <span class="text-gray-500 block">Bill Type</span>
-                        <span class="font-bold text-gray-900">{{ $payment->remarks ?: 'Tuition Fee' }}</span>
+                        <span class="text-gray-500 dark:text-gray-400 block">Bill Type</span>
+                        <span class="font-bold text-gray-900 dark:text-gray-100">{{ $payment->remarks ?: 'Tuition Fee' }}</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-gray-500 block">Method</span>
-                        <span class="font-bold text-gray-900 capitalize">{{ str_replace('_', ' ', $payment->method ?? 'Cash') }}</span>
+                        <span class="text-gray-500 dark:text-gray-400 block">Method</span>
+                        <span class="font-bold text-gray-900 dark:text-gray-100 capitalize">{{ str_replace('_', ' ', $payment->method ?? 'Cash') }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Total Amount -->
             <div class="text-center mb-3">
-                <h1 class="text-3xl font-extrabold text-gray-900">₱{{ number_format($payment->amount_paid, 2) }}</h1>
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Amount Paid</p>
-                <div class="text-xs text-gray-400 mt-1 flex justify-center gap-3">
+                <h1 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">₱{{ number_format($payment->amount_paid, 2) }}</h1>
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Amount Paid</p>
+                <div class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex justify-center gap-3">
                     <span>{{ $payment->created_at->format('M d, Y - h:i A') }}</span>
-                    <span class="text-green-600 font-bold">Completed</span>
+                    <span class="text-green-600 dark:text-green-400 font-bold">Completed</span>
                 </div>
             </div>
 
             <!-- Notification Box -->
             @if(isset($smsWasSent) && $smsWasSent)
-            <div class="bg-blue-50 rounded-lg p-2 flex items-start gap-2 mb-3">
-                <div class="bg-blue-100 rounded-full p-1 shrink-0 mt-0.5">
-                    <i class="fas fa-envelope text-blue-600 text-xs"></i>
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 flex items-start gap-2 mb-3">
+                <div class="bg-blue-100 dark:bg-blue-900/40 rounded-full p-1 shrink-0 mt-0.5">
+                    <i class="fas fa-envelope text-blue-600 dark:text-blue-400 text-xs"></i>
                 </div>
                 <div>
-                    <p class="font-bold text-blue-900 text-xs">SMS Sent</p>
-                    <p class="text-blue-700 text-[10px] leading-tight">Confirmation sent to registered mobile.</p>
+                    <p class="font-bold text-blue-900 dark:text-blue-300 text-xs">SMS Sent</p>
+                    <p class="text-blue-700 dark:text-blue-400 text-[10px] leading-tight">Confirmation sent to registered mobile.</p>
                 </div>
             </div>
             @endif
 
             <!-- Footer -->
             <div class="text-center">
-                <div class="flex items-center justify-center gap-1 text-[10px] text-gray-400">
+                <div class="flex items-center justify-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
                     <i class="fas fa-graduation-cap"></i>
-                    <span>Powered By: <span class="font-bold text-gray-500">E-Fees Portal</span></span>
+                    <span>Powered By: <span class="font-bold text-gray-500 dark:text-gray-400">E-Fees Portal</span></span>
                 </div>
-                <div class="mt-2 text-[9px] text-gray-300 font-mono">
+                <div class="mt-2 text-[9px] text-gray-300 dark:text-gray-600 font-mono">
                     REF: {{ $payment->reference_number ?? 'REC-' . str_pad($payment->id, 8, '0', STR_PAD_LEFT) }}
                 </div>
             </div>

@@ -72,7 +72,7 @@
         </button>
     </div>
     @include('layouts.staff_sidebar')
-    <main class="flex-1 overflow-y-auto main-scrollbar p-8">
+    <main class="flex-1 md:h-screen overflow-y-auto main-scrollbar p-8">
         <header class="mb-8 flex justify-between items-start">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Payment Processing</h1>
@@ -151,12 +151,28 @@
         @endif
 
         <div class="bg-white dark:bg-background-dark rounded-xl shadow-sm p-8" x-data="paymentProcessing()">
-            <form method="POST" action="{{ route('staff.payments.store') }}">
-                @csrf
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                    
-                    <!-- LEFT COLUMN: Filters & Table -->
-                    <div class="lg:col-span-2 space-y-6">
+            <!-- Mode Toggle -->
+            <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Mode:</span>
+                <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <button type="button" @click="switchMode('single')" :class="mode === 'single' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 text-sm font-semibold transition-colors">
+                        <i class="fas fa-user mr-1"></i> Single Payment
+                    </button>
+                    <button type="button" @click="switchMode('bulk')" :class="mode === 'bulk' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'" class="px-4 py-2 text-sm font-semibold transition-colors">
+                        <i class="fas fa-users mr-1"></i> Bulk Payment
+                    </button>
+                </div>
+                <template x-if="mode === 'bulk' && bulkSelected.length > 0">
+                    <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                        <span x-text="bulkSelected.length"></span>&nbsp;selected
+                    </span>
+                </template>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                
+                <!-- LEFT COLUMN: Filters & Table (always visible) -->
+                <div class="lg:col-span-2 space-y-6">
                         
                         <!-- Filters Panel -->
                         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
@@ -254,7 +270,7 @@
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
                                 <div>
                                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Students List</h2>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Select a student to process payment.</p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400" x-text="mode === 'single' ? 'Select a student to process payment.' : 'Check students to include in bulk payment.'"></p>
                                 </div>
                                 <div class="w-full md:w-64">
                                     <input
@@ -271,6 +287,9 @@
                                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
                                     <thead class="bg-gray-50 dark:bg-gray-900/40">
                                         <tr>
+                                            <th x-show="mode === 'bulk'" class="px-4 py-3 text-center w-10">
+                                                <input type="checkbox" @change="toggleAllStudents($event)" :checked="bulkSelected.length === students.filter(s => s.total_balance > 0).length && students.filter(s => s.total_balance > 0).length > 0" class="rounded border-gray-300 text-primary focus:ring-primary">
+                                            </th>
                                             <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">Student</th>
                                             <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">Level/Sec</th>
                                             <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">Status</th>
@@ -283,9 +302,14 @@
                                         <template x-for="student in students" :key="student.student_id">
                                             <tr
                                                 class="hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer transition-colors"
-                                                :class="form.student_id == student.student_id ? 'bg-blue-50/70 dark:bg-blue-900/40 ring-1 ring-inset ring-blue-500/20' : ''"
-                                                @click="selectStudent(student)"
+                                                :class="{
+                                                    'bg-blue-50/70 dark:bg-blue-900/40 ring-1 ring-inset ring-blue-500/20': mode === 'single' ? form.student_id == student.student_id : bulkSelected.includes(student.student_id)
+                                                }"
+                                                @click="mode === 'single' ? selectStudent(student) : toggleBulkStudent(student)"
                                             >
+                                                <td x-show="mode === 'bulk'" class="px-4 py-3 text-center" @click.stop>
+                                                    <input type="checkbox" :value="student.student_id" :checked="bulkSelected.includes(student.student_id)" @change="toggleBulkStudent(student)" :disabled="student.total_balance <= 0" class="rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-40">
+                                                </td>
                                                 <td class="px-4 py-3">
                                                     <div class="font-medium text-gray-900 dark:text-gray-100" x-text="student.last_name + ', ' + student.first_name"></div>
                                                     <div class="text-xs text-gray-500" x-text="student.student_id"></div>
@@ -331,7 +355,7 @@
                                                         <span class="text-xs text-gray-400">-</span>
                                                     </template>
                                                 </td>
-                                                <td class="px-4 py-3 text-right">
+                                                <td class="px-4 py-3 text-right" x-show="mode === 'single'">
                                                     <button
                                                         type="button"
                                                         class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
@@ -340,10 +364,15 @@
                                                         <span x-text="form.student_id == student.student_id ? 'Selected' : 'Select'"></span>
                                                     </button>
                                                 </td>
+                                                <td class="px-4 py-3 text-right" x-show="mode === 'bulk'">
+                                                    <span x-show="bulkSelected.includes(student.student_id)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                                                        <i class="fas fa-check mr-1"></i> Included
+                                                    </span>
+                                                </td>
                                             </tr>
                                         </template>
                                         <tr x-show="students.length === 0">
-                                            <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                            <td :colspan="mode === 'bulk' ? 7 : 6" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                                                 <div class="flex flex-col items-center justify-center">
                                                     <i class="fas fa-search text-3xl mb-3 text-gray-300"></i>
                                                     <p>No students found matching your filters.</p>
@@ -356,8 +385,13 @@
                         </div>
                     </div>
 
-                    <!-- RIGHT COLUMN: Payment Form -->
-                    <div class="lg:col-span-1">
+                <!-- RIGHT COLUMN -->
+                <div class="lg:col-span-1">
+
+                    <!-- Single Payment Form -->
+                    <form method="POST" action="{{ route('staff.payments.store') }}" x-show="mode === 'single'">
+                    @csrf
+                    <div x-show="mode === 'single'">
                         <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 sticky top-6 border border-gray-200 dark:border-gray-700 shadow-sm">
                             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                                 <i class="fas fa-cash-register text-primary"></i>
@@ -458,9 +492,152 @@
                             </div>
                         </div>
                     </div>
+                    </form>
+
+                    <!-- Bulk Payment Form -->
+                    <form method="POST" action="{{ route('staff.payments.bulk_store') }}" @submit.prevent="submitBulkPayment($event)" x-show="mode === 'bulk'">
+                    @csrf
+                    <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i class="fas fa-layer-group text-primary"></i>
+                            Bulk Payment Summary
+                        </h3>
+
+                        <!-- Empty State -->
+                        <template x-if="bulkSelected.length === 0">
+                            <div class="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 text-center">
+                                <i class="fas fa-users text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Select students from the table above to create a bulk payment.</p>
+                            </div>
+                        </template>
+
+                        <!-- Bulk Payment Options -->
+                        <template x-if="bulkSelected.length > 0">
+                            <div class="space-y-4">
+                                <!-- Payment Mode Selection -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Type</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" x-model="bulkPaymentType" value="full_balance" class="text-primary focus:ring-primary" @change="recalcBulkAmounts()">
+                                            <span class="text-sm text-gray-700 dark:text-gray-300">Pay Full Balance</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" x-model="bulkPaymentType" value="fixed_amount" class="text-primary focus:ring-primary" @change="recalcBulkAmounts()">
+                                            <span class="text-sm text-gray-700 dark:text-gray-300">Fixed Amount Per Student</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" x-model="bulkPaymentType" value="custom" class="text-primary focus:ring-primary" @change="recalcBulkAmounts()">
+                                            <span class="text-sm text-gray-700 dark:text-gray-300">Custom Amount Per Student</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Fixed Amount Input -->
+                                <div x-show="bulkPaymentType === 'fixed_amount'" x-cloak>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount Per Student</label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-2 text-gray-500 text-sm">₱</span>
+                                        <input type="number" step="0.01" min="0.01" x-model="bulkFixedAmount" @input="recalcBulkAmounts()" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary/20 pl-7 text-sm font-semibold">
+                                    </div>
+                                </div>
+
+                                <!-- Common Fields -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Method</label>
+                                        <select name="method" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm shadow-sm focus:border-primary focus:ring-primary/20" required>
+                                            <option value="Cash" selected>Cash</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+                                        <input type="date" name="paid_at" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm shadow-sm focus:border-primary focus:ring-primary/20" value="{{ now()->format('Y-m-d') }}">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Remarks</label>
+                                    <textarea name="remarks" rows="2" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm shadow-sm focus:border-primary focus:ring-primary/20" placeholder="Optional notes for all payments..."></textarea>
+                                </div>
+
+                                <!-- Review Table -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Review Payments</label>
+                                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto">
+                                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                                            <thead class="bg-gray-100 dark:bg-gray-900/40 sticky top-0">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Student</th>
+                                                    <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">Balance</th>
+                                                    <th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-300">Amount</th>
+                                                    <th class="px-3 py-2 text-center font-medium text-gray-600 dark:text-gray-300 w-8"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
+                                                <template x-for="(entry, idx) in bulkEntries" :key="entry.student_id">
+                                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                        <td class="px-3 py-2">
+                                                            <div class="font-medium text-gray-900 dark:text-gray-100 text-xs" x-text="entry.student_name"></div>
+                                                            <div class="text-[10px] text-gray-500" x-text="entry.student_id"></div>
+                                                        </td>
+                                                        <td class="px-3 py-2 text-right text-xs text-gray-600 dark:text-gray-400" x-text="formatMoney(entry.balance)"></td>
+                                                        <td class="px-3 py-2 text-right">
+                                                            <template x-if="bulkPaymentType === 'custom'">
+                                                                <div class="relative">
+                                                                    <span class="absolute left-2 top-1.5 text-gray-400 text-xs">₱</span>
+                                                                    <input type="number" step="0.01" min="0.01" :max="entry.balance" x-model="entry.amount" class="w-24 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs pl-5 py-1 text-right focus:border-primary focus:ring-primary/20">
+                                                                </div>
+                                                            </template>
+                                                            <template x-if="bulkPaymentType !== 'custom'">
+                                                                <span class="text-xs font-medium text-gray-900 dark:text-gray-100" x-text="formatMoney(entry.amount)"></span>
+                                                            </template>
+                                                        </td>
+                                                        <td class="px-3 py-2 text-center">
+                                                            <button type="button" @click="removeBulkStudent(entry.student_id)" class="text-red-400 hover:text-red-600 transition-colors">
+                                                                <i class="fas fa-times text-xs"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Grand Total -->
+                                <div class="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+                                    <div>
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">Total Students:</span>
+                                        <span class="font-bold text-gray-900 dark:text-white ml-1" x-text="bulkEntries.length"></span>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">Grand Total:</span>
+                                        <span class="font-bold text-lg text-primary ml-1" x-text="formatMoney(bulkGrandTotal)"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Hidden inputs for form submission -->
+                                <template x-for="(entry, idx) in bulkEntries" :key="'hidden-' + entry.student_id">
+                                    <div>
+                                        <input type="hidden" :name="'payments[' + idx + '][student_id]'" :value="entry.student_id">
+                                        <input type="hidden" :name="'payments[' + idx + '][amount_paid]'" :value="entry.amount">
+                                    </div>
+                                </template>
+
+                                <button type="submit" :disabled="bulkEntries.length === 0 || bulkSubmitting" class="w-full bg-primary hover:bg-blue-600 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors duration-200 flex items-center justify-center gap-2 mt-2">
+                                    <i class="fas fa-check-double" x-show="!bulkSubmitting"></i>
+                                    <i class="fas fa-spinner fa-spin" x-show="bulkSubmitting"></i>
+                                    <span x-text="bulkSubmitting ? 'Submitting...' : 'Submit Bulk Payment (' + bulkEntries.length + ' students)'"></span>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                    </form>
 
                 </div>
-            </form>
+            </div>
+
             <!-- Rejection Reason Modal -->
         <div x-show="showRejectionModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak>
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -499,6 +676,7 @@
 <script>
     function paymentProcessing() {
         return {
+            mode: 'single', // 'single' or 'bulk'
             filters: {
                 search: '',
                 school_year: '{{ $activeYear ?? "" }}',
@@ -521,6 +699,13 @@
             fees: [],
             amountPayable: 0,
             
+            // Bulk payment state
+            bulkSelected: [],
+            bulkEntries: [],
+            bulkPaymentType: 'full_balance',
+            bulkFixedAmount: '',
+            bulkSubmitting: false,
+            
             rejectionMessage: '',
             showRejectionModal: false,
             
@@ -532,6 +717,18 @@
             closeRejectionModal() {
                 this.showRejectionModal = false;
                 this.rejectionMessage = '';
+            },
+            
+            switchMode(newMode) {
+                this.mode = newMode;
+                if (newMode === 'single') {
+                    this.bulkSelected = [];
+                    this.bulkEntries = [];
+                } else {
+                    this.form.student_id = '';
+                    this.fees = [];
+                    this.amountPayable = 0;
+                }
             },
             
             init() {
@@ -583,8 +780,6 @@
                 try {
                     const response = await fetch(`{{ route('staff.payment_processing') }}?${params}`);
                     this.fees = await response.json();
-                    
-                    // Auto-calculate total payable (sum of balances) if no specific fee selected
                     this.updateAmount();
                 } catch (e) {
                     console.error('Error fetching fees:', e);
@@ -611,17 +806,12 @@
                     const fee = this.fees.find(f => f.id == this.form.fee_record_id);
                     if (fee) {
                         this.amountPayable = fee.balance;
-                        this.form.amount_paid = fee.balance; // Auto-fill amount paid
+                        this.form.amount_paid = fee.balance;
                     }
                 } else {
-                    // Sum of all unpaid fees, but handle discounts as negative if they are stored as positive balances
-                    // or just sum them up if they already reduce the total.
-                    // Usually, discounts should be subtracted if record_type is 'discount'.
                     this.amountPayable = this.fees.reduce((sum, fee) => {
                         return sum + parseFloat(fee.balance);
                     }, 0);
-                    
-                    // Ensure amountPayable is not negative
                     if (this.amountPayable < 0) this.amountPayable = 0;
                 }
             },
@@ -642,6 +832,92 @@
             selectStudent(student) {
                 this.form.student_id = student.student_id;
                 this.fetchFees();
+            },
+            
+            // Bulk payment methods
+            toggleBulkStudent(student) {
+                if (student.total_balance <= 0) return;
+                
+                const idx = this.bulkSelected.indexOf(student.student_id);
+                if (idx > -1) {
+                    this.bulkSelected.splice(idx, 1);
+                    this.bulkEntries = this.bulkEntries.filter(e => e.student_id !== student.student_id);
+                } else {
+                    this.bulkSelected.push(student.student_id);
+                    const amount = this.bulkPaymentType === 'fixed_amount' && this.bulkFixedAmount
+                        ? Math.min(parseFloat(this.bulkFixedAmount), student.total_balance)
+                        : student.total_balance;
+                    this.bulkEntries.push({
+                        student_id: student.student_id,
+                        student_name: student.last_name + ', ' + student.first_name,
+                        balance: student.total_balance,
+                        amount: amount
+                    });
+                }
+            },
+            
+            toggleAllStudents(event) {
+                if (event.target.checked) {
+                    this.students.filter(s => s.total_balance > 0).forEach(s => {
+                        if (!this.bulkSelected.includes(s.student_id)) {
+                            this.bulkSelected.push(s.student_id);
+                            const amount = this.bulkPaymentType === 'fixed_amount' && this.bulkFixedAmount
+                                ? Math.min(parseFloat(this.bulkFixedAmount), s.total_balance)
+                                : s.total_balance;
+                            this.bulkEntries.push({
+                                student_id: s.student_id,
+                                student_name: s.last_name + ', ' + s.first_name,
+                                balance: s.total_balance,
+                                amount: amount
+                            });
+                        }
+                    });
+                } else {
+                    const currentPageIds = this.students.map(s => s.student_id);
+                    this.bulkSelected = this.bulkSelected.filter(id => !currentPageIds.includes(id));
+                    this.bulkEntries = this.bulkEntries.filter(e => !currentPageIds.includes(e.student_id));
+                }
+            },
+            
+            removeBulkStudent(studentId) {
+                this.bulkSelected = this.bulkSelected.filter(id => id !== studentId);
+                this.bulkEntries = this.bulkEntries.filter(e => e.student_id !== studentId);
+            },
+            
+            recalcBulkAmounts() {
+                this.bulkEntries.forEach(entry => {
+                    if (this.bulkPaymentType === 'full_balance') {
+                        entry.amount = entry.balance;
+                    } else if (this.bulkPaymentType === 'fixed_amount') {
+                        const fixed = parseFloat(this.bulkFixedAmount) || 0;
+                        entry.amount = Math.min(fixed, entry.balance);
+                    }
+                    // For 'custom', keep existing amounts
+                });
+            },
+            
+            get bulkGrandTotal() {
+                return this.bulkEntries.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+            },
+            
+            submitBulkPayment(event) {
+                if (this.bulkEntries.length === 0) return;
+                
+                // Validate all amounts
+                for (const entry of this.bulkEntries) {
+                    const amt = parseFloat(entry.amount);
+                    if (!amt || amt <= 0) {
+                        alert('Please enter a valid amount for ' + entry.student_name);
+                        return;
+                    }
+                    if (amt > parseFloat(entry.balance)) {
+                        alert('Amount for ' + entry.student_name + ' exceeds their balance of ' + this.formatMoney(entry.balance));
+                        return;
+                    }
+                }
+                
+                this.bulkSubmitting = true;
+                event.target.submit();
             }
         }
     }
