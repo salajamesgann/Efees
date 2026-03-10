@@ -59,7 +59,7 @@
       <main class="flex-1 p-8 md:h-screen overflow-y-auto bg-gray-50 custom-scrollbar">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Edit User Account</h1>
-      <a href="{{ route('admin.staff.index') }}" class="inline-flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-colors duration-200">
+      <a href="{{ route('super_admin.users.index') }}" class="inline-flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-colors duration-200">
         <i class="fas fa-arrow-left"></i>
         Back to List
       </a>
@@ -99,7 +99,7 @@
         }
     @endphp
 
-    <form method="POST" action="{{ route('admin.staff.update', $user) }}" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 card-hover" x-data="{ submitting: false }" @submit="submitting = true">
+    <form method="POST" action="{{ route('super_admin.users.update', $user) }}" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 card-hover" x-data="{ submitting: false }" @submit="submitting = true">
       @csrf
       @method('PUT')
 
@@ -157,7 +157,7 @@
       </div>
 
       <div class="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-100">
-        <a href="{{ route('admin.staff.index') }}" class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors duration-200">
+        <a href="{{ route('super_admin.users.index') }}" class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors duration-200">
           Cancel
         </a>
         <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="submitting">

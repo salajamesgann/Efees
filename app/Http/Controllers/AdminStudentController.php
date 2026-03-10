@@ -439,7 +439,7 @@ class AdminStudentController extends Controller
             $redirectParams['strand'] = $validated['strand'];
         }
 
-        return redirect()->route('admin.students.index', $redirectParams)
+        return redirect()->route('super_admin.students.index', $redirectParams)
             ->with('success', 'Section added successfully.');
     }
 
@@ -454,7 +454,7 @@ class AdminStudentController extends Controller
             'name' => $validated['name'],
         ]);
 
-        return redirect()->route('admin.students.index', ['level' => $validated['level']])
+        return redirect()->route('super_admin.students.index', ['level' => $validated['level']])
             ->with('success', 'Strand added successfully.');
     }
 
@@ -471,7 +471,7 @@ class AdminStudentController extends Controller
 
         $section->delete();
 
-        return redirect()->route('admin.students.index', [
+        return redirect()->route('super_admin.students.index', [
             'level' => $section->level,
             'strand' => $request->input('strand'),
         ])->with('success', "Section '{$section->name}' deleted successfully.");
@@ -547,7 +547,7 @@ class AdminStudentController extends Controller
         $skipNote = $skipped > 0 ? " {$skipped} Withdrawn/Archived student(s) were left in place." : '';
 
         return redirect()
-            ->route('admin.students.index', $redirectParams)
+            ->route('super_admin.students.index', $redirectParams)
             ->with('success', "Promoted {$count} student(s) from {$validated['level']} ({$validated['section']}) → {$nextLevel} for {$newSy}.{$skipNote}" .
                 ($keepSection ? '' : ' Section assignment cleared — students can be re-assigned.'));
     }
@@ -805,7 +805,7 @@ class AdminStudentController extends Controller
         $flashKey = $skipped > 0 && $imported === 0 ? 'error' : ($skipped > 0 ? 'warning' : 'success');
 
         return redirect()
-            ->route('admin.students.index', ['school_year' => $overrideSy])
+            ->route('super_admin.students.index', ['school_year' => $overrideSy])
             ->with($flashKey, $summary);
     }
 
@@ -1169,7 +1169,7 @@ class AdminStudentController extends Controller
         }
 
         return redirect()
-            ->route('admin.students.index', ['id' => $result['student']->student_id])
+            ->route('super_admin.students.index', ['id' => $result['student']->student_id])
             ->with('success', $successMessage);
     }
 
@@ -1442,7 +1442,7 @@ class AdminStudentController extends Controller
         }
 
         return redirect()
-            ->route('admin.students.index', ['id' => $student->student_id]) // Redirect back to the student
+            ->route('super_admin.students.index', ['id' => $student->student_id]) // Redirect back to the student
             ->with('success', 'Student updated successfully.');
     }
 
@@ -1462,7 +1462,7 @@ class AdminStudentController extends Controller
         } catch (\Throwable $e) {
         }
 
-        return redirect()->route('admin.students.index')->with('success', 'Student deleted.');
+        return redirect()->route('super_admin.students.index')->with('success', 'Student deleted.');
     }
 
     /**
@@ -1492,7 +1492,7 @@ class AdminStudentController extends Controller
         );
 
         return redirect()
-            ->route('admin.students.index', ['id' => $student->student_id])
+            ->route('super_admin.students.index', ['id' => $student->student_id])
             ->with('success', "{$student->full_name}'s enrollment status updated to {$newStatus}.");
     }
 
@@ -1509,7 +1509,7 @@ class AdminStudentController extends Controller
         } catch (\Throwable $e) {
         }
 
-        return redirect()->route('admin.students.index')->with('success', 'Student archived.');
+        return redirect()->route('super_admin.students.index')->with('success', 'Student archived.');
     }
 
     public function unarchive(Student $student): RedirectResponse
@@ -1525,7 +1525,7 @@ class AdminStudentController extends Controller
         } catch (\Throwable $e) {
         }
 
-        return redirect()->route('admin.students.index')->with('success', 'Student unarchived.');
+        return redirect()->route('super_admin.students.index')->with('success', 'Student unarchived.');
     }
 
     /**

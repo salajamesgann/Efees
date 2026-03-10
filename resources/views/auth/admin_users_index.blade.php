@@ -32,10 +32,6 @@
   </style>
 </head>
 <body class="flex flex-col md:flex-row min-h-screen bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false, roleModalOpen: false, selectedRole: '' }">
-  <!-- Mobile Sidebar Overlay -->
-  <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/80 z-40 md:hidden" x-cloak></div>
-
-  <!-- Sidebar -->
   @include('layouts.admin_sidebar')
 
   <!-- Mobile Header & Content -->
@@ -62,7 +58,7 @@
                     <h1 class="text-2xl font-bold text-slate-900">User Management</h1>
                     <p class="text-sm text-slate-500 mt-1">Manage Admin, Staff, and Parent accounts</p>
                 </div>
-                <a href="{{ route('admin.users.create') }}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-sm shadow-blue-200 transition-all hover:shadow-md">
+                <a href="{{ route('super_admin.users.create') }}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-sm shadow-blue-200 transition-all hover:shadow-md">
                     <i class="fas fa-plus"></i>
                     <span>Add User</span>
                 </a>
@@ -70,7 +66,7 @@
 
             <!-- Filters & Search -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <form action="{{ route('admin.users.index') }}" method="GET" class="flex flex-col md:flex-row gap-4">
+                <form action="{{ route('super_admin.users.index') }}" method="GET" class="flex flex-col md:flex-row gap-4">
                     <div class="flex-1 relative">
                         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                         <input type="text" name="q" value="{{ $query }}" placeholder="Search by name or email..." class="w-full pl-10 pr-4 py-2 rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500">
@@ -164,10 +160,10 @@
                                     </td>
                                     <td class="px-6 py-4 text-right">
                                         <div class="flex items-center justify-end gap-2">
-                                            <a href="{{ route('admin.users.edit', $user) }}" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                                            <a href="{{ route('super_admin.users.edit', $user) }}" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <form action="{{ route('admin.users.toggle-status', $user) }}" method="POST" class="inline">
+                                            <form action="{{ route('super_admin.users.toggle-status', $user) }}" method="POST" class="inline">
                                                 @csrf
                                                 <button type="submit" class="p-2 {{ $user->is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50' }} hover:opacity-80 rounded-lg transition-colors" title="{{ $user->is_active ? 'Deactivate' : 'Activate' }}">
                                                     @if($user->is_active)
@@ -178,7 +174,7 @@
                                                 </button>
                                             </form>
                                             @if($user->role && $user->role->role_name !== 'admin')
-                                                <form action="{{ route('admin.users.destroy', $user) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');" class="inline">
+                                                <form action="{{ route('super_admin.users.destroy', $user) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');" class="inline">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
@@ -247,7 +243,7 @@
                     <button type="button" 
                         class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         :disabled="!selectedRole"
-                        @click="window.location.href = '{{ route('admin.users.create') }}?role=' + selectedRole">
+                        @click="window.location.href = '{{ route('super_admin.users.create') }}?role=' + selectedRole">
                         Confirm
                     </button>
                     <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" @click="roleModalOpen = false">

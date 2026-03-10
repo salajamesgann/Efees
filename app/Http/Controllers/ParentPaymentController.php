@@ -304,13 +304,30 @@ class ParentPaymentController extends Controller
                 // Send Notifications
                 try {
                     $user = Auth::user();
-                    $prefs = DB::table('user_preferences')->where('user_id', $user->user_id)->first();
+                    $studentName = \App\Models\Student::where('student_id', $studentId)->value('first_name') . ' ' . \App\Models\Student::where('student_id', $studentId)->value('last_name');
+                    $adminIds = \App\Models\User::whereHas('role', function ($query) {
+                        $query->where('role_name', 'admin');
+                    })->pluck('user_id')->all();
 
-                    // In-App Notification
+                    if (! empty($adminIds)) {
+                        $body = 'Online payment of ₱'.number_format($amountPaid, 2)." for {$studentName} ({$studentId}) is awaiting confirmation. Ref: {$reference}";
+                        foreach ($adminIds as $aid) {
+                            \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                                'user_id' => $aid,
+                                'title' => 'Online Payment Awaiting Confirmation',
+                                'body' => $body,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+                    }
+
+                    // Parent's own notification
+                    $prefs = DB::table('user_preferences')->where('user_id', $user->user_id)->first();
                     DB::table('notifications')->insert([
                         'user_id' => $user->user_id,
-                        'title' => 'Payment Successful',
-                        'body' => 'We received your payment of ₱'.number_format($amountPaid, 2)." for {$studentId}. Ref: {$reference}",
+                        'title' => 'Payment Submitted for Confirmation',
+                        'body' => 'Your payment of ₱'.number_format($amountPaid, 2)." for {$studentId} has been submitted and is awaiting admin confirmation. Ref: {$reference}",
                         'created_at' => now(),
                     ]);
 
@@ -343,7 +360,7 @@ class ParentPaymentController extends Controller
                 // Clear session
                 session()->forget(['paymongo_checkout_id', 'payment_student_id', 'payment_amount', 'payment_method']);
 
-                return redirect()->route('parent.pay')->with('success', 'Payment successful! Your balance has been updated.');
+                return redirect()->route('parent.pay')->with('success', 'Payment submitted for confirmation. You will be notified once it is approved.');
             } else {
                 return redirect()->route('parent.pay')->with('error', 'Payment was not completed.');
             }
@@ -446,10 +463,10 @@ class ParentPaymentController extends Controller
                     'reference_number' => $reference,
                     'remarks' => 'Online Payment via PayMongo',
                     'paid_at' => now(),
-                    'status' => 'approved',
+                    'status' => 'for_confirmation', // New status
                 ]);
-            } elseif ($payment->status !== 'approved') {
-                $payment->status = 'approved';
+            } elseif ($payment->status !== 'for_confirmation' && $payment->status !== 'approved') {
+                $payment->status = 'for_confirmation'; // New status
                 $payment->paid_at = $payment->paid_at ?? now();
                 $payment->save();
             }
@@ -492,6 +509,33 @@ class ParentPaymentController extends Controller
                 app(FeeManagementService::class)->recomputeStudentLedger($student);
             } catch (\Throwable $e) {
             }
+        }
+        try {
+            $studentName = $student ? ($student->first_name.' '.$student->last_name) : $studentId;
+            $adminIds = DB::table('users')
+                ->join('roles', 'users.role_id', '=', 'roles.role_id')
+                ->where('roles.role_name', 'admin')
+                ->pluck('users.user_id')
+                ->all();
+            if (! empty($adminIds)) {
+                $body = 'Online payment received ₱'.number_format((float) $amountPaid, 2)." for {$studentName} ({$studentId}). Ref: {$reference}";
+                foreach ($adminIds as $aid) {
+                    $exists = DB::table('notifications')
+                        ->where('user_id', $aid)
+                        ->where('body', 'like', '%Ref: '.$reference.'%')
+                        ->exists();
+                    if (! $exists) {
+                        DB::table('notifications')->insert([
+                            'user_id' => $aid,
+                            'title' => 'Online Payment Received',
+                            'body' => $body,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
         }
     }
 
@@ -716,11 +760,30 @@ class ParentPaymentController extends Controller
                     $user = Auth::user();
                     $totalFormatted = number_format($grandTotal, 2);
                     $studentCount = count($allocations);
+                    $baseReference = 'PAYMONGO-' . $sessionId;
 
+                    $adminIds = \App\Models\User::whereHas('role', function ($query) {
+                        $query->where('role_name', 'admin');
+                    })->pluck('user_id')->all();
+
+                    if (! empty($adminIds)) {
+                        $body = "Online combined payment of ₱{$totalFormatted} for {$studentCount} student(s) is awaiting confirmation. Ref: {$baseReference}";
+                        foreach ($adminIds as $aid) {
+                            \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                                'user_id' => $aid,
+                                'title' => 'Multi-Child Payment Awaiting Confirmation',
+                                'body' => $body,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+                    }
+
+                    // Parent's own notification
                     DB::table('notifications')->insert([
                         'user_id' => $user->user_id,
-                        'title' => 'Multi-Child Payment Successful',
-                        'body' => "We received your combined payment of ₱{$totalFormatted} for {$studentCount} student(s). Ref: {$baseReference}",
+                        'title' => 'Multi-Child Payment Submitted for Confirmation',
+                        'body' => "Your combined payment of ₱{$totalFormatted} for {$studentCount} student(s) has been submitted and is awaiting admin confirmation. Ref: {$baseReference}",
                         'created_at' => now(),
                     ]);
 
@@ -747,7 +810,7 @@ class ParentPaymentController extends Controller
 
                 session()->forget(['paymongo_checkout_id', 'multi_child_payment', 'multi_allocations', 'payment_amount', 'payment_method']);
 
-                return redirect()->route('parent.pay.multi')->with('success', "Combined payment of ₱" . number_format($grandTotal, 2) . " for " . count($allocations) . " student(s) was successful!");
+                return redirect()->route('parent.pay.multi')->with('success', "Combined payment of ₱" . number_format($grandTotal, 2) . " for " . count($allocations) . " student(s) has been submitted for confirmation.");
             } else {
                 return redirect()->route('parent.pay.multi')->with('error', 'Payment was not completed.');
             }

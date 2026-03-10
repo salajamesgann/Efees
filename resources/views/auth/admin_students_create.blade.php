@@ -38,142 +38,7 @@
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }">
-  <!-- Mobile Sidebar Overlay -->
-  <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/80 z-40 md:hidden" x-cloak></div>
-
-  <!-- Sidebar -->
-  <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-50 w-72 h-screen overflow-y-auto bg-white text-slate-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:sticky md:top-0 md:inset-0 border-r border-slate-200 flex flex-col shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)]" id="sidebar">
-      <!-- Header -->
-      <div class="flex items-center justify-between gap-3 px-8 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
-          <div class="flex items-center gap-3">
-              <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                  <i class="fas fa-user-shield text-lg"></i>
-              </div>
-              <div>
-                  <h1 class="text-blue-900 font-extrabold text-xl tracking-tight select-none">Efees Admin</h1>
-                  <p class="text-xs text-slate-500 font-medium">Administration</p>
-              </div>
-          </div>
-          <!-- Mobile Close Button -->
-          <button @click="sidebarOpen = false" class="md:hidden p-2 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-slate-50">
-              <i class="fas fa-times text-xl"></i>
-          </button>
-      </div>
-
-      <nav class="flex flex-col mt-6 px-4 space-y-1.5 flex-grow pb-6 overflow-y-auto custom-scrollbar">
-          <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Main Menu</p>
-          
-          <!-- Dashboard -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin_dashboard') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin_dashboard') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-tachometer-alt text-lg {{ request()->routeIs('admin_dashboard') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Dashboard</span>
-          </a>
-
-
-          <!-- Student Management (Users) -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.students.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.students.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-users text-lg {{ request()->routeIs('admin.students.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Student Management</span>
-          </a>
-
-          <!-- User Management -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.staff.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.staff.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-chalkboard-teacher text-lg {{ request()->routeIs('admin.staff.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">User Management</span>
-          </a>
-
-          <!-- Fee Management -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.fees.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.fees.index', ['tab' => 'tuition']) }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-file-invoice-dollar text-lg {{ request()->routeIs('admin.fees.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Fee Management</span>
-            </a>
-
-            <!-- Payment Approvals -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.payment_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.payment_approvals.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-check-double text-lg {{ request()->routeIs('admin.payment_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Payment Approvals</span>
-            </a>
-
-            <!-- Void Approvals -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.void_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.void_approvals.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-undo-alt text-lg {{ request()->routeIs('admin.void_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Void Approvals</span>
-                @php try { $pendingVoids = \App\Models\PaymentVoidRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingVoids = 0; } @endphp
-                @if($pendingVoids > 0)
-                  <span class="ml-auto bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingVoids }}</span>
-                @endif
-            </a>
-
-            <!-- Link Approvals -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.link_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.link_approvals.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-link text-lg {{ request()->routeIs('admin.link_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Link Approvals</span>
-                @php try { $pendingLinks = \App\Models\StudentLinkRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingLinks = 0; } @endphp
-                @if($pendingLinks > 0)
-                  <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingLinks }}</span>
-                @endif
-            </a>
-
-          <!-- Reports & Analytics -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.reports.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.reports.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-chart-bar text-lg {{ request()->routeIs('admin.reports.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Reports & Analytics</span>
-          </a>
-
-          <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6">System</p>
-
-          <!-- Audit Logs -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.audit-logs.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.audit-logs.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-shield-alt text-lg {{ request()->routeIs('admin.audit-logs.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Audit Logs</span>
-          </a>
-
-          <!-- SMS Control -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.sms.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.sms.logs') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-comment-alt text-lg {{ request()->routeIs('admin.sms.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">SMS Control</span>
-            </a>
-
-          <!-- Settings -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.settings.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.settings.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-cog text-lg {{ request()->routeIs('admin.settings.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Settings</span>
-          </a>
-
-          <!-- Logout -->
-          <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-6 px-4 pb-6">
-              @csrf
-              <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 hover:shadow-sm transition-all duration-200 group border border-red-100">
-                  <div class="w-8 flex justify-center">
-                      <i class="fas fa-sign-out-alt text-lg group-hover:scale-110 transition-transform"></i>
-                  </div>
-                  <span class="text-sm font-bold">Logout</span>
-              </button>
-          </form>
-      </nav>
-  </aside>
+  @include('layouts.admin_sidebar')
 
   <!-- Main Content Wrapper -->
   <div class="flex-1 flex flex-col h-screen overflow-hidden">
@@ -197,7 +62,7 @@
             <h1 class="text-2xl font-bold tracking-tight text-slate-900">Create Student</h1>
             <p class="text-sm text-slate-500 mt-1">Add a new student to the system</p>
           </div>
-          <a href="{{ route('admin.students.index') }}" class="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-xl transition-all duration-200 shadow-sm hover:text-blue-600 hover:shadow-md">
+          <a href="{{ route('super_admin.students.index') }}" class="inline-flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold px-4 py-2 rounded-xl transition-all duration-200 shadow-sm hover:text-blue-600 hover:shadow-md">
             <i class="fas fa-arrow-left"></i>
             Back to Students
           </a>
@@ -213,7 +78,7 @@
           </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.students.store') }}" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6" x-data="{ forceConfirmed: {{ session('duplicate_warning') ? 'false' : 'true' }} }">
+        <form method="POST" action="{{ route('super_admin.students.store') }}" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6" x-data="{ forceConfirmed: {{ session('duplicate_warning') ? 'false' : 'true' }} }">
           @csrf
 
           {{-- Duplicate Warning Banner --}}
@@ -246,7 +111,7 @@
                       @endif
                     </div>
                     <div class="mt-2">
-                      <a href="{{ route('admin.students.index', ['id' => $dup['student_id']]) }}" target="_blank"
+                      <a href="{{ route('super_admin.students.index', ['id' => $dup['student_id']]) }}" target="_blank"
                          class="text-blue-600 hover:underline text-xs font-medium">
                         <i class="fas fa-external-link-alt mr-1"></i>View existing student record
                       </a>
@@ -342,7 +207,7 @@
                       this.loading = true;
                       this.errMsg = '';
                       try {
-                          const res = await fetch('{{ route('admin.students.generateId') }}', {
+                          const res = await fetch('{{ route('super_admin.students.generateId') }}', {
                               headers: { 'X-Requested-With': 'XMLHttpRequest' }
                           });
                           const data = await res.json();
@@ -528,7 +393,7 @@
           </div>
 
           <div class="flex justify-end gap-4 mt-10 pt-6 border-t border-slate-100">
-            <a href="{{ route('admin.students.index') }}" class="px-6 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold rounded-xl transition-all duration-200 shadow-sm">Cancel</a>
+            <a href="{{ route('super_admin.students.index') }}" class="px-6 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold rounded-xl transition-all duration-200 shadow-sm">Cancel</a>
             <button type="submit"
                     :disabled="!forceConfirmed"
                     :class="forceConfirmed ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 hover:shadow-blue-300 cursor-pointer' : 'bg-blue-300 cursor-not-allowed opacity-60'"

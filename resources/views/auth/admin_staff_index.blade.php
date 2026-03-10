@@ -54,7 +54,7 @@
                         <h1 class="text-2xl font-bold text-slate-900">User Management</h1>
                         <p class="text-sm text-slate-500 mt-1">Manage staff and parent accounts</p>
                     </div>
-                    <a href="{{ route('admin.staff.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm font-medium">
+                    <a href="{{ route('super_admin.users.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm font-medium">
                         <i class="fas fa-plus"></i>
                         <span>Add User</span>
                     </a>
@@ -76,11 +76,17 @@
 
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                        <form method="GET" action="{{ route('admin.staff.index') }}" class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                        <form method="GET" action="{{ route('super_admin.users.index') }}" class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                             <div class="relative">
                                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                                 <input type="text" name="q" value="{{ request('q') }}" placeholder="Search users..." class="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64">
                             </div>
+                            <select name="role" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onchange="this.form.submit()">
+                                <option value="all" {{ ($role_filter ?? 'all') == 'all' ? 'selected' : '' }}>All Roles</option>
+                                <option value="admin" {{ ($role_filter ?? '') == 'admin' ? 'selected' : '' }}>Admin</option>
+                                <option value="staff" {{ ($role_filter ?? '') == 'staff' ? 'selected' : '' }}>Staff</option>
+                                <option value="parent" {{ ($role_filter ?? '') == 'parent' ? 'selected' : '' }}>Parent</option>
+                            </select>
                             <select name="status" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onchange="this.form.submit()">
                                 <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>All Status</option>
                                 <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
@@ -157,21 +163,21 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div class="flex justify-end space-x-2">
                                                 <!-- View Action -->
-                                                <a href="{{ route('admin.staff.show', $user) }}" 
+                                                <a href="{{ route('super_admin.users.show', $user) }}" 
                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors duration-200"
                                                    title="View User">
                                                     <i class="fas fa-eye text-sm"></i>
                                                 </a>
                                                 
                                                 <!-- Edit Action -->
-                                                <a href="{{ route('admin.staff.edit', $user) }}" 
+                                                <a href="{{ route('super_admin.users.edit', $user) }}" 
                                                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-colors duration-200"
                                                    title="Edit User">
                                                     <i class="fas fa-edit text-sm"></i>
                                                 </a>
                                                 
                                                 <!-- Toggle Status Action -->
-                                                <form action="{{ route('admin.staff.toggle-status', $user) }}" method="POST" class="inline">
+                                                <form action="{{ route('super_admin.users.toggle-status', $user) }}" method="POST" class="inline">
                                                     @csrf
                                                     @if($user->role->role_name === 'parent' && $user->roleable)
                                                         @if($user->roleable->account_status === 'Active')
@@ -204,11 +210,11 @@
                                                     @endif
                                                 </form>
                                                 
-                                                <!-- Delete Action (only for inactive non-admin users) -->
-                                                @if($user->role && $user->role->role_name !== 'admin')
+                                                <!-- Delete Action (only for inactive users) -->
+                                                @if($user->role)
                                                     @if($user->role->role_name === 'parent' && $user->roleable)
                                                         @if($user->roleable->account_status === 'Archived')
-                                                            <form action="{{ route('admin.staff.destroy', $user) }}" method="POST" class="inline" 
+                                                            <form action="{{ route('super_admin.users.destroy', $user) }}" method="POST" class="inline" 
                                                                   onsubmit="return confirm('Are you sure you want to delete this user account? This action cannot be undone.');">
                                                                 @csrf
                                                                 @method('DELETE')
@@ -220,7 +226,7 @@
                                                             </form>
                                                         @endif
                                                     @elseif(!$isActive)
-                                                        <form action="{{ route('admin.staff.destroy', $user) }}" method="POST" class="inline" 
+                                                        <form action="{{ route('super_admin.users.destroy', $user) }}" method="POST" class="inline" 
                                                               onsubmit="return confirm('Are you sure you want to delete this user account? This action cannot be undone.');">
                                                             @csrf
                                                             @method('DELETE')

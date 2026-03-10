@@ -52,142 +52,7 @@
   <div x-show="sidebarOpen" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden" x-cloak></div>
 
   <!-- Sidebar -->
-  <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed md:sticky md:top-0 inset-y-0 left-0 z-40 w-72 h-screen bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 md:translate-x-0 shadow-2xl md:shadow-none overflow-y-auto custom-scrollbar">
-      <div class="flex items-center gap-3 px-8 py-6 border-b border-slate-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-          <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-              <i class="fas fa-user-shield text-lg"></i>
-          </div>
-          <div>
-              <h1 class="text-blue-900 font-extrabold text-xl tracking-tight select-none">Efees Admin</h1>
-              <p class="text-xs text-slate-500 font-medium">Administration</p>
-          </div>
-      </div>
-
-      <nav class="flex flex-col mt-6 px-4 space-y-1.5 flex-grow overflow-y-auto pb-6 custom-scrollbar">
-          <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Main Menu</p>
-          
-          <!-- Dashboard -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin_dashboard') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin_dashboard') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-tachometer-alt text-lg {{ request()->routeIs('admin_dashboard') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Dashboard</span>
-          </a>
-
-          
-
-          <!-- Student Management -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.students.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.students.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-users text-lg {{ request()->routeIs('admin.students.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-          <span class="text-sm font-medium">Student Management</span>
-          </a>
-
-          <!-- Parent Management removed -->
-
-          <!-- User Management -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.staff.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.staff.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-chalkboard-teacher text-lg {{ request()->routeIs('admin.staff.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">User Management</span>
-          </a>
-
-          <!-- Fee Management -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.fees.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.fees.index', ['tab' => 'tuition']) }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-file-invoice-dollar text-lg {{ request()->routeIs('admin.fees.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Fee Management</span>
-          </a>
-
-          <!-- Payment Approvals -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.payment_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.payment_approvals.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-check-double text-lg {{ request()->routeIs('admin.payment_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Payment Approvals</span>
-          </a>
-
-          <!-- Void Approvals -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.void_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.void_approvals.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-undo-alt text-lg {{ request()->routeIs('admin.void_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Void Approvals</span>
-              @php try { $pendingVoids = \App\Models\PaymentVoidRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingVoids = 0; } @endphp
-              @if($pendingVoids > 0)
-                <span class="ml-auto bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingVoids }}</span>
-              @endif
-          </a>
-
-          <!-- Link Approvals -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.link_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.link_approvals.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-link text-lg {{ request()->routeIs('admin.link_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Link Approvals</span>
-              @php try { $pendingLinks = \App\Models\StudentLinkRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingLinks = 0; } @endphp
-              @if($pendingLinks > 0)
-                <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingLinks }}</span>
-              @endif
-          </a>
-
-          <!-- Reports & Analytics -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.reports.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.reports.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-chart-bar text-lg {{ request()->routeIs('admin.reports.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Reports & Analytics</span>
-          </a>
-
-          <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6">System</p>
-          
-          <!-- Audit Logs -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.audit-logs.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.audit-logs.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-shield-alt text-lg {{ request()->routeIs('admin.audit-logs.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Audit Logs</span>
-          </a>
-
-          <!-- SMS Control -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.sms.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.sms.logs') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-comment-alt text-lg {{ request()->routeIs('admin.sms.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">SMS Control</span>
-            </a>
-
-            <!-- Requests -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.requests.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.requests.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-key text-lg {{ request()->routeIs('admin.requests.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Requests</span>
-            </a>
-
-          <!-- Settings -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.settings.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.settings.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-cog text-lg {{ request()->routeIs('admin.settings.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Settings</span>
-          </a>
-
-          <!-- Logout -->
-          <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-6 px-4 pb-6" onsubmit="return confirmLogout()">
-              @csrf
-              <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 hover:shadow-sm transition-all duration-200 group border border-red-100">
-                  <div class="w-8 flex justify-center">
-                      <i class="fas fa-sign-out-alt text-lg group-hover:scale-110 transition-transform"></i>
-                  </div>
-                  <span class="text-sm font-bold">Logout</span>
-              </button>
-          </form>
-      </nav>
-  </aside>
+  @include('layouts.admin_sidebar')
   <!-- Main content -->
   <main class="flex-1 p-6 md:p-8 overflow-y-auto custom-scrollbar">
    <div class="flex justify-between items-center mb-8">
@@ -365,7 +230,10 @@
     </div>
 
     <!-- Total Students -->
-    <a href="{{ route('admin.students.index') }}" class="block transform transition-transform hover:-translate-y-1">
+    @php
+        $studentsRoute = auth()->user()->hasRole('super_admin') ? route('super_admin.students.index') : route('admin.enrollment.index');
+    @endphp
+    <a href="{{ $studentsRoute }}" class="block transform transition-transform hover:-translate-y-1">
         <section class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 flex flex-col justify-center items-center text-center h-full relative overflow-hidden group">
              <div class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
              <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-400">
@@ -532,8 +400,8 @@
               @endif
           </td>
           <td class="px-4 py-3 whitespace-nowrap text-center">
-             <a href="{{ route('admin.students.index', ['id' => $rec['student_id']]) }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline">
-                 View Ledger
+             <a href="{{ auth()->user()->hasRole('super_admin') ? route('super_admin.students.index', ['id' => $rec['student_id']]) : route('admin.enrollment.index', ['id' => $rec['student_id']]) }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline">
+                 View Details
              </a>
           </td>
          </tr>
@@ -562,7 +430,7 @@
        </thead>
        <tbody class="divide-y divide-gray-200" id="recentTransactionsTableBody">
         @foreach(($recentTransactions ?? collect()) as $pay)
-         <tr class="hover:bg-green-50 transition-colors cursor-pointer" onclick="window.location.href='{{ route('admin.students.index', ['id' => $pay['student_id']]) }}'">
+         <tr class="hover:bg-green-50 transition-colors cursor-pointer" onclick="window.location.href='{{ auth()->user()->hasRole('super_admin') ? route('super_admin.students.index', ['id' => $pay['student_id']]) : route('admin.enrollment.index', ['id' => $pay['student_id']]) }}'">
              <td class="px-4 py-3 whitespace-nowrap">
                  <div class="font-medium text-gray-900">{{ $pay['student_name'] }}</div>
              </td>

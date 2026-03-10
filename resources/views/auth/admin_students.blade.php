@@ -47,7 +47,7 @@
       <h1 class="text-indigo-400 font-extrabold text-xl tracking-tight select-none" style="letter-spacing: -0.015em;">Efees Admin</h1>
     </div>
     <nav class="flex flex-col mt-6 px-4 space-y-1 flex-grow">
-      <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-indigo-400 transition-colors duration-200" href="{{ route('admin_dashboard') }}">
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-indigo-400 transition-colors duration-200" href="{{ auth()->user()->hasRole('super_admin') ? route('super_admin.dashboard') : route('admin_dashboard') }}">
         <i class="fas fa-tachometer-alt w-5"></i>
         <span class="text-sm font-semibold">Dashboard</span>
       </a>

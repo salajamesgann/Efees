@@ -25,13 +25,11 @@ class AdminSettingsController extends Controller
     public function index(): View
     {
         $settings = SystemSetting::whereIn('key', [
-            'school_year',
             'semester',
             'student_id_format',
             'allow_staff_edit_fees',
             'auto_generate_fees_on_enrollment',
             'notifications_enabled',
-            'maintenance_mode',
             'max_login_attempts',
             'lockout_minutes',
             'password_expiry_days',
@@ -45,12 +43,10 @@ class AdminSettingsController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'school_year' => ['nullable', 'string', 'max:50'],
             'semester' => ['nullable', 'string', 'max:50'],
             'student_id_format' => ['nullable', 'string', 'max:100'],
             'auto_generate_fees_on_enrollment' => ['nullable', 'in:0,1'],
             'notifications_enabled' => ['nullable', 'in:0,1'],
-            'maintenance_mode' => ['nullable', 'in:0,1'],
             'allow_staff_edit_fees' => ['nullable', 'in:0,1'],
             'max_login_attempts' => ['nullable', 'integer', 'min:3', 'max:20'],
             'lockout_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
@@ -63,10 +59,6 @@ class AdminSettingsController extends Controller
 
         if (! $request->has('notifications_enabled')) {
             $data['notifications_enabled'] = '0';
-        }
-
-        if (! $request->has('maintenance_mode')) {
-            $data['maintenance_mode'] = '0';
         }
 
         if (! $request->has('allow_staff_edit_fees')) {
@@ -84,12 +76,6 @@ class AdminSettingsController extends Controller
         }
 
         $oldSettings = SystemSetting::whereIn('key', array_keys($data))->pluck('value', 'key')->toArray();
-
-        // Check if school year is being updated
-        $schoolYearUpdateResults = [];
-        if (isset($data['school_year']) && $data['school_year'] !== ($oldSettings['school_year'] ?? null)) {
-            $schoolYearUpdateResults = SchoolYearUpdateService::handleSchoolYearChange($data['school_year']);
-        }
 
         foreach ($data as $key => $value) {
             SystemSetting::updateOrCreate(['key' => $key], ['value' => $value]);

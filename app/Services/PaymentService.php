@@ -25,11 +25,14 @@ class PaymentService
      */
     public function approvePayment(Payment $payment)
     {
-        if ($payment->status === 'approved') {
-            return; // Already approved
-        }
-
         return DB::transaction(function () use ($payment) {
+            // Re-fetch with lock to prevent race conditions
+            $payment = Payment::lockForUpdate()->findOrFail($payment->id);
+
+            if ($payment->status === 'approved') {
+                return $payment; // Already approved
+            }
+
             // 1. Update Payment Status
             $payment->update(['status' => 'approved']);
 

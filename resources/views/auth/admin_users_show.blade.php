@@ -60,9 +60,9 @@
             <div class="max-w-3xl mx-auto space-y-6">
                 <!-- Breadcrumbs -->
                 <nav class="flex text-sm text-slate-500">
-                    <a href="{{ route('admin_dashboard') }}" class="hover:text-blue-600 transition-colors">Dashboard</a>
+                    <a href="{{ auth()->user()->hasRole('super_admin') ? route('super_admin.dashboard') : route('admin_dashboard') }}" class="hover:text-blue-600 transition-colors">Dashboard</a>
                     <span class="mx-2">/</span>
-                    <a href="{{ route('admin.users.index') }}" class="hover:text-blue-600 transition-colors">User Management</a>
+                    <a href="{{ route('super_admin.users.index') }}" class="hover:text-blue-600 transition-colors">User Management</a>
                     <span class="mx-2">/</span>
                     <span class="text-slate-900 font-medium">User Profile</span>
                 </nav>
@@ -97,7 +97,7 @@
                         </div>
                     </div>
                     <div class="flex flex-col gap-2 w-full sm:w-auto">
-                        <a href="{{ route('admin.users.edit', $user) }}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors shadow-sm">
+                        <a href="{{ route('super_admin.users.edit', $user) }}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors shadow-sm">
                             <i class="fas fa-edit"></i>
                             <span>Edit Profile</span>
                         </a>

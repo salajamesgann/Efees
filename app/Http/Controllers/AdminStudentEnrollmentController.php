@@ -15,9 +15,34 @@ class AdminStudentEnrollmentController extends Controller
     /**
      * Display a listing of enrolled students.
      */
-    public function index(Request $request): RedirectResponse
+    public function index(Request $request): View
     {
-        return redirect()->route('admin.students.index');
+        $query = Student::query();
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'ilike', "%{$search}%")
+                  ->orWhere('last_name', 'ilike', "%{$search}%")
+                  ->orWhere('student_id', 'ilike', "%{$search}%");
+            });
+        }
+
+        // Filters
+        if ($request->filled('level')) {
+            $query->where('level', $request->level);
+        }
+        if ($request->filled('section')) {
+            $query->where('section', $request->section);
+        }
+        if ($request->filled('school_year')) {
+            $query->where('school_year', $request->school_year);
+        }
+
+        $students = $query->orderBy('last_name')->paginate(20)->withQueryString();
+
+        return view('admin.enrollment.index', compact('students'));
     }
 
     /**

@@ -58,7 +58,7 @@
                         <h1 class="text-2xl font-bold text-slate-900">Create New User</h1>
                         <p class="text-sm text-slate-500 mt-1">Add a new Admin, Staff, or Parent account</p>
                     </div>
-                    <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg transition-colors shadow-sm font-medium">
+                    <a href="{{ route('super_admin.users.index') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg transition-colors shadow-sm font-medium">
                         <i class="fas fa-arrow-left"></i>
                         <span>Back to List</span>
                     </a>
@@ -84,7 +84,7 @@
                 </div>
 
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden" x-data="{ role: '{{ old('role_name', request('role', '')) }}' }">
-                    <form action="{{ route('admin.users.store') }}" method="POST" class="p-6 space-y-6" x-data="{ submitting: false }" @submit="submitting = true">
+                    <form action="{{ route('super_admin.users.store') }}" method="POST" class="p-6 space-y-6" x-data="{ submitting: false }" @submit="submitting = true">
                         @csrf
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,7 +189,7 @@
                         </div>
 
                         <div class="flex items-center justify-end gap-4 pt-4 border-t border-slate-100">
-                            <a href="{{ route('admin.users.index') }}" class="px-4 py-2 text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg font-medium transition-colors">Cancel</a>
+                            <a href="{{ route('super_admin.users.index') }}" class="px-4 py-2 text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg font-medium transition-colors">Cancel</a>
                             <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" :disabled="submitting">
                                 <span x-show="!submitting">Create User</span>
                                 <span x-show="submitting" class="inline-flex items-center gap-2">

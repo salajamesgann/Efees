@@ -2,6 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
+use App\Models\Admin;
+use App\Models\Staff;
+use App\Models\ParentContact;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -23,10 +27,22 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $role = Role::whereIn('role_name', ['admin', 'staff', 'parent'])->inRandomOrder()->first();
+        
+        $roleable_type = match ($role->role_name) {
+            'admin' => Admin::class,
+            'staff' => Staff::class,
+            'parent' => ParentContact::class,
+            default => null,
+        };
+
         return [
             'email' => fake()->unique()->safeEmail(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'role_id' => $role->role_id,
+            'roleable_type' => $roleable_type,
+            'roleable_id' => substr(str_replace('-', '', \Illuminate\Support\Str::uuid()->toString()), 0, 20),
         ];
     }
 

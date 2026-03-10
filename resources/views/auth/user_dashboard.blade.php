@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parent Dashboard - Efees</title>
+    <script>
+        (function () {
+            var k = 'efees-dark-mode';
+            var d = document.documentElement;
+            var v = localStorage.getItem(k);
+            var m = window.matchMedia('(prefers-color-scheme: dark)');
+            if (v === 'true' || (v === null && m.matches)) {
+                d.classList.add('dark');
+            } else {
+                d.classList.remove('dark');
+            }
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {

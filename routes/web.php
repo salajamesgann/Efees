@@ -31,7 +31,7 @@ Route::post('reset-password', [App\Http\Controllers\ForgotPasswordController::cl
 Route::post('/webhooks/paymongo', [\App\Http\Controllers\ParentPaymentController::class, 'webhook'])->name('webhooks.paymongo');
 
 // Protected Routes
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'checkMaintenance'])->group(function () {
     Route::get('/change-password', [AuthLoginController::class, 'changePassword'])->name('auth.password.change');
     Route::post('/change-password', [AuthLoginController::class, 'updatePassword'])->name('auth.password.update');
     Route::get('/user_dashboard', [AuthLoginController::class, 'user_dashboard'])->name('user_dashboard');
@@ -150,56 +150,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/webhooks/sms/twilio', [\App\Http\Controllers\AdminSmsController::class, 'twilioCallback'])->name('webhooks.sms.twilio');
     Route::post('/webhooks/sms/philsms', [\App\Http\Controllers\AdminSmsController::class, 'philsmsCallback'])->name('webhooks.sms.philsms');
 
-    // Admin Manage Students
-    Route::prefix('admin/students')->name('admin.students.')->middleware('ensureRole:admin')->group(function () {
-        Route::get('/export', [AdminStudentController::class, 'exportMasterList'])->name('export');
-        Route::get('/search', [AdminStudentController::class, 'search'])->name('search');
-        Route::get('/sections', [AdminStudentController::class, 'sectionsList'])->name('sections.list');
-        Route::get('/generate-id', [AdminStudentController::class, 'generateStudentId'])->name('generateId');
-        Route::get('/search-for-sibling', [AdminStudentController::class, 'searchForSibling'])->name('searchForSibling');
-        Route::get('/', [AdminStudentController::class, 'index'])->name('index');
-        Route::get('/create', [AdminStudentController::class, 'create'])->name('create');
-        Route::post('/', [AdminStudentController::class, 'store'])->name('store');
-        Route::post('/section', [AdminStudentController::class, 'storeSection'])->name('storeSection');
-        Route::post('/strand', [AdminStudentController::class, 'storeStrand'])->name('storeStrand');
-        Route::delete('/sections/{section}', [AdminStudentController::class, 'destroySection'])->name('sections.destroy');
-        Route::get('/{student}/edit', [AdminStudentController::class, 'edit'])->name('edit');
-        Route::get('/{student}/siblings', [AdminStudentController::class, 'siblings'])->name('siblings');
-        Route::post('/{student}/siblings/link', [AdminStudentController::class, 'linkSibling'])->name('siblings.link');
-        Route::post('/{student}/siblings/unlink', [AdminStudentController::class, 'unlinkSibling'])->name('siblings.unlink');
-        Route::post('/{student}/charges', [AdminStudentController::class, 'addCharge'])->name('charges.add');
-        Route::delete('/{student}/charges/{charge}', [AdminStudentController::class, 'removeCharge'])->name('charges.remove');
-        Route::post('/{student}/adjustments', [AdminStudentController::class, 'storeAdjustment'])->name('adjustments.store');
-        Route::post('/{student}/recalculate-fees', [AdminStudentController::class, 'recalculateFees'])->name('recalculateFees');
-        Route::put('/{student}', [AdminStudentController::class, 'update'])->name('update');
-        Route::delete('/{student}', [AdminStudentController::class, 'destroy'])->name('destroy');
-        Route::patch('/{student}/archive', [AdminStudentController::class, 'archive'])->name('archive');
-        Route::patch('/{student}/unarchive', [AdminStudentController::class, 'unarchive'])->name('unarchive');
-        Route::patch('/{student}/status', [AdminStudentController::class, 'changeStatus'])->name('changeStatus');
-        Route::post('/promote-section', [AdminStudentController::class, 'promoteSection'])->name('promoteSection');
-        Route::get('/import-template', [AdminStudentController::class, 'downloadImportTemplate'])->name('importTemplate');
-        Route::post('/import', [AdminStudentController::class, 'importStudents'])->name('import');
-    });
-
-    // Admin Parent Management - DEPRECATED (Moved to Unified User Management)
-    // Route::prefix('admin/parents')->name('admin.parents.')->middleware('ensureRole:admin')->group(function () {
-    //     Route::get('/', [AdminParentController::class, 'index'])->name('index');
-    //     Route::get('/create', [AdminParentController::class, 'create'])->name('create');
-    //     Route::post('/', [AdminParentController::class, 'store'])->name('store');
-    //     Route::get('/{parent}/edit', [AdminParentController::class, 'edit'])->name('edit');
-    //     Route::put('/{parent}', [AdminParentController::class, 'update'])->name('update');
-    //     Route::delete('/{parent}', [AdminParentController::class, 'destroy'])->name('destroy');
-    //     Route::patch('/{parent}/archive', [AdminParentController::class, 'archive'])->name('archive');
-    //     Route::patch('/{parent}/unarchive', [AdminParentController::class, 'unarchive'])->name('unarchive');
-    //     Route::post('/{parent}/link', [AdminParentController::class, 'link'])->name('link');
-    //     Route::post('/{parent}/unlink', [AdminParentController::class, 'unlink'])->name('unlink');
-    //     Route::patch('/{parent}/toggle-status', [AdminParentController::class, 'toggleStatus'])->name('toggle-status');
-    //     Route::post('/{parent}/reset-password', [AdminParentController::class, 'resetPassword'])->name('reset-password');
-    // });
+    // Alias for backward compatibility - points to enrollment list
+    Route::get('/admin/students', [\App\Http\Controllers\AdminStudentEnrollmentController::class, 'index'])->name('admin.students.index')->middleware('ensureRole:admin');
+    Route::get('/admin/staff', [\App\Http\Controllers\AdminStaffController::class, 'index'])->name('admin.staff.index')->middleware('ensureRole:admin');
 
     // Admin Student Enrollment
     Route::prefix('admin/enrollment')->name('admin.enrollment.')->middleware('ensureRole:admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminStudentEnrollmentController::class, 'index'])->name('index');
+        
         Route::get('/{student}', [\App\Http\Controllers\AdminStudentEnrollmentController::class, 'show'])->name('show');
         Route::get('/{student}/edit', [\App\Http\Controllers\AdminStudentEnrollmentController::class, 'edit'])->name('edit');
         Route::get('/{student}/print', [\App\Http\Controllers\AdminStudentEnrollmentController::class, 'printStatement'])->name('print');
@@ -247,32 +205,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/assignments/{feeAssignment}/recalculate', [AdminFeeController::class, 'recalculateStudentFees'])->name('assignments.recalculate');
     });
 
-    // Admin User Management (formerly Staff)
-    Route::prefix('admin/staff')->name('admin.staff.')->middleware('ensureRole:admin')->group(function () {
-        Route::get('/', [\App\Http\Controllers\AdminStaffController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\AdminStaffController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\AdminStaffController::class, 'store'])->name('store');
-        Route::get('/{user}', [\App\Http\Controllers\AdminStaffController::class, 'show'])->name('show');
-        Route::get('/{user}/edit', [\App\Http\Controllers\AdminStaffController::class, 'edit'])->name('edit');
-        Route::put('/{user}', [\App\Http\Controllers\AdminStaffController::class, 'update'])->name('update');
-        Route::delete('/{user}', [\App\Http\Controllers\AdminStaffController::class, 'destroy'])->name('destroy');
-        Route::post('/{user}/toggle', [\App\Http\Controllers\AdminStaffController::class, 'toggleStatus'])->name('toggle-status');
-        Route::post('/{user}/activate', [\App\Http\Controllers\AdminStaffController::class, 'activate'])->name('activate');
-        Route::post('/{user}/reset-password', [\App\Http\Controllers\AdminStaffController::class, 'resetPassword'])->name('reset-password');
-    });
-
-    // Admin User Management
-    Route::prefix('admin/users')->name('admin.users.')->middleware('ensureRole:admin')->group(function () {
-        Route::get('/', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\AdminUserController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\AdminUserController::class, 'store'])->name('store');
-        Route::get('/{user}/edit', [\App\Http\Controllers\AdminUserController::class, 'edit'])->name('edit');
-        Route::put('/{user}', [\App\Http\Controllers\AdminUserController::class, 'update'])->name('update');
-        Route::delete('/{user}', [\App\Http\Controllers\AdminUserController::class, 'destroy'])->name('destroy');
-        Route::post('/{user}/toggle', [\App\Http\Controllers\AdminUserController::class, 'toggleStatus'])->name('toggle-status');
-        Route::post('/{user}/activate', [\App\Http\Controllers\AdminUserController::class, 'activate'])->name('activate');
-    });
-
     // Admin SMS Management
     Route::prefix('admin/sms')->name('admin.sms.')->middleware('ensureRole:admin')->group(function () {
         Route::get('/templates', [\App\Http\Controllers\AdminSmsController::class, 'templates'])->name('templates');
@@ -293,6 +225,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminPaymentApprovalController::class, 'index'])->name('index');
         Route::post('/{payment}/approve', [\App\Http\Controllers\AdminPaymentApprovalController::class, 'approve'])->name('approve');
         Route::post('/{payment}/reject', [\App\Http\Controllers\AdminPaymentApprovalController::class, 'reject'])->name('reject');
+    });
+
+    // Admin Online Payment Confirmations
+    Route::prefix('admin/online-confirmations')->name('admin.online_confirmations.')->middleware('ensureRole:admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AdminOnlineConfirmationController::class, 'index'])->name('index');
+        Route::post('/{payment}/confirm', [\App\Http\Controllers\AdminOnlineConfirmationController::class, 'confirm'])->name('confirm');
+        Route::post('/{payment}/reject', [\App\Http\Controllers\AdminOnlineConfirmationController::class, 'reject'])->name('reject');
     });
 
     // Admin Void Approvals
@@ -328,5 +267,84 @@ Route::middleware('auth')->group(function () {
         Route::post('/clear-cache', [\App\Http\Controllers\AdminSettingsController::class, 'clearCache'])->name('clear-cache');
         Route::post('/reset-database', [\App\Http\Controllers\AdminSettingsController::class, 'resetDatabase'])->name('reset-database');
         Route::post('/export-db', [\App\Http\Controllers\AdminSettingsController::class, 'exportDatabase'])->name('export-db');
+    });
+
+    // Admin Parents Management
+    Route::prefix('admin/parents')->name('admin.parents.')->middleware('ensureRole:admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AdminParentController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\AdminParentController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\AdminParentController::class, 'store'])->name('store');
+        Route::get('/{parent}/edit', [\App\Http\Controllers\AdminParentController::class, 'edit'])->name('edit');
+        Route::put('/{parent}', [\App\Http\Controllers\AdminParentController::class, 'update'])->name('update');
+        Route::delete('/{parent}', [\App\Http\Controllers\AdminParentController::class, 'destroy'])->name('destroy');
+    });
+});
+
+// Super Admin Routes
+Route::prefix('super-admin')->name('super_admin.')->middleware('ensureRole:super_admin')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\SuperAdminController::class, 'dashboard'])->name('dashboard');
+
+    // Super Admin Manage Students
+    Route::prefix('students')->name('students.')->group(function () {
+        Route::get('/export', [\App\Http\Controllers\AdminStudentController::class, 'exportMasterList'])->name('export');
+        Route::get('/search', [\App\Http\Controllers\AdminStudentController::class, 'search'])->name('search');
+        Route::get('/sections', [\App\Http\Controllers\AdminStudentController::class, 'sectionsList'])->name('sections.list');
+        Route::get('/generate-id', [\App\Http\Controllers\AdminStudentController::class, 'generateStudentId'])->name('generateId');
+        Route::get('/search-for-sibling', [\App\Http\Controllers\AdminStudentController::class, 'searchForSibling'])->name('searchForSibling');
+        Route::get('/', [\App\Http\Controllers\AdminStudentController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\AdminStudentController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\AdminStudentController::class, 'store'])->name('store');
+        Route::post('/section', [\App\Http\Controllers\AdminStudentController::class, 'storeSection'])->name('storeSection');
+        Route::post('/strand', [\App\Http\Controllers\AdminStudentController::class, 'storeStrand'])->name('storeStrand');
+        Route::delete('/sections/{section}', [\App\Http\Controllers\AdminStudentController::class, 'destroySection'])->name('destroySection');
+        Route::get('/{student}/edit', [\App\Http\Controllers\AdminStudentController::class, 'edit'])->name('edit');
+        Route::get('/{student}/siblings', [\App\Http\Controllers\AdminStudentController::class, 'siblings'])->name('siblings');
+        Route::post('/{student}/siblings/link', [\App\Http\Controllers\AdminStudentController::class, 'linkSibling'])->name('siblings.link');
+        Route::post('/{student}/siblings/unlink', [\App\Http\Controllers\AdminStudentController::class, 'unlinkSibling'])->name('siblings.unlink');
+        Route::post('/{student}/charges', [\App\Http\Controllers\AdminStudentController::class, 'addCharge'])->name('charges.add');
+        Route::delete('/{student}/charges/{charge}', [\App\Http\Controllers\AdminStudentController::class, 'removeCharge'])->name('charges.remove');
+        Route::post('/{student}/adjustments', [\App\Http\Controllers\AdminStudentController::class, 'storeAdjustment'])->name('adjustments.store');
+        Route::post('/{student}/recalculate-fees', [\App\Http\Controllers\AdminStudentController::class, 'recalculateFees'])->name('recalculateFees');
+        Route::put('/{student}', [\App\Http\Controllers\AdminStudentController::class, 'update'])->name('update');
+        Route::delete('/{student}', [\App\Http\Controllers\AdminStudentController::class, 'destroy'])->name('destroy');
+        Route::patch('/{student}/archive', [\App\Http\Controllers\AdminStudentController::class, 'archive'])->name('archive');
+        Route::patch('/{student}/unarchive', [\App\Http\Controllers\AdminStudentController::class, 'unarchive'])->name('unarchive');
+        Route::patch('/{student}/status', [\App\Http\Controllers\AdminStudentController::class, 'changeStatus'])->name('changeStatus');
+        Route::post('/promote-section', [\App\Http\Controllers\AdminStudentController::class, 'promoteSection'])->name('promoteSection');
+        Route::get('/import-template', [\App\Http\Controllers\AdminStudentController::class, 'downloadImportTemplate'])->name('importTemplate');
+        Route::post('/import', [\App\Http\Controllers\AdminStudentController::class, 'importStudents'])->name('import');
+    });
+
+    // Super Admin User Management (formerly Staff)
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AdminStaffController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\AdminStaffController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\AdminStaffController::class, 'store'])->name('store');
+        Route::get('/{user}', [\App\Http\Controllers\AdminStaffController::class, 'show'])->name('show');
+        Route::get('/{user}/edit', [\App\Http\Controllers\AdminStaffController::class, 'edit'])->name('edit');
+        Route::put('/{user}', [\App\Http\Controllers\AdminStaffController::class, 'update'])->name('update');
+        Route::delete('/{user}', [\App\Http\Controllers\AdminStaffController::class, 'destroy'])->name('destroy');
+        Route::post('/{user}/toggle', [\App\Http\Controllers\AdminStaffController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{user}/activate', [\App\Http\Controllers\AdminStaffController::class, 'activate'])->name('activate');
+        Route::post('/{user}/reset-password', [\App\Http\Controllers\AdminStaffController::class, 'resetPassword'])->name('reset-password');
+    });
+
+    // Super Admin Audit Logs
+    Route::prefix('audit-logs')->name('audit-logs.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\SuperAdminAuditController::class, 'index'])->name('index');
+        Route::get('/{log}', [\App\Http\Controllers\SuperAdminAuditController::class, 'show'])->name('show');
+    });
+
+    // Super Admin Global Settings
+    Route::prefix('system-settings')->name('settings.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\SuperAdminSettingsController::class, 'index'])->name('index');
+        Route::post('/', [\App\Http\Controllers\SuperAdminSettingsController::class, 'update'])->name('update');
+    });
+
+    // Super Admin Bulk Operations
+    Route::prefix('bulk-operations')->name('bulk.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\BulkOperationsController::class, 'index'])->name('index');
+        Route::post('/promote', [\App\Http\Controllers\BulkOperationsController::class, 'promote'])->name('promote');
+        Route::post('/archive', [\App\Http\Controllers\BulkOperationsController::class, 'archive'])->name('archive');
     });
 });

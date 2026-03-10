@@ -31,10 +31,15 @@ class AdminStaffController extends Controller
     {
         $query = trim($request->input('q', ''));
         $status = $request->input('status', 'all');
+        $role_filter = $request->input('role', 'all');
 
         $usersQuery = User::with(['role', 'roleable'])
-            ->whereHas('role', function ($q) {
-                $q->whereIn('role_name', ['staff', 'admin', 'parent']);
+            ->whereHas('role', function ($q) use ($role_filter) {
+                if ($role_filter !== 'all') {
+                    $q->where('role_name', $role_filter);
+                } else {
+                    $q->whereIn('role_name', ['staff', 'admin', 'parent']);
+                }
             })
             ->when($query !== '', function ($q) use ($query) {
                 $operator = DB::connection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
@@ -68,12 +73,18 @@ class AdminStaffController extends Controller
             ->when($status === 'active', function ($q) {
                 $q->where(function ($sub) {
                     $sub->where(function ($s) {
-                        $s->where('roleable_type', Staff::class)
+                        $s->whereIn('roleable_type', [Staff::class, Admin::class])
                             ->whereExists(function ($exists) {
                                 $exists->select(DB::raw(1))
-                                    ->from('staff')
-                                    ->whereColumn('staff.staff_id', 'users.roleable_id')
-                                    ->where('is_active', true);
+                                    ->from(function ($query) {
+                                        $query->select('staff_id as id', 'is_active')
+                                              ->from('staff')
+                                              ->unionAll(
+                                                  DB::table('admins')->select('admin_id as id', 'is_active')
+                                              );
+                                    }, 'active_profiles')
+                                    ->whereColumn('active_profiles.id', 'users.roleable_id')
+                                    ->where('active_profiles.is_active', true);
                             });
                     })->orWhere(function ($p) {
                         $p->where('roleable_type', ParentContact::class)
@@ -90,19 +101,23 @@ class AdminStaffController extends Controller
                                     ->where('account_status', 'Active');
                             });
                     });
-                    // Admin-type users are always considered active (no is_active field)
-                    $sub->orWhere('roleable_type', Admin::class);
                 });
             })
             ->when($status === 'inactive', function ($q) {
                 $q->where(function ($sub) {
                     $sub->where(function ($s) {
-                        $s->where('roleable_type', Staff::class)
+                        $s->whereIn('roleable_type', [Staff::class, Admin::class])
                             ->whereExists(function ($exists) {
                                 $exists->select(DB::raw(1))
-                                    ->from('staff')
-                                    ->whereColumn('staff.staff_id', 'users.roleable_id')
-                                    ->where('is_active', false);
+                                    ->from(function ($query) {
+                                        $query->select('staff_id as id', 'is_active')
+                                              ->from('staff')
+                                              ->unionAll(
+                                                  DB::table('admins')->select('admin_id as id', 'is_active')
+                                              );
+                                    }, 'inactive_profiles')
+                                    ->whereColumn('inactive_profiles.id', 'users.roleable_id')
+                                    ->where('inactive_profiles.is_active', false);
                             });
                     })->orWhere(function ($p) {
                         $p->where('roleable_type', ParentContact::class)
@@ -119,7 +134,6 @@ class AdminStaffController extends Controller
                                     ->where('account_status', '!=', 'Active');
                             });
                     });
-                    // Admin-type users are always active, so exclude them from inactive filter
                 });
             })
             ->orderBy('user_id', 'desc');
@@ -130,6 +144,7 @@ class AdminStaffController extends Controller
             'users' => $users,
             'query' => $query,
             'status' => $status,
+            'role_filter' => $role_filter,
         ]);
     }
 
@@ -287,7 +302,7 @@ class AdminStaffController extends Controller
             });
 
             return redirect()
-                ->route('admin.staff.index')
+                ->route('super_admin.users.index')
                 ->with('success', rtrim(ucfirst($roleName).' account created successfully.'.($roleName === 'parent' && str_contains(strtolower($email), '@gmail.com') && empty($validated['password']) ? ' A password setup email has been sent to the Gmail address.' : '')));
         } catch (\Exception $e) {
             return redirect()
@@ -366,7 +381,7 @@ class AdminStaffController extends Controller
             });
 
             return redirect()
-                ->route('admin.staff.index')
+                ->route('super_admin.users.index')
                 ->with('success', 'Account updated successfully.');
 
         } catch (\Exception $e) {
@@ -425,7 +440,7 @@ class AdminStaffController extends Controller
             }
 
             // Update using the loaded roleable model
-            if ($user->roleable_type === Staff::class) {
+            if ($user->roleable_type === Staff::class || $user->roleable_type === Admin::class) {
                 $roleable->update(['is_active' => ! $roleable->is_active]);
                 $status = $roleable->is_active ? 'activated' : 'deactivated';
             } elseif ($user->roleable_type === ParentContact::class) {
@@ -454,7 +469,7 @@ class AdminStaffController extends Controller
             $user->load('roleable');
             $roleable = $user->roleable;
 
-            if ($user->roleable_type === Staff::class) {
+            if ($user->roleable_type === Staff::class || $user->roleable_type === Admin::class) {
                 $roleable->update(['is_active' => true]);
             } elseif ($user->roleable_type === ParentContact::class) {
                 $roleable->update(['account_status' => 'Active']);
@@ -517,11 +532,6 @@ class AdminStaffController extends Controller
     public function destroy(User $user): RedirectResponse
     {
         try {
-            // Prevent deletion of admin accounts
-            if ($user->role && $user->role->role_name === 'admin') {
-                return redirect()->back()->with('error', 'Admin accounts cannot be deleted for security reasons.');
-            }
-
             DB::transaction(function () use ($user) {
                 $roleable = $user->roleable;
 
@@ -543,7 +553,7 @@ class AdminStaffController extends Controller
                 }
             });
 
-            return redirect()->route('admin.staff.index')->with('success', 'Account deleted successfully.');
+            return redirect()->route('super_admin.users.index')->with('success', 'Account deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to delete account.');
         }

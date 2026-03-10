@@ -146,7 +146,7 @@ class User extends Authenticatable
     public function getIsActiveAttribute()
     {
         if ($this->roleable) {
-            if ($this->roleable_type === 'App\\Models\\Staff') {
+            if ($this->roleable_type === 'App\\Models\\Staff' || $this->roleable_type === 'App\\Models\\Admin') {
                 return (bool) ($this->roleable->is_active ?? true);
             }
             if ($this->roleable_type === 'App\\Models\\ParentContact') {

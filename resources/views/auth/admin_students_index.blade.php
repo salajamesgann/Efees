@@ -45,149 +45,7 @@
   </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 flex h-screen overflow-hidden" x-data="{ sidebarOpen: false }">
-    
-    <!-- Mobile Sidebar Overlay -->
-    <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-900/80 z-40 md:hidden" x-cloak></div>
-
-    <!-- Sidebar -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-50 w-72 h-screen overflow-y-auto bg-white text-slate-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:sticky md:top-0 md:inset-0 border-r border-slate-200 flex flex-col shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] custom-scrollbar" id="sidebar">
-        <div class="flex items-center justify-between gap-3 px-8 py-6 border-b border-slate-100 bg-white sticky top-0 z-10">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                    <i class="fas fa-user-shield text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="text-blue-900 font-extrabold text-xl tracking-tight select-none">Efees Admin</h1>
-                    <p class="text-xs text-slate-500 font-medium">Administration</p>
-                </div>
-            </div>
-            <!-- Mobile Close Button -->
-            <button @click="sidebarOpen = false" class="md:hidden text-slate-400 hover:text-slate-600 transition-colors">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-
-        <nav class="flex flex-col mt-6 px-4 space-y-1.5 flex-grow pb-6 overflow-y-auto custom-scrollbar">
-            <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Main Menu</p>
-            
-            <!-- Dashboard -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin_dashboard') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin_dashboard') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-tachometer-alt text-lg {{ request()->routeIs('admin_dashboard') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Dashboard</span>
-            </a>
-
-            <!-- Student Management -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.students.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.students.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-users text-lg {{ request()->routeIs('admin.students.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Student Management</span>
-            </a>
-
-            <!-- User Management -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.staff.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.staff.index') }}">
-                <div class="w-8 flex justify-center">
-                  <i class="fas fa-chalkboard-teacher text-lg {{ request()->routeIs('admin.staff.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">User Management</span>
-            </a>
-
-            <!-- Fee Management -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.fees.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.fees.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-file-invoice-dollar text-lg {{ request()->routeIs('admin.fees.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Fee Management</span>
-            </a>
-
-            <!-- Payment Approvals -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.payment_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.payment_approvals.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-check-double text-lg {{ request()->routeIs('admin.payment_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Payment Approvals</span>
-            </a>
-
-            <!-- Void Approvals -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.void_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.void_approvals.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-undo-alt text-lg {{ request()->routeIs('admin.void_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Void Approvals</span>
-                @php try { $pendingVoids = \App\Models\PaymentVoidRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingVoids = 0; } @endphp
-                @if($pendingVoids > 0)
-                  <span class="ml-auto bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingVoids }}</span>
-                @endif
-            </a>
-
-            <!-- Link Approvals -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.link_approvals.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.link_approvals.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-link text-lg {{ request()->routeIs('admin.link_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Link Approvals</span>
-                @php try { $pendingLinks = \App\Models\StudentLinkRequest::where('status','pending')->count(); } catch (\Exception $e) { $pendingLinks = 0; } @endphp
-                @if($pendingLinks > 0)
-                  <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingLinks }}</span>
-                @endif
-            </a>
-
-            <!-- Reports & Analytics -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.reports.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.reports.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-chart-bar text-lg {{ request()->routeIs('admin.reports.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Reports & Analytics</span>
-            </a>
-
-            <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6">System</p>
-
-            <!-- Audit Logs -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.audit-logs.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.audit-logs.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-shield-alt text-lg {{ request()->routeIs('admin.audit-logs.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Audit Logs</span>
-            </a>
-
-            <!-- SMS Control -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.sms.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.sms.logs') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-comment-alt text-lg {{ request()->routeIs('admin.sms.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">SMS Control</span>
-            </a>
-
-            <!-- Requests -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.requests.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.requests.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-key text-lg {{ request()->routeIs('admin.requests.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Requests</span>
-            </a>
-
-            <!-- Settings -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.settings.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.settings.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-cog text-lg {{ request()->routeIs('admin.settings.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-                </div>
-                <span class="text-sm font-medium">Settings</span>
-            </a>
-
-            <!-- Logout -->
-            <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-6 px-4 pb-6">
-                @csrf
-                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 hover:shadow-sm transition-all duration-200 group border border-red-100">
-                    <div class="w-8 flex justify-center">
-                        <i class="fas fa-sign-out-alt text-lg group-hover:scale-110 transition-transform"></i>
-                    </div>
-                    <span class="text-sm font-bold">Logout</span>
-                </button>
-            </form>
-        </nav>
-    </aside>
+    @include('layouts.admin_sidebar')
 
     <!-- Main Content Wrapper -->
     <div class="flex-1 flex flex-col h-screen overflow-hidden bg-white" x-data="{ 
@@ -217,7 +75,7 @@
                 if (['Grade 11','Grade 12'].includes(this.gradeLevel) && this.strandName) {
                     params.set('strand', this.strandName);
                 }
-                const res = await fetch('{{ route('admin.students.sections.list') }}' + '?' + params.toString());
+                const res = await fetch('{{ route('super_admin.students.sections.list') }}' + '?' + params.toString());
                 const data = await res.json();
                 this.sections = Array.isArray(data) ? data : [];
             } catch (e) {
@@ -272,7 +130,7 @@
                                     $backParams['level'] = $currentLevel;
                                     if(isset($currentStrand)) {
                                         // If strand is set, clicking back should go to strands list (which means level is set but strand is null)
-                                        // But currently admin.students.index with just level will show strands if SHS.
+                                        // But currently super_admin.students.index with just level will show strands if SHS.
                                         // So passing just 'level' is correct.
                                         // Wait, if I am in sections and I have a strand, I want to go back to strand selection.
                                         // AdminStudentController: if level is 11/12 and !strand, show strands.
@@ -299,7 +157,7 @@
                                     $backParams['school_year'] = $currentSchoolYear;
                                 }
                             @endphp
-                            <a href="{{ route('admin.students.index', $backParams) }}" class="text-slate-500 hover:text-blue-600 transition-colors">
+                            <a href="{{ route('super_admin.students.index', $backParams) }}" class="text-slate-500 hover:text-blue-600 transition-colors">
                                 <i class="fas fa-arrow-left"></i>
                             </a>
                         @endif
@@ -328,7 +186,7 @@
                     
                     @if(isset($activeSy) && $currentSchoolYear === $activeSy)
                         @if($viewState === 'students' && !$q)
-                        <a href="{{ route('admin.students.index', ['create' => true, 'level' => $currentLevel, 'section' => $currentSection, 'strand' => $currentStrand ?? null, 'school_year' => $currentSchoolYear]) }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
+                        <a href="{{ route('super_admin.students.index', ['create' => true, 'level' => $currentLevel, 'section' => $currentSection, 'strand' => $currentStrand ?? null, 'school_year' => $currentSchoolYear]) }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
                             <i class="fas fa-plus"></i> Add Student
                         </a>
                         @elseif($viewState === 'levels')
@@ -351,7 +209,7 @@
                         <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-full whitespace-nowrap">
                             {{ number_format($totalStudents) }} {{ Str::plural('student', $totalStudents) }}
                         </span>
-                        <form method="GET" action="{{ route('admin.students.index') }}" class="flex items-center">
+                        <form method="GET" action="{{ route('super_admin.students.index') }}" class="flex items-center">
                             <select name="school_year" onchange="this.form.submit()" class="text-sm border-none bg-slate-50 rounded-lg text-slate-600 font-medium focus:ring-0 cursor-pointer hover:text-slate-900 py-1 pl-3 pr-8">
                                 @foreach($schoolYears as $sy)
                                     <option value="{{ $sy }}" {{ $currentSchoolYear == $sy ? 'selected' : '' }}>{{ $sy }}</option>
@@ -364,7 +222,7 @@
 
                 <!-- Search (Available in all views) -->
                 <div class="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3 shrink-0">
-                    <form method="GET" action="{{ route('admin.students.index') }}" class="relative"
+                    <form method="GET" action="{{ route('super_admin.students.index') }}" class="relative"
                           x-data="{
                               query: @json($q ?? ''),
                               suggestions: [],
@@ -376,7 +234,7 @@
                                       return;
                                   }
                                   try {
-                                      const response = await fetch('{{ route('admin.students.search') }}?q=' + encodeURIComponent(this.query));
+                                      const response = await fetch('{{ route('super_admin.students.search') }}?q=' + encodeURIComponent(this.query));
                                       this.suggestions = await response.json();
                                       this.showSuggestions = true;
                                   } catch (e) {
@@ -416,7 +274,7 @@
                                     x-transition:leave-start="transform opacity-100 scale-100"
                                     x-transition:leave-end="transform opacity-0 scale-95">
                                     <template x-for="student in suggestions" :key="student.student_id">
-                                        <a :href="'{{ route('admin.students.index') }}?id=' + student.student_id" 
+                                        <a :href="'{{ route('super_admin.students.index') }}?id=' + student.student_id" 
                                         class="block px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
                                             <div class="flex items-center justify-between">
                                                 <div>
@@ -432,7 +290,7 @@
                                     </template>
                                 </div>
                             </div>
-                            <a href="{{ route('admin.students.index', ['view_all' => 1]) }}" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors flex items-center justify-center" title="View All Students">
+                            <a href="{{ route('super_admin.students.index', ['view_all' => 1]) }}" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors flex items-center justify-center" title="View All Students">
                                 <i class="fas fa-list"></i>
                             </a>
                         </div>
@@ -455,7 +313,7 @@
                                 $isActive = strtolower($statusFilter ?? '') === $val;
                                 $params   = $val === '' ? $baseStatusParams : array_merge($baseStatusParams, ['status' => $val]);
                             @endphp
-                            <a href="{{ route('admin.students.index', $params) }}"
+                            <a href="{{ route('super_admin.students.index', $params) }}"
                                class="px-2.5 py-1 rounded-full text-xs font-semibold transition-colors {{ $opt['color'] }} {{ $isActive ? 'ring-2 ring-offset-1 ring-current' : '' }}">
                                 {{ $opt['label'] }}
                             </a>
@@ -472,7 +330,7 @@
                             @forelse($levels as $lvl)
                             @php $lvlCount = $levelStudentCounts[$lvl] ?? 0; @endphp
                             <li>
-                                <a href="{{ route('admin.students.index', array_merge(request()->query(), ['level' => $lvl])) }}" 
+                                <a href="{{ route('super_admin.students.index', array_merge(request()->query(), ['level' => $lvl])) }}" 
                                    class="block p-4 hover:bg-slate-50 transition-colors group">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-3">
@@ -504,7 +362,7 @@
                         @elseif($viewState === 'strands')
                             @forelse($strands as $strand)
                             <li>
-                                <a href="{{ route('admin.students.index', array_merge(request()->query(), ['level' => $currentLevel, 'strand' => $strand->name])) }}" 
+                                <a href="{{ route('super_admin.students.index', array_merge(request()->query(), ['level' => $currentLevel, 'strand' => $strand->name])) }}" 
                                    class="block p-4 hover:bg-slate-50 transition-colors group">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-3">
@@ -530,7 +388,7 @@
                             @endphp
                             <li>
                                 <div class="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group relative">
-                                    <a href="{{ route('admin.students.index', array_merge(request()->query(), ['level' => $currentLevel, 'section' => $sec->name])) }}" 
+                                    <a href="{{ route('super_admin.students.index', array_merge(request()->query(), ['level' => $currentLevel, 'section' => $sec->name])) }}" 
                                        class="flex-1 flex items-center justify-between pr-24">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
@@ -559,7 +417,7 @@
                                         </button>
                                         @endif
                                         <!-- Delete Button -->
-                                        <form action="{{ route('admin.students.sections.destroy', $sec->id) }}" method="POST"
+                                        <form action="{{ route('super_admin.students.destroySection', $sec->id) }}" method="POST"
                                               onsubmit="return confirm('Are you sure you want to delete section {{ $sec->name }}?');">
                                             @csrf
                                             @method('DELETE')
@@ -579,7 +437,7 @@
                         @elseif($viewState === 'students')
                             @forelse($students as $student)
                             <li>
-                                <a href="{{ route('admin.students.index', array_merge(request()->except(['page']), ['id' => $student->student_id, 'create' => null])) }}" 
+                                <a href="{{ route('super_admin.students.index', array_merge(request()->except(['page']), ['id' => $student->student_id, 'create' => null])) }}" 
                                    class="block p-4 hover:bg-slate-50 transition-colors border-l-4 {{ isset($selectedStudent) && $selectedStudent->student_id === $student->student_id ? 'bg-blue-50/50 border-blue-600' : 'border-transparent' }}">
                                     <div class="flex items-start gap-3">
                                         <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
@@ -646,7 +504,7 @@
                 
                 <!-- Export (Always Visible) -->
                 <div class="p-4 border-t border-slate-100 bg-white shrink-0">
-                    <a href="{{ route('admin.students.export', array_merge(request()->query(), ['school_year' => $currentSchoolYear])) }}" target="_blank" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm group">
+                    <a href="{{ route('super_admin.students.export', array_merge(request()->query(), ['school_year' => $currentSchoolYear])) }}" target="_blank" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm group">
                         <i class="fas fa-file-download text-slate-400 group-hover:text-teal-600 transition-colors"></i>
                         <span>Download Master List</span>
                     </a>
@@ -733,7 +591,7 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <form action="{{ route('admin.students.changeStatus', $selectedStudent) }}" method="POST"
+                                <form action="{{ route('super_admin.students.changeStatus', $selectedStudent) }}" method="POST"
                                       x-data="{ status: @js($selectedStudent->enrollment_status ?? 'Active'), original: @js($selectedStudent->enrollment_status ?? 'Active') }"
                                       @submit.prevent="if(status !== original && confirm('Change enrollment status to ' + status + '?')) $el.submit()">
                                     @csrf
@@ -807,7 +665,7 @@
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 @unless($isReadOnly)
-                                                <form action="{{ route('admin.students.recalculateFees', $selectedStudent) }}" method="POST">
+                                                <form action="{{ route('super_admin.students.recalculateFees', $selectedStudent) }}" method="POST">
                                                     @csrf
                                                     <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200">
                                                         <i class="fas fa-sync-alt"></i> Recalculate
@@ -893,7 +751,7 @@
                                                             <td class="px-4 py-2.5 text-sm font-bold text-amber-600 text-right flex items-center justify-end gap-2">
                                                                 +₱{{ number_format($charge->amount, 2) }}
                                                                 @unless($isReadOnly)
-                                                                <form action="{{ route('admin.students.charges.remove', ['student' => $selectedStudent, 'charge' => $charge->id]) }}" method="POST" class="inline opacity-0 group-hover:opacity-100 transition-opacity" onsubmit="return confirm('Remove this charge?');">
+                                                                <form action="{{ route('super_admin.students.charges.remove', ['student' => $selectedStudent, 'charge' => $charge->id]) }}" method="POST" class="inline opacity-0 group-hover:opacity-100 transition-opacity" onsubmit="return confirm('Remove this charge?');">
                                                                     @csrf @method('DELETE')
                                                                     <button type="submit" class="text-slate-400 hover:text-red-500 text-xs"><i class="fas fa-times"></i></button>
                                                                 </form>
@@ -1037,7 +895,7 @@
                                         <div x-show="showAddCharge" x-cloak x-transition class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-3">
                                             <h5 class="text-xs font-bold text-amber-800 uppercase tracking-wider mb-3"><i class="fas fa-plus-circle mr-1"></i> Attach Additional Charge</h5>
                                             @if($availableCharges->count() > 0)
-                                                <form action="{{ route('admin.students.charges.add', $selectedStudent) }}" method="POST" class="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+                                                <form action="{{ route('super_admin.students.charges.add', $selectedStudent) }}" method="POST" class="flex flex-col sm:flex-row items-start sm:items-end gap-3">
                                                     @csrf
                                                     <div class="flex-1 w-full">
                                                         <label class="text-xs font-semibold text-slate-600 mb-1 block">Select Charge</label>
@@ -1063,7 +921,7 @@
                                         <div x-show="showAdjustment" x-cloak x-transition class="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-3">
                                             <h5 class="text-xs font-bold text-purple-800 uppercase tracking-wider mb-3"><i class="fas fa-sliders-h mr-1"></i> One-Off Fee Adjustment</h5>
                                             <p class="text-xs text-purple-600 mb-3">Add a manual charge (e.g., late fee, lost-ID penalty) or a manual discount (e.g., scholarship override). This is a one-time adjustment to the student's account.</p>
-                                            <form action="{{ route('admin.students.adjustments.store', $selectedStudent) }}" method="POST" class="space-y-3">
+                                            <form action="{{ route('super_admin.students.adjustments.store', $selectedStudent) }}" method="POST" class="space-y-3">
                                                 @csrf
                                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <div>
@@ -1330,7 +1188,7 @@
                                     async fetchSiblings() {
                                         this.loading = true;
                                         try {
-                                            const res = await fetch('{{ $selectedStudent ? route('admin.students.siblings', $selectedStudent) : '' }}');
+                                            const res = await fetch('{{ $selectedStudent ? route('super_admin.students.siblings', $selectedStudent) : '' }}');
                                             const data = await res.json();
                                             this.siblings = data.siblings || [];
                                             this.familyCount = data.family_count || 0;
@@ -1346,7 +1204,7 @@
                                         if (this.searchQuery.length < 2) { this.searchResults = []; return; }
                                         this.searching = true;
                                         try {
-                                            const res = await fetch('{{ route('admin.students.searchForSibling') }}?q=' + encodeURIComponent(this.searchQuery) + '&exclude={{ $selectedStudent?->student_id ?? '' }}');
+                                            const res = await fetch('{{ route('super_admin.students.searchForSibling') }}?q=' + encodeURIComponent(this.searchQuery) + '&exclude={{ $selectedStudent?->student_id ?? '' }}');
                                             this.searchResults = await res.json();
                                         } catch(e) { this.searchResults = []; }
                                         this.searching = false;
@@ -1355,7 +1213,7 @@
                                         this.linking = true;
                                         this.message = '';
                                         try {
-                                            const res = await fetch('{{ $selectedStudent ? route('admin.students.siblings.link', $selectedStudent) : '' }}', {
+                                            const res = await fetch('{{ $selectedStudent ? route('super_admin.students.siblings.link', $selectedStudent) : '' }}', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
                                                 body: JSON.stringify({ sibling_id: siblingId })
@@ -1384,7 +1242,7 @@
                                         this.unlinking = siblingId;
                                         this.message = '';
                                         try {
-                                            const res = await fetch('{{ $selectedStudent ? route('admin.students.siblings.unlink', $selectedStudent) : '' }}', {
+                                            const res = await fetch('{{ $selectedStudent ? route('super_admin.students.siblings.unlink', $selectedStudent) : '' }}', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
                                                 body: JSON.stringify({ sibling_id: siblingId })
@@ -1521,7 +1379,7 @@
                                                         </div>
                                                         <div>
                                                             <div class="flex items-center gap-2">
-                                                                <a :href="'{{ route('admin.students.index') }}?id=' + sib.student_id" class="text-sm font-bold text-slate-800 hover:text-blue-600 transition-colors" x-text="sib.full_name"></a>
+                                                                <a :href="'{{ route('super_admin.students.index') }}?id=' + sib.student_id" class="text-sm font-bold text-slate-800 hover:text-blue-600 transition-colors" x-text="sib.full_name"></a>
                                                                 <span class="px-2 py-0.5 rounded-full text-[10px] uppercase font-bold"
                                                                       :class="{
                                                                           'bg-green-100 text-green-700': sib.enrollment_status === 'Active',
@@ -1633,7 +1491,7 @@
                         </div>
                         <h3 class="text-xl font-bold text-slate-700">Select a Student</h3>
                         <p class="text-sm text-slate-500 max-w-xs text-center mt-2">Choose a student from the list to view their details, manage enrollment, or view activity logs.</p>
-                        <a href="{{ route('admin.students.index', ['create' => true]) }}" class="mt-6 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+                        <a href="{{ route('super_admin.students.index', ['create' => true]) }}" class="mt-6 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
                             Enroll New Student
                         </a>
                     </div>
@@ -1651,7 +1509,7 @@
                     <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
                     <div x-show="sectionModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                        <form action="{{ route('admin.students.storeSection') }}" method="POST">
+                        <form action="{{ route('super_admin.students.storeSection') }}" method="POST">
                             @csrf
                             <input type="hidden" name="level" value="{{ $currentLevel }}">
                             @if(isset($currentStrand))
@@ -1707,7 +1565,7 @@
                          x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                          x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                          class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                        <form action="{{ route('admin.students.promoteSection') }}" method="POST">
+                        <form action="{{ route('super_admin.students.promoteSection') }}" method="POST">
                             @csrf
                             <input type="hidden" name="level"       value="{{ $currentLevel }}">
                             <input type="hidden" name="school_year" value="{{ $currentSchoolYear }}">
@@ -1803,7 +1661,7 @@
                     <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
                     <div x-show="strandModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                        <form action="{{ route('admin.students.storeStrand') }}" method="POST">
+                        <form action="{{ route('super_admin.students.storeStrand') }}" method="POST">
                             @csrf
                             <input type="hidden" name="level" value="{{ $currentLevel }}">
                             <div class="px-4 pt-5 pb-4 bg-white sm:p-6 sm:pb-4">
@@ -1856,7 +1714,7 @@
                          x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                          class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-xl sm:w-full">
 
-                        <form action="{{ route('admin.students.import') }}" method="POST" enctype="multipart/form-data" id="csvImportForm">
+                        <form action="{{ route('super_admin.students.import') }}" method="POST" enctype="multipart/form-data" id="csvImportForm">
                             @csrf
                             <div class="px-6 pt-5 pb-4 bg-white">
                                 <div class="flex items-start gap-4">
@@ -1877,7 +1735,7 @@
                                             <i class="fas fa-download text-blue-500"></i>
                                             <span>Need a template? Download the sample CSV to get started.</span>
                                         </div>
-                                        <a href="{{ route('admin.students.importTemplate') }}"
+                                        <a href="{{ route('super_admin.students.importTemplate') }}"
                                            class="text-xs font-semibold text-blue-700 hover:text-blue-900 border border-blue-300 hover:border-blue-500 px-2.5 py-1 rounded-md bg-white hover:bg-blue-50 transition-colors whitespace-nowrap">
                                             <i class="fas fa-file-download mr-1"></i> Template
                                         </a>

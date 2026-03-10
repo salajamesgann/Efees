@@ -90,6 +90,8 @@ class AuthLoginController extends Controller
             }
 
             switch ($roleName) {
+                case 'super_admin':
+                    return redirect()->intended('super-admin/dashboard');
                 case 'admin':
                     return redirect()->intended('admin_dashboard');
                 case 'staff':

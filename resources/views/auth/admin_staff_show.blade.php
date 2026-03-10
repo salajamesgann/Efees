@@ -56,20 +56,20 @@
                         <p class="text-sm text-slate-500 mt-1">View user details</p>
                     </div>
                     <div class="flex gap-2">
-                        <a href="{{ route('admin.staff.index') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <a href="{{ route('super_admin.users.index') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             Back to List
                         </a>
-                        <a href="{{ route('admin.staff.edit', $user) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <a href="{{ route('super_admin.users.edit', $user) }}" class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             Edit User
                         </a>
-                        <form action="{{ route('admin.staff.reset-password', $user) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to reset this user\'s password? A new password will be generated and emailed to them.');">
+                        <form action="{{ route('super_admin.users.reset-password', $user) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to reset this user\'s password? A new password will be generated and emailed to them.');">
                             @csrf
                             <button type="submit" class="inline-flex items-center px-4 py-2 bg-amber-500 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">
                                 <i class="fas fa-key mr-1.5"></i> Reset Password
                             </button>
                         </form>
                         @if($user->role && $user->role->role_name !== 'admin')
-                            <form action="{{ route('admin.staff.destroy', $user) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this user account? This action cannot be undone.');">
+                            <form action="{{ route('super_admin.users.destroy', $user) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this user account? This action cannot be undone.');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">

@@ -30,6 +30,7 @@ class EnsureRole
             'parent' => \App\Models\ParentContact::class,
             'student' => \App\Models\Student::class,
             'staff' => \App\Models\Staff::class,
+            'super_admin' => \App\Models\User::class, // Assuming Super Admin is a user type
         ];
 
         if (isset($roleableMap[$role]) && ($user->roleable_type ?? '') === $roleableMap[$role]) {

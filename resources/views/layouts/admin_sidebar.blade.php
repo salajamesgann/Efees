@@ -24,31 +24,63 @@
           <p class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Main Menu</p>
           
           <!-- Dashboard -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin_dashboard') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin_dashboard') }}">
+          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin_dashboard') || request()->routeIs('super_admin.dashboard') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ auth()->user()->hasRole('super_admin') ? route('super_admin.dashboard') : route('admin_dashboard') }}">
               <div class="w-8 flex justify-center">
-                  <i class="fas fa-tachometer-alt text-lg {{ request()->routeIs('admin_dashboard') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+                  <i class="fas fa-tachometer-alt text-lg {{ request()->routeIs('admin_dashboard') || request()->routeIs('super_admin.dashboard') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
               </div>
               <span class="text-sm font-medium">Dashboard</span>
           </a>
 
-
-          <!-- Student Management (Users) -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.students.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.students.index') }}">
+          @if(auth()->user()->hasRole('super_admin'))
+          <!-- Student Management (Super Admin) -->
+          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('super_admin.students.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('super_admin.students.index') }}">
               <div class="w-8 flex justify-center">
-                  <i class="fas fa-users text-lg {{ request()->routeIs('admin.students.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+                  <i class="fas fa-users text-lg {{ request()->routeIs('super_admin.students.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
               </div>
               <span class="text-sm font-medium">Student Management</span>
           </a>
 
+          <!-- User Management (Super Admin) -->
+          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('super_admin.users.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('super_admin.users.index') }}">
+              <div class="w-8 flex justify-center">
+                  <i class="fas fa-chalkboard-teacher text-lg {{ request()->routeIs('super_admin.users.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+              </div>
+              <span class="text-sm font-medium">User Management</span>
+          </a>
 
-          
-            <!-- User Management -->
-            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ (request()->routeIs('admin.users.*') || request()->routeIs('admin.staff.*')) ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.staff.index') }}">
-                <div class="w-8 flex justify-center">
-                    <i class="fas fa-chalkboard-teacher text-lg {{ (request()->routeIs('admin.users.*') || request()->routeIs('admin.staff.*')) ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+          <!-- Audit Logs (Super Admin) -->
+          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('super_admin.audit-logs.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('super_admin.audit-logs.index') }}">
+              <div class="w-8 flex justify-center">
+                   <i class="fas fa-shield-alt text-lg {{ request()->routeIs('super_admin.audit-logs.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+               </div>
+               <span class="text-sm font-medium">Audit Logs</span>
+           </a>
+
+           <!-- System Settings (Super Admin) -->
+           <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('super_admin.settings.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('super_admin.settings.index') }}">
+               <div class="w-8 flex justify-center">
+                    <i class="fas fa-tools text-lg {{ request()->routeIs('super_admin.settings.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
                 </div>
-                <span class="text-sm font-medium">User Management</span>
+                <span class="text-sm font-medium">System Configuration</span>
             </a>
+
+            <!-- Bulk Operations (Super Admin) -->
+            <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('super_admin.bulk.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('super_admin.bulk.index') }}">
+                <div class="w-8 flex justify-center">
+                    <i class="fas fa-layer-group text-lg {{ request()->routeIs('super_admin.bulk.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+                </div>
+                <span class="text-sm font-medium">Bulk Operations</span>
+            </a>
+            @endif
+
+          @if(auth()->user()->hasRole('admin'))
+          <!-- Student Enrollment (Admin) -->
+          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.enrollment.*') || request()->routeIs('admin.students.index') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.enrollment.index') }}">
+              <div class="w-8 flex justify-center">
+                  <i class="fas fa-user-graduate text-lg {{ request()->routeIs('admin.enrollment.*') || request()->routeIs('admin.students.index') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+              </div>
+              <span class="text-sm font-medium">Student Enrollment</span>
+          </a>
 
           <!-- Fee Management -->
           <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.fees.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.fees.index', ['tab' => 'tuition']) }}">
@@ -64,6 +96,18 @@
                   <i class="fas fa-check-double text-lg {{ request()->routeIs('admin.payment_approvals.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
               </div>
               <span class="text-sm font-medium">Payment Approvals</span>
+          </a>
+
+          <!-- Online Payment Confirmations -->
+          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.online_confirmations.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.online_confirmations.index') }}">
+              <div class="w-8 flex justify-center">
+                  <i class="fas fa-money-check-alt text-lg {{ request()->routeIs('admin.online_confirmations.*') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
+              </div>
+              <span class="text-sm font-medium">Online Confirmations</span>
+              @php try { $pendingOnlineConfirmations = \App\Models\Payment::where('status','for_confirmation')->count(); } catch (\Exception $e) { $pendingOnlineConfirmations = 0; } @endphp
+              @if($pendingOnlineConfirmations > 0)
+                <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingOnlineConfirmations }}</span>
+              @endif
           </a>
 
           <!-- Void Approvals -->
@@ -89,7 +133,9 @@
                 <span class="ml-auto bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">{{ $pendingLinks }}</span>
               @endif
           </a>
+          @endif
 
+          @if(auth()->user()->hasRole('admin'))
           <!-- Reports & Analytics -->
           <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.reports.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.reports.index') }}">
               <div class="w-8 flex justify-center">
@@ -131,6 +177,7 @@
               </div>
               <span class="text-sm font-medium">Settings</span>
           </a>
+          @endif
 
           <!-- Logout -->
           <form method="POST" action="{{ route('logout') }}" class="mt-auto pt-6 px-4 pb-6">
