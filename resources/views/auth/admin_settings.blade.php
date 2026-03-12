@@ -59,7 +59,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <form method="POST" action="{{ route('admin.settings.account.profile') }}" enctype="multipart/form-data" class="md:col-span-2 space-y-4">
+                <form method="POST" action="{{ Route::has('admin.settings.account.profile') ? route('admin.settings.account.profile') : url('/admin/settings') }}" enctype="multipart/form-data" class="md:col-span-2 space-y-4">
                     @csrf
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
@@ -89,7 +89,7 @@
 
         <div class="bg-white rounded-2xl border border-slate-200 p-6">
             <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Notifications</h2>
-            <form method="POST" action="{{ route('admin.settings.account.notifications') }}" class="space-y-4">
+            <form method="POST" action="{{ Route::has('admin.settings.account.notifications') ? route('admin.settings.account.notifications') : url('/admin/settings') }}" class="space-y-4">
                 @csrf
                 <label class="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
                     <input type="checkbox" name="approvals" value="1" class="mt-1 h-4 w-4 text-blue-600 rounded border-slate-300" {{ ($prefs['notifications']['approvals'] ?? true) ? 'checked' : '' }}>
