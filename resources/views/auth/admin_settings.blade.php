@@ -31,129 +31,98 @@
 <body class="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-50 text-gray-900" x-data="{ sidebarOpen: false }">
     @include('layouts.admin_sidebar')
   <main class="flex-1 p-8 overflow-y-auto custom-scrollbar">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold">School Settings</h1>
-        <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-100">
-            <i class="fas fa-info-circle text-sm"></i>
-            <span class="text-xs font-bold uppercase tracking-wider">Global settings managed by Super Admin</span>
-        </div>
-    </div>
+    <div class="max-w-4xl mx-auto space-y-6">
+        @if(session('success'))
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl">{{ session('success') }}</div>
+        @endif
+        @if($errors->any())
+            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+                <ul class="list-disc list-inside text-sm">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
-    @if(session('success'))
-        <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{{ session('success') }}</div>
-    @endif
-
-    @if($errors->any())
-        <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            <ul class="list-disc list-inside text-sm">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <form method="POST" action="{{ route('admin.settings.update') }}" class="bg-white rounded-lg border border-gray-200 p-6">
-        @csrf
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Semester</label>
-            <input type="text" name="semester" value="{{ old('semester', optional($settings['semester'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. First Semester" />
-        </div>
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700">Student ID Format</label>
-            <input type="text" name="student_id_format"
-                   value="{{ old('student_id_format', optional($settings['student_id_format'] ?? null)->value ?? 'STU-{SY}-{####}') }}"
-                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono"
-                   placeholder="e.g. STU-{SY}-{####}" />
-            <p class="mt-1.5 text-xs text-gray-500 space-x-2">
-                Available tokens:
-                <code class="bg-gray-100 px-1 rounded">{SY}</code> start year of active SY (e.g. 2025) &nbsp;
-                <code class="bg-gray-100 px-1 rounded">{YYYY}</code> current 4-digit year &nbsp;
-                <code class="bg-gray-100 px-1 rounded">{YY}</code> 2-digit year &nbsp;
-                <code class="bg-gray-100 px-1 rounded">{####}</code> auto-incrementing number (number of # sets zero-pad width)
-            </p>
-            <p class="mt-1 text-xs text-amber-600">&#9888; Changing this format only affects <strong>new</strong> students. Existing IDs are not renamed.</p>
-        </div>
-        
-        <div class="mb-6 pt-4 border-t border-gray-200 space-y-4">
-            <h2 class="text-lg font-semibold mb-2">System Behavior</h2>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-700">Auto-generate fees on enrollment</p>
-                    <p class="text-xs text-gray-500 mt-1">Automatically create fee records when a new student is enrolled.</p>
-                </div>
-                <div>
-                    <input type="checkbox" id="auto_generate_fees_on_enrollment" name="auto_generate_fees_on_enrollment" value="1"
-                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                           {{ (optional($settings['auto_generate_fees_on_enrollment'] ?? null)->value == '1') ? 'checked' : '' }} />
+        <div class="bg-white rounded-2xl border border-slate-200 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-slate-800">{{ $user->name }}</div>
+                        <div class="text-xs text-slate-500">{{ $user->email }}</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-700">Enable SMS notifications</p>
-                    <p class="text-xs text-gray-500 mt-1">Global master switch for all SMS notifications and reminders.</p>
-                </div>
-                <div>
-                    <input type="checkbox" id="notifications_enabled" name="notifications_enabled" value="1"
-                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                           {{ (optional($settings['notifications_enabled'] ?? null)->value == '1') ? 'checked' : '' }} />
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <form method="POST" action="{{ route('admin.settings.account.profile') }}" enctype="multipart/form-data" class="md:col-span-2 space-y-4">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">First Name</label>
+                            <input name="first_name" type="text" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ old('first_name', $user->roleable->first_name ?? '') }}" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">Middle Initial</label>
+                            <input name="middle_initial" type="text" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ old('middle_initial', $user->roleable->MI ?? '') }}" maxlength="2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">Last Name</label>
+                            <input name="last_name" type="text" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ old('last_name', $user->roleable->last_name ?? '') }}" required>
+                        </div>
+                        <div class="md:col-span-3">
+                            <label class="block text-sm font-medium text-slate-700">Phone</label>
+                            <input name="phone" type="text" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value="{{ old('phone', $user->roleable->contact_number ?? '') }}">
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">Save Profile</button>
+                    </div>
+                </form>
+                <div class="space-y-4"></div>
             </div>
         </div>
 
-        <div class="mb-6 pt-4 border-t border-gray-200 space-y-4">
-            <h2 class="text-lg font-semibold mb-2">Security</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Max Login Attempts</label>
-                    <input type="number" min="3" max="20" name="max_login_attempts" value="{{ old('max_login_attempts', optional($settings['max_login_attempts'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. 5" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Lockout Minutes</label>
-                    <input type="number" min="1" max="1440" name="lockout_minutes" value="{{ old('lockout_minutes', optional($settings['lockout_minutes'] ?? null)->value) }}" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="e.g. 15" />
-                </div>
-            </div>
-        </div>
-
-        <div class="flex items-center gap-3">
-            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg" type="submit">Save</button>
-            <a href="{{ auth()->user()->hasRole('super_admin') ? route('super_admin.dashboard') : route('admin_dashboard') }}" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700">Back</a>
-        </div>
-    </form>
-
-    <section class="mt-8 bg-white rounded-lg border border-red-200 p-6">
-        <h2 class="text-lg font-semibold text-red-700 mb-2">Danger Zone</h2>
-        <p class="text-sm text-gray-700 mb-4">
-            This will permanently remove all students, their fee records, payments, and parent accounts.
-            This action is intended for clearing demo or test data only.
-        </p>
-        <form method="POST" action="{{ route('admin.settings.reset-demo') }}" class="space-y-4">
-            @csrf
-            <div>
-                <label for="confirm" class="block text-sm font-medium text-gray-700">
-                    Type RESET to confirm
+        <div class="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Notifications</h2>
+            <form method="POST" action="{{ route('admin.settings.account.notifications') }}" class="space-y-4">
+                @csrf
+                <label class="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <input type="checkbox" name="approvals" value="1" class="mt-1 h-4 w-4 text-blue-600 rounded border-slate-300" {{ ($prefs['notifications']['approvals'] ?? true) ? 'checked' : '' }}>
+                    <div>
+                        <div class="text-sm font-semibold text-slate-800">Notify me about payment approvals</div>
+                        <div class="text-[11px] text-slate-500">New pending approvals and status changes.</div>
+                    </div>
                 </label>
-                <input
-                    id="confirm"
-                    name="confirm"
-                    type="text"
-                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
-                    placeholder="RESET"
-                    autocomplete="off"
-                />
-            </div>
-            <button
-                type="submit"
-                class="inline-flex items-center px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
-                onclick="return confirm('Are you absolutely sure? This will delete all students and parent accounts.');"
-            >
-                Reset demo data
-            </button>
-        </form>
-    </section>
+                <label class="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <input type="checkbox" name="online_confirmations" value="1" class="mt-1 h-4 w-4 text-blue-600 rounded border-slate-300" {{ ($prefs['notifications']['online_confirmations'] ?? true) ? 'checked' : '' }}>
+                    <div>
+                        <div class="text-sm font-semibold text-slate-800">Notify me about online payment confirmations</div>
+                        <div class="text-[11px] text-slate-500">Online payment events from gateways.</div>
+                    </div>
+                </label>
+                <div class="flex justify-end">
+                    <button class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">Save Notifications</button>
+                </div>
+            </form>
+        </div>
 
-    <!-- Maintenance tools removed per request -->
-</main>
+        <div class="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Security</h2>
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm font-semibold text-slate-800">Password</div>
+                    <div class="text-[11px] text-slate-500">Keep your account secure by using a strong password.</div>
+                </div>
+                <a href="{{ route('auth.password.change') }}" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold">Change Password</a>
+            </div>
+        </div>
+
+    </div>
+  </main>
 </body>
 </html>

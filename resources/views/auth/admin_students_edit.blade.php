@@ -252,7 +252,7 @@
               </div>
 
               <div class="flex justify-end gap-4 mt-10 pt-6 border-t border-slate-100">
-                <a href="{{ route('admin.students.index') }}" class="px-6 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold rounded-xl transition-all duration-200 shadow-sm">Cancel</a>
+                <a href="{{ route('super_admin.students.index') }}" class="px-6 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold rounded-xl transition-all duration-200 shadow-sm">Cancel</a>
                 <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-blue-200 hover:shadow-blue-300">Update Student</button>
               </div>
             </form>

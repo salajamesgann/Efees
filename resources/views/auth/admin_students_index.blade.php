@@ -224,7 +224,7 @@
                 <div class="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3 shrink-0">
                     <form method="GET" action="{{ route('super_admin.students.index') }}" class="relative"
                           x-data="{
-                              query: @json($q ?? ''),
+                              query: @js($q ?? ''),
                               suggestions: [],
                               showSuggestions: false,
                               async fetchSuggestions() {

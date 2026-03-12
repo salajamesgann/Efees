@@ -17,6 +17,10 @@ use App\Services\AuditService;
 use App\Services\SchoolYearUpdateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -24,96 +28,18 @@ class AdminSettingsController extends Controller
 {
     public function index(): View
     {
-        $settings = SystemSetting::whereIn('key', [
-            'semester',
-            'student_id_format',
-            'allow_staff_edit_fees',
-            'auto_generate_fees_on_enrollment',
-            'notifications_enabled',
-            'max_login_attempts',
-            'lockout_minutes',
-            'password_expiry_days',
-        ])
-            ->get()
-            ->keyBy('key');
-
-        return view('auth.admin_settings', compact('settings'));
+        $user = Auth::user();
+        $user->load(['role', 'roleable']);
+        $prefs = $user->preferences ?? [];
+        return view('auth.admin_settings', [
+            'user' => $user,
+            'prefs' => $prefs,
+        ]);
     }
 
     public function update(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'semester' => ['nullable', 'string', 'max:50'],
-            'student_id_format' => ['nullable', 'string', 'max:100'],
-            'auto_generate_fees_on_enrollment' => ['nullable', 'in:0,1'],
-            'notifications_enabled' => ['nullable', 'in:0,1'],
-            'allow_staff_edit_fees' => ['nullable', 'in:0,1'],
-            'max_login_attempts' => ['nullable', 'integer', 'min:3', 'max:20'],
-            'lockout_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
-            'password_expiry_days' => ['nullable', 'integer', 'min:7', 'max:365'],
-        ]);
-
-        if (! $request->has('auto_generate_fees_on_enrollment')) {
-            $data['auto_generate_fees_on_enrollment'] = '0';
-        }
-
-        if (! $request->has('notifications_enabled')) {
-            $data['notifications_enabled'] = '0';
-        }
-
-        if (! $request->has('allow_staff_edit_fees')) {
-            $data['allow_staff_edit_fees'] = '0';
-        }
-
-        if (! $request->has('max_login_attempts')) {
-            $data['max_login_attempts'] = (string) (int) ($request->input('max_login_attempts') ?? 5);
-        }
-        if (! $request->has('lockout_minutes')) {
-            $data['lockout_minutes'] = (string) (int) ($request->input('lockout_minutes') ?? 15);
-        }
-        if (! $request->has('password_expiry_days')) {
-            $data['password_expiry_days'] = (string) (int) ($request->input('password_expiry_days') ?? 90);
-        }
-
-        $oldSettings = SystemSetting::whereIn('key', array_keys($data))->pluck('value', 'key')->toArray();
-
-        foreach ($data as $key => $value) {
-            SystemSetting::updateOrCreate(['key' => $key], ['value' => $value]);
-        }
-
-        cache()->forget('system_settings');
-
-        // Audit Log
-        try {
-            AuditService::log(
-                'System Settings Updated',
-                null,
-                'Updated system settings',
-                $oldSettings,
-                $data
-            );
-        } catch (\Throwable $e) {
-        }
-
-        // Prepare success message
-        $successMessage = 'Settings updated';
-        if (!empty($schoolYearUpdateResults['staff_updated'])) {
-            $successMessage .= sprintf(
-                '. School year updated: %d staff records updated to %s. %d student records preserved in their original enrollment years.',
-                $schoolYearUpdateResults['staff_updated'],
-                $data['school_year'] ?? 'new school year',
-                $schoolYearUpdateResults['students_preserved'] ?? 0
-            );
-        }
-
-        if (!empty($schoolYearUpdateResults['errors'])) {
-            // Add errors to session if any occurred during school year update
-            return redirect()->route('admin.settings.index')
-                ->with('success', $successMessage)
-                ->with('warning', 'Some issues occurred during school year update: ' . implode(', ', $schoolYearUpdateResults['errors']));
-        }
-
-        return redirect()->route('admin.settings.index')->with('success', $successMessage);
+        return redirect()->route('admin.settings.index')->with('success', 'Settings are now managed by the Super Admin under System Configuration.');
     }
 
     public function resetDemoData(Request $request): RedirectResponse
@@ -280,5 +206,102 @@ class AdminSettingsController extends Controller
         } catch (\Throwable $e) {
             return redirect()->route('admin.settings.index')->with('error', 'Failed to export database: ' . $e->getMessage());
         }
+    }
+
+    public function updateProfile(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        $user->load('roleable');
+        $data = $request->validate([
+            'first_name' => ['required','string','max:255'],
+            'middle_initial' => ['nullable','string','max:2'],
+            'last_name' => ['required','string','max:255'],
+            'phone' => ['nullable','string','max:20'],
+            'avatar' => ['nullable','image','max:2048'],
+        ]);
+        DB::transaction(function () use ($user, $data, $request) {
+            if ($user->roleable) {
+                $user->roleable->first_name = $data['first_name'];
+                $user->roleable->MI = $data['middle_initial'] ?? null;
+                $user->roleable->last_name = $data['last_name'];
+                $user->roleable->contact_number = $data['phone'] ?? null;
+                $user->roleable->save();
+            }
+            $prefs = $user->preferences ?? [];
+            if ($request->hasFile('avatar')) {
+                $path = $request->file('avatar')->store('avatars','public');
+                $prefs['profile']['avatar_path'] = $path;
+            }
+            $prefs['profile']['updated_at'] = now()->toISOString();
+            $user->preferences = $prefs;
+            $user->save();
+        });
+        return back()->with('success','Profile updated.');
+    }
+
+    public function updateNotifications(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        $request->validate([
+            'approvals' => ['nullable','in:0,1'],
+            'online_confirmations' => ['nullable','in:0,1'],
+        ]);
+        $prefs = $user->preferences ?? [];
+        $prefs['notifications']['approvals'] = $request->boolean('approvals');
+        $prefs['notifications']['online_confirmations'] = $request->boolean('online_confirmations');
+        $user->preferences = $prefs;
+        $user->save();
+        return back()->with('success','Notification preferences saved.');
+    }
+
+    public function revokeOtherSessions(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'current_password' => ['required','string'],
+        ]);
+        $user = Auth::user();
+        if (! Hash::check($request->input('current_password'), $user->password)) {
+            return back()->withErrors(['current_password' => 'Password is incorrect.']);
+        }
+        Auth::logoutOtherDevices($request->input('current_password'));
+        return back()->with('success','Signed out from other sessions.');
+    }
+
+    public function toggleTwoFactor(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        $request->validate([
+            'enabled' => ['required','in:0,1'],
+        ]);
+        $prefs = $user->preferences ?? [];
+        $enabled = $request->input('enabled') === '1';
+        $prefs['two_factor']['enabled'] = $enabled;
+        if ($enabled && empty($prefs['two_factor']['recovery_codes'])) {
+            $prefs['two_factor']['recovery_codes'] = $this->generateRecoveryCodes();
+        }
+        $prefs['two_factor']['updated_at'] = now()->toISOString();
+        $user->preferences = $prefs;
+        $user->save();
+        return back()->with('success', $enabled ? 'Two-factor authentication enabled.' : 'Two-factor authentication disabled.');
+    }
+
+    public function regenerateRecoveryCodes(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        $prefs = $user->preferences ?? [];
+        $prefs['two_factor']['recovery_codes'] = $this->generateRecoveryCodes();
+        $prefs['two_factor']['updated_at'] = now()->toISOString();
+        $user->preferences = $prefs;
+        $user->save();
+        return back()->with('success','Recovery codes regenerated.');
+    }
+
+    private function generateRecoveryCodes(): array
+    {
+        $codes = [];
+        for ($i=0; $i<8; $i++) {
+            $codes[] = Str::upper(Str::random(4)).'-'.Str::upper(Str::random(4));
+        }
+        return $codes;
     }
 }

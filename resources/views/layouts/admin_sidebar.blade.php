@@ -74,14 +74,6 @@
             @endif
 
           @if(auth()->user()->hasRole('admin'))
-          <!-- Student Enrollment (Admin) -->
-          <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.enrollment.*') || request()->routeIs('admin.students.index') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.enrollment.index') }}">
-              <div class="w-8 flex justify-center">
-                  <i class="fas fa-user-graduate text-lg {{ request()->routeIs('admin.enrollment.*') || request()->routeIs('admin.students.index') ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500 transition-colors' }}"></i>
-              </div>
-              <span class="text-sm font-medium">Student Enrollment</span>
-          </a>
-
           <!-- Fee Management -->
           <a class="group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 {{ request()->routeIs('admin.fees.*') ? 'bg-blue-50 text-blue-700 font-bold shadow-sm ring-1 ring-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:shadow-sm' }}" href="{{ route('admin.fees.index', ['tab' => 'tuition']) }}">
               <div class="w-8 flex justify-center">

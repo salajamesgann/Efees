@@ -456,18 +456,7 @@ class AuthLoginController extends Controller
             $pendingPayments = collect();
         } else {
             // Reconcile ledger for students in active School Year so metrics reflect assignment totals
-            try {
-                $svc = app(\App\Services\FeeManagementService::class);
-                if ($activeSy) {
-                    \App\Models\Student::where('school_year', $activeSy)->get(['student_id'])->each(function ($s) use ($svc) {
-                        try {
-                            $svc->recomputeStudentLedger($s);
-                        } catch (\Throwable $e) {
-                        }
-                    });
-                }
-            } catch (\Throwable $e) {
-            }
+            // Disabled on dashboard load to avoid long-running requests
             // 1. Total Collected (This Month vs Last Month)
             $totalCollected = \App\Models\Payment::where('paid_at', '>=', $startOfMonth)->sum('amount_paid');
             $prevTotalCollected = \App\Models\Payment::whereBetween('paid_at', [$startOfLastMonth, $endOfLastMonth])->sum('amount_paid');
@@ -476,20 +465,22 @@ class AuthLoginController extends Controller
             $pendingApprovals = \App\Models\Payment::where('status', 'pending')->sum('amount_paid');
 
             // 2. Pending Outstanding (use student Net Payable basis: totalAmount - paidAmount)
-            $svc = app(\App\Services\FeeManagementService::class);
-            $pendingOutstanding = 0.0;
-            \App\Models\Student::select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, $svc) {
-                foreach ($chunk as $stu) {
-                    $t = $svc->computeTotalsForStudent($stu);
-                    $pendingOutstanding += max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
-                }
-            });
-
+            // 2. Pending Outstanding – sum ledger balances for active SY
+            $pendingOutstanding = \App\Models\FeeRecord::where('balance', '>', 0)
+                ->where('record_type', '!=', 'adjustment')
+                ->whereHas('student', function ($q) use ($activeSy) {
+                    if ($activeSy) {
+                        $q->where('school_year', $activeSy);
+                    }
+                    $q->whereNotIn('enrollment_status', ['Withdrawn', 'Archived']);
+                })
+                ->sum('balance');
             // Expected Collection (Total Fees Assigned)
             // Note: This is an estimate. For strict accuracy, sum of all FeeRecords amounts?
             // Keeping original logic for Expected Collection for now, or updating it to match FeeRecords.
             $totalExpected = \App\Models\FeeRecord::sum('amount');
             $expectedCollection = $totalCollected + $pendingOutstanding;
+
 
             // 3. Students Count (excludes Withdrawn/Archived — only active/irregular students)
             $studentsCount = \App\Models\Student::whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])->count();
@@ -532,60 +523,62 @@ class AuthLoginController extends Controller
                     ];
                 });
 
-            // Pending Payments — filtered by active school year, aggregated per student
+            // Pending Payments — aggregate by student first, limit, then load details to avoid large memory scans
             $activeSyStudentIds = \App\Models\Student::where('school_year', $activeSy)
                 ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
                 ->pluck('student_id');
-            $allPending = \App\Models\FeeRecord::where('balance', '>', 0)
-                ->whereIn('student_id', $activeSyStudentIds)
+            $topBalances = DB::table('fee_records')
+                ->select('student_id', DB::raw('SUM(balance) as total_balance'), DB::raw('MIN(COALESCE(payment_date, created_at)) as due_at'))
+                ->where('balance', '>', 0)
                 ->where('record_type', '!=', 'adjustment')
-                ->with(['student.parents', 'student.feeAssignments'])
-                ->get()
+                ->whereIn('student_id', $activeSyStudentIds)
                 ->groupBy('student_id')
-                ->map(function ($records) {
-                    $rec          = $records->first();
-                    $totalBalance = (float) $records->sum(fn ($r) => (float) $r->balance);
-                    $earliest     = $records->filter(fn ($r) => $r->payment_date)->sortBy('payment_date')->first() ?? $rec;
-                    $dueDate      = $earliest->payment_date
-                        ? \Carbon\Carbon::parse($earliest->payment_date)
-                        : $earliest->created_at;
-                    $daysOverdue  = $dueDate && $dueDate->isPast() ? (int) $dueDate->diffInDays(now()) : 0;
-
-                    $parentName = 'N/A';
-                    if ($rec->student && $rec->student->parents->isNotEmpty()) {
-                        $primary    = $rec->student->parents->where('pivot.is_primary', true)->first()
-                            ?? $rec->student->parents->first();
-                        $parentName = $primary->full_name ?? 'N/A';
-                    }
-
-                    $rawLevel  = $rec->student->level ?? '';
-                    $levelAbbr = $rawLevel ? preg_replace('/Grade\s*/i', 'G', $rawLevel) : '—';
-
-                    // Whole tuition payable from fee assignment
-                    $feeAssignment = $rec->student ? $rec->student->feeAssignments->sortByDesc('created_at')->first() : null;
-                    $totalTuition  = $feeAssignment ? (float) $feeAssignment->total_amount : 0;
-
-                    // Actual payments made by the student
-                    $totalPaid = (float) \App\Models\Payment::where('student_id', $rec->student_id)
-                        ->whereIn('status', ['approved', 'paid'])
-                        ->sum('amount_paid');
-
-                    return [
-                        'student_id'    => $rec->student_id,
-                        'record_type'   => 'Total',
-                        'total_tuition' => $totalTuition,
-                        'total_paid'    => $totalPaid,
-                        'balance'       => max(0, $totalTuition - $totalPaid),
-                        'student_name'  => $rec->student ? $rec->student->full_name : 'Unknown',
-                        'parent_name'   => $parentName,
-                        'level'         => $levelAbbr,
-                        'due_date'      => $dueDate ? $dueDate->format('M d, Y') : 'N/A',
-                        'days_overdue'  => $daysOverdue,
-                    ];
-                })
-                ->sortByDesc('balance');
-            $pendingPaymentsTotal = $allPending->count();
-            $pendingPayments       = $allPending->take(10)->values();
+                ->orderByDesc('total_balance')
+                ->limit(10)
+                ->get();
+            $pendingPaymentsTotal = DB::table('fee_records')
+                ->where('balance', '>', 0)
+                ->where('record_type', '!=', 'adjustment')
+                ->whereIn('student_id', $activeSyStudentIds)
+                ->distinct('student_id')
+                ->count('student_id');
+            $topIds = $topBalances->pluck('student_id')->all();
+            $students = \App\Models\Student::with(['parents', 'feeAssignments'])
+                ->whereIn('student_id', $topIds)
+                ->get()
+                ->keyBy('student_id');
+            $paidSums = \App\Models\Payment::select('student_id', DB::raw('SUM(amount_paid) as total_paid'))
+                ->whereIn('student_id', $topIds)
+                ->whereIn('status', ['approved', 'paid'])
+                ->groupBy('student_id')
+                ->pluck('total_paid', 'student_id');
+            $pendingPayments = collect($topBalances)->map(function ($row) use ($students, $paidSums) {
+                $sid = $row->student_id;
+                $stu = $students->get($sid);
+                $parentName = 'N/A';
+                if ($stu && $stu->parents && $stu->parents->isNotEmpty()) {
+                    $primary = $stu->parents->where('pivot.is_primary', true)->first() ?? $stu->parents->first();
+                    $parentName = $primary->full_name ?? 'N/A';
+                }
+                $levelAbbr = $stu && $stu->level ? preg_replace('/Grade\s*/i', 'G', $stu->level) : '—';
+                $feeAssignment = $stu ? $stu->feeAssignments->sortByDesc('created_at')->first() : null;
+                $totalTuition = $feeAssignment ? (float) $feeAssignment->total_amount : 0.0;
+                $totalPaid = (float) ($paidSums[$sid] ?? 0.0);
+                $dueDate = $row->due_at ? \Carbon\Carbon::parse($row->due_at) : null;
+                $daysOverdue = $dueDate && $dueDate->isPast() ? (int) $dueDate->diffInDays(now()) : 0;
+                return [
+                    'student_id'    => $sid,
+                    'record_type'   => 'Total',
+                    'total_tuition' => $totalTuition,
+                    'total_paid'    => $totalPaid,
+                    'balance'       => max(0, (float) $row->total_balance),
+                    'student_name'  => $stu ? $stu->full_name : 'Unknown',
+                    'parent_name'   => $parentName,
+                    'level'         => $levelAbbr,
+                    'due_date'      => $dueDate ? $dueDate->format('M d, Y') : 'N/A',
+                    'days_overdue'  => $daysOverdue,
+                ];
+            });
         }
 
         return view('auth.admin_dashboard', [
@@ -686,15 +679,11 @@ class AuthLoginController extends Controller
                 ->sum('amount_paid');
         }
 
-        // 2. Pending Outstanding (use student Net Payable basis across filtered students)
-        $svc = app(\App\Services\FeeManagementService::class);
-        $pendingOutstanding = 0.0;
-        \App\Models\Student::whereIn('student_id', $studentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, $svc) {
-            foreach ($chunk as $stu) {
-                $t = $svc->computeTotalsForStudent($stu);
-                $pendingOutstanding += max(0.0, ((float) ($t['totalAmount'] ?? 0)) - ((float) ($t['paidAmount'] ?? 0)));
-            }
-        });
+        // 2. Pending Outstanding – set-based aggregate to avoid per-student loops
+        $pendingOutstanding = \App\Models\FeeRecord::where('balance', '>', 0)
+            ->where('record_type', '!=', 'adjustment')
+            ->whereIn('student_id', $studentIds)
+            ->sum('balance');
 
         // Calculate expected collection based on fee records total amount if possible,
         // or simplistic approximation: collected + outstanding.
@@ -779,53 +768,52 @@ class AuthLoginController extends Controller
             ->where('record_type', '!=', 'adjustment')
             ->distinct('student_id')
             ->count('student_id');
-        $pendingPayments = \App\Models\FeeRecord::where('balance', '>', 0)
-            ->whereIn('student_id', $studentIds)
+        $topBalances = DB::table('fee_records')
+            ->select('student_id', DB::raw('SUM(balance) as total_balance'), DB::raw('MIN(COALESCE(payment_date, created_at)) as due_at'))
+            ->where('balance', '>', 0)
             ->where('record_type', '!=', 'adjustment')
-            ->with(['student.parents', 'student.feeAssignments'])
-            ->get()
+            ->whereIn('student_id', $studentIds)
             ->groupBy('student_id')
-            ->map(function ($records) {
-                $rec          = $records->first();
-                $totalBalance = (float) $records->sum(fn ($r) => (float) $r->balance);
-                $earliest     = $records->filter(fn ($r) => $r->payment_date)->sortBy('payment_date')->first() ?? $rec;
-                $dueDate      = $earliest->payment_date ? \Carbon\Carbon::parse($earliest->payment_date) : $earliest->created_at;
-                $daysOverdue  = $dueDate && $dueDate->isPast() ? (int) $dueDate->diffInDays(now()) : 0;
-
-                $parentName = 'N/A';
-                if ($rec->student && $rec->student->parents->isNotEmpty()) {
-                    $parent = $rec->student->parents->where('pivot.is_primary', true)->first() ?? $rec->student->parents->first();
-                    $parentName = $parent->full_name ?? 'N/A';
-                }
-
-                $rawLevel  = $rec->student->level ?? '';
-                $levelAbbr = $rawLevel ? preg_replace('/Grade\s*/i', 'G', $rawLevel) : '—';
-
-                // Whole tuition payable from fee assignment
-                $feeAssignment = $rec->student ? $rec->student->feeAssignments->sortByDesc('created_at')->first() : null;
-                $totalTuition  = $feeAssignment ? (float) $feeAssignment->total_amount : 0;
-
-                // Actual payments made by the student
-                $totalPaid = (float) \App\Models\Payment::where('student_id', $rec->student_id)
-                    ->whereIn('status', ['approved', 'paid'])
-                    ->sum('amount_paid');
-
-                return [
-                    'student_id'    => $rec->student_id,
-                    'record_type'   => 'Total',
-                    'total_tuition' => $totalTuition,
-                    'total_paid'    => $totalPaid,
-                    'balance'       => max(0, $totalTuition - $totalPaid),
-                    'student_name'  => $rec->student ? $rec->student->full_name : 'Unknown',
-                    'parent_name'   => $parentName,
-                    'level'         => $levelAbbr,
-                    'due_date'      => $dueDate ? $dueDate->format('M d, Y') : 'N/A',
-                    'days_overdue'  => (int) $daysOverdue,
-                ];
-            })
-            ->sortByDesc('balance')
-            ->take(10)
-            ->values();
+            ->orderByDesc('total_balance')
+            ->limit(10)
+            ->get();
+        $topIds = $topBalances->pluck('student_id')->all();
+        $students = \App\Models\Student::with(['parents', 'feeAssignments'])
+            ->whereIn('student_id', $topIds)
+            ->get()
+            ->keyBy('student_id');
+        $paidSums = \App\Models\Payment::select('student_id', DB::raw('SUM(amount_paid) as total_paid'))
+            ->whereIn('student_id', $topIds)
+            ->whereIn('status', ['approved', 'paid'])
+            ->groupBy('student_id')
+            ->pluck('total_paid', 'student_id');
+        $pendingPayments = collect($topBalances)->map(function ($row) use ($students, $paidSums) {
+            $sid = $row->student_id;
+            $stu = $students->get($sid);
+            $parentName = 'N/A';
+            if ($stu && $stu->parents && $stu->parents->isNotEmpty()) {
+                $primary = $stu->parents->where('pivot.is_primary', true)->first() ?? $stu->parents->first();
+                $parentName = $primary->full_name ?? 'N/A';
+            }
+            $levelAbbr = $stu && $stu->level ? preg_replace('/Grade\\s*/i', 'G', $stu->level) : '—';
+            $feeAssignment = $stu ? $stu->feeAssignments->sortByDesc('created_at')->first() : null;
+            $totalTuition = $feeAssignment ? (float) $feeAssignment->total_amount : 0.0;
+            $totalPaid = (float) ($paidSums[$sid] ?? 0.0);
+            $dueDate = $row->due_at ? \Carbon\Carbon::parse($row->due_at) : null;
+            $daysOverdue = $dueDate && $dueDate->isPast() ? (int) $dueDate->diffInDays(now()) : 0;
+            return [
+                'student_id'    => $sid,
+                'record_type'   => 'Total',
+                'total_tuition' => $totalTuition,
+                'total_paid'    => $totalPaid,
+                'balance'       => max(0, (float) $row->total_balance),
+                'student_name'  => $stu ? $stu->full_name : 'Unknown',
+                'parent_name'   => $parentName,
+                'level'         => $levelAbbr,
+                'due_date'      => $dueDate ? $dueDate->format('M d, Y') : 'N/A',
+                'days_overdue'  => (int) $daysOverdue,
+            ];
+        })->values();
 
         // 8. Recent Transactions
         $recentTransactions = \App\Models\Payment::whereIn('student_id', $studentIds)
@@ -1072,7 +1060,23 @@ class AuthLoginController extends Controller
         } catch (\Throwable $e) {
         }
 
-        return redirect()->route('user_dashboard')->with('success', 'Password updated successfully.');
+        $redirect = 'admin_dashboard';
+        try {
+            if (method_exists($user, 'hasRole')) {
+                if ($user->hasRole('super_admin')) {
+                    $redirect = 'super_admin.dashboard';
+                } elseif ($user->hasRole('admin') || $user->hasRole('staff')) {
+                    $redirect = 'admin_dashboard';
+                } elseif ($user->hasRole('parent')) {
+                    $redirect = 'parent.dashboard';
+                } else {
+                    $redirect = 'admin_dashboard';
+                }
+            }
+        } catch (\Throwable $e) {
+            $redirect = 'admin_dashboard';
+        }
+        return redirect()->route($redirect)->with('success', 'Password updated successfully.');
     }
 
     /**

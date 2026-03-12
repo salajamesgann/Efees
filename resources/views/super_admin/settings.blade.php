@@ -13,41 +13,8 @@
     </div>
 @endif
 
-<form action="{{ route('super_admin.settings.update') }}" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<form action="{{ route('super_admin.settings.update') }}" method="POST" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     @csrf
-    
-    <!-- Left Column: Branding -->
-    <div class="lg:col-span-1 space-y-6">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6 flex items-center gap-2">
-                <i class="fas fa-palette text-blue-500"></i> Platform Branding
-            </h2>
-            
-            <!-- School Logo -->
-            <div class="space-y-4" x-data="{ logoPreview: '{{ $settings['school_logo'] ? asset('storage/'.$settings['school_logo']) : asset('images/default-logo.png') }}' }">
-                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Institution Logo</div>
-                <div class="flex flex-col items-center gap-4">
-                    <div class="w-32 h-32 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
-                        <img :src="logoPreview" class="max-w-full max-h-full object-contain p-2" alt="Logo Preview">
-                    </div>
-                    <label class="cursor-pointer">
-                        <span class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold rounded-lg transition-all">
-                            Change Logo
-                        </span>
-                        <input type="file" name="school_logo" class="hidden" accept="image/*" @change="logoPreview = URL.createObjectURL($event.target.files[0])">
-                    </label>
-                </div>
-            </div>
-
-            <!-- Institution Name -->
-            <div class="mt-8">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Institution Name</label>
-                <input type="text" name="institution_name" value="{{ $settings['institution_name'] }}" 
-                       class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-semibold text-slate-700">
-                <p class="text-[10px] text-slate-400 mt-2">Used on official receipts and generated reports.</p>
-            </div>
-        </div>
-    </div>
 
     <!-- Right Column: System Behavior -->
     <div class="lg:col-span-2 space-y-6">
@@ -66,6 +33,12 @@
                                class="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono font-bold text-blue-600">
                     </div>
                     <p class="text-[10px] text-slate-400 mt-2">Setting this will update the default year for all modules.</p>
+                </div>
+                <!-- Semester -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Semester</label>
+                    <input type="text" name="semester" value="{{ $settings['semester'] }}"
+                           class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
                 </div>
 
                 <!-- Maintenance Mode -->
@@ -88,6 +61,56 @@
                             <span class="text-[10px] text-red-600 font-bold uppercase">Emergency mode active</span>
                         @endif
                     </div>
+                </div>
+                <!-- Student ID Format -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Student ID Format</label>
+                    <input type="text" name="student_id_format" value="{{ $settings['student_id_format'] }}"
+                           class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono">
+                    <p class="text-[10px] text-slate-400 mt-2">
+                        Tokens: {SY}=start year · {YYYY}=year · {YY}=2-digit year · {####}=auto-increment.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Toggles -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <label class="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <input type="checkbox" name="auto_generate_fees_on_enrollment" value="1" {{ $settings['auto_generate_fees_on_enrollment'] == '1' ? 'checked' : '' }} class="mt-1 h-4 w-4 text-blue-600 rounded border-slate-300">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-800">Auto-generate fees on enrollment</div>
+                        <div class="text-[11px] text-slate-500">Automatically create fee records when a new student is enrolled.</div>
+                    </div>
+                </label>
+                <label class="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <input type="checkbox" name="notifications_enabled" value="1" {{ $settings['notifications_enabled'] == '1' ? 'checked' : '' }} class="mt-1 h-4 w-4 text-blue-600 rounded border-slate-300">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-800">Enable SMS notifications</div>
+                        <div class="text-[11px] text-slate-500">Global switch for all SMS reminders and messages.</div>
+                    </div>
+                </label>
+                <label class="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <input type="checkbox" name="allow_staff_edit_fees" value="1" {{ $settings['allow_staff_edit_fees'] == '1' ? 'checked' : '' }} class="mt-1 h-4 w-4 text-blue-600 rounded border-slate-300">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-800">Allow staff to edit fee records</div>
+                        <div class="text-[11px] text-slate-500">Permit non-admin staff to modify fee items within their scope.</div>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Security -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Max Login Attempts</label>
+                    <input type="number" name="max_login_attempts" min="3" max="20" value="{{ $settings['max_login_attempts'] }}" class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Lockout Minutes</label>
+                    <input type="number" name="lockout_minutes" min="1" max="1440" value="{{ $settings['lockout_minutes'] }}" class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Password Expiry Days</label>
+                    <input type="number" name="password_expiry_days" min="7" max="365" value="{{ $settings['password_expiry_days'] }}" class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl">
                 </div>
             </div>
 

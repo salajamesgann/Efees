@@ -1,6 +1,6 @@
 @props(['student' => null, 'mode' => 'create', 'isReadOnly' => false])
 
-<form method="POST" action="{{ $mode === 'create' ? route('admin.students.store') : route('admin.students.update', $student) }}" class="space-y-8">
+<form method="POST" action="{{ $mode === 'create' ? route('super_admin.students.store') : route('super_admin.students.update', $student) }}" class="space-y-8">
     @csrf
     @if($mode === 'edit')
         @method('PUT')
@@ -39,7 +39,7 @@
                         if (['Grade 11','Grade 12'].includes(gradeLevel) && this.strandName) {
                             params.set('strand', this.strandName);
                         }
-                        const res = await fetch('{{ route('admin.students.sections.list') }}' + '?' + params.toString());
+                        const res = await fetch('{{ route('super_admin.students.sections.list') }}' + '?' + params.toString());
                         const data = await res.json();
                         this.sections = Array.isArray(data) ? data : [];
                     } catch (e) {
@@ -102,7 +102,7 @@
                 async generate() {
                     this.loading = true; this.errMsg = '';
                     try {
-                        const res = await fetch('{{ route('admin.students.generateId') }}', { headers: {'X-Requested-With':'XMLHttpRequest'} });
+                        const res = await fetch('{{ route('super_admin.students.generateId') }}', { headers: {'X-Requested-With':'XMLHttpRequest'} });
                         const d = await res.json();
                         this.studentId = d.student_id;
                     } catch(e) { this.errMsg = 'Failed. Please enter an ID manually.'; }
@@ -367,7 +367,7 @@
     <!-- Actions -->
     <div class="pt-6 border-t border-slate-100 flex justify-end gap-3">
         @if($mode === 'create')
-        <a href="{{ route('admin.students.index') }}" class="px-6 py-2.5 rounded-xl text-slate-600 font-semibold hover:bg-slate-50 transition-colors">Cancel</a>
+        <a href="{{ route('super_admin.students.index') }}" class="px-6 py-2.5 rounded-xl text-slate-600 font-semibold hover:bg-slate-50 transition-colors">Cancel</a>
         @endif
         
         @unless($isReadOnly)

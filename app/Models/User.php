@@ -68,6 +68,7 @@ class User extends Authenticatable
         'must_change_password' => 'boolean',
         'lockout_until' => 'datetime',
         'password_expires_at' => 'datetime',
+        'preferences' => 'array',
     ];
 
     /**
@@ -85,6 +86,7 @@ class User extends Authenticatable
         'failed_login_attempts',
         'lockout_until',
         'password_expires_at',
+        'preferences',
     ];
 
     /**

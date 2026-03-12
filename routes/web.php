@@ -262,11 +262,11 @@ Route::middleware(['auth', 'checkMaintenance'])->group(function () {
     // Admin Settings
     Route::prefix('admin/settings')->name('admin.settings.')->middleware('ensureRole:admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminSettingsController::class, 'index'])->name('index');
-        Route::match(['put', 'post'], '/', [\App\Http\Controllers\AdminSettingsController::class, 'update'])->name('update');
-        Route::post('/reset-demo', [\App\Http\Controllers\AdminSettingsController::class, 'resetDemoData'])->name('reset-demo');
-        Route::post('/clear-cache', [\App\Http\Controllers\AdminSettingsController::class, 'clearCache'])->name('clear-cache');
-        Route::post('/reset-database', [\App\Http\Controllers\AdminSettingsController::class, 'resetDatabase'])->name('reset-database');
-        Route::post('/export-db', [\App\Http\Controllers\AdminSettingsController::class, 'exportDatabase'])->name('export-db');
+        Route::post('/account/profile', [\App\Http\Controllers\AdminSettingsController::class, 'updateProfile'])->name('account.profile');
+        Route::post('/account/notifications', [\App\Http\Controllers\AdminSettingsController::class, 'updateNotifications'])->name('account.notifications');
+        Route::post('/account/sessions/revoke', [\App\Http\Controllers\AdminSettingsController::class, 'revokeOtherSessions'])->name('account.sessions.revoke');
+        Route::post('/account/2fa/toggle', [\App\Http\Controllers\AdminSettingsController::class, 'toggleTwoFactor'])->name('account.2fa.toggle');
+        Route::post('/account/2fa/recovery-codes', [\App\Http\Controllers\AdminSettingsController::class, 'regenerateRecoveryCodes'])->name('account.2fa.recovery');
     });
 
     // Admin Parents Management
