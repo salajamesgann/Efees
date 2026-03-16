@@ -24,7 +24,6 @@ class SuperAdminSettingsController extends Controller
             'student_id_format' => SystemSetting::getValue('student_id_format', 'STU-{SY}-{####}'),
             'auto_generate_fees_on_enrollment' => SystemSetting::getValue('auto_generate_fees_on_enrollment', '1'),
             'notifications_enabled' => SystemSetting::getValue('notifications_enabled', '1'),
-            'allow_staff_edit_fees' => SystemSetting::getValue('allow_staff_edit_fees', '0'),
             'max_login_attempts' => SystemSetting::getValue('max_login_attempts', '5'),
             'lockout_minutes' => SystemSetting::getValue('lockout_minutes', '15'),
             'password_expiry_days' => SystemSetting::getValue('password_expiry_days', '90'),
@@ -46,7 +45,6 @@ class SuperAdminSettingsController extends Controller
             'student_id_format' => 'nullable|string|max:100',
             'auto_generate_fees_on_enrollment' => 'nullable|in:0,1',
             'notifications_enabled' => 'nullable|in:0,1',
-            'allow_staff_edit_fees' => 'nullable|in:0,1',
             'max_login_attempts' => 'nullable|integer|min:3|max:20',
             'lockout_minutes' => 'nullable|integer|min:1|max:1440',
             'password_expiry_days' => 'nullable|integer|min:7|max:365',
@@ -61,7 +59,6 @@ class SuperAdminSettingsController extends Controller
             'student_id_format',
             'auto_generate_fees_on_enrollment',
             'notifications_enabled',
-            'allow_staff_edit_fees',
             'max_login_attempts',
             'lockout_minutes',
             'password_expiry_days',
@@ -73,9 +70,6 @@ class SuperAdminSettingsController extends Controller
         }
         if (! $request->has('notifications_enabled')) {
             $newSettings['notifications_enabled'] = '0';
-        }
-        if (! $request->has('allow_staff_edit_fees')) {
-            $newSettings['allow_staff_edit_fees'] = '0';
         }
         if (! isset($newSettings['max_login_attempts'])) {
             $newSettings['max_login_attempts'] = (string) (int) ($request->input('max_login_attempts') ?? 5);

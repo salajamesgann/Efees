@@ -62,7 +62,6 @@
         promoteTargetSection: '',
         promoteStudentCount: 0,
         promoteSkipCount: 0,
-        importModalOpen: false,
         async fetchSections() {
             if (!this.gradeLevel) { 
                 this.sections = []; 
@@ -189,10 +188,6 @@
                         <a href="{{ route('super_admin.students.index', ['create' => true, 'level' => $currentLevel, 'section' => $currentSection, 'strand' => $currentStrand ?? null, 'school_year' => $currentSchoolYear]) }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
                             <i class="fas fa-plus"></i> Add Student
                         </a>
-                        @elseif($viewState === 'levels')
-                        <button @click="importModalOpen = true" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
-                            <i class="fas fa-file-csv"></i> Import CSV
-                        </button>
                         @elseif($viewState === 'sections')
                         <button @click="sectionModalOpen = true" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
                             <i class="fas fa-plus"></i> Add Section
@@ -1696,128 +1691,7 @@
         </template>
         @endif
 
-        <!-- CSV Import Modal (always available) -->
-        <template x-teleport="body">
-            <div x-show="importModalOpen" class="fixed inset-0 z-[110] overflow-y-auto" style="display: none;" x-cloak>
-                <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                    <div x-show="importModalOpen" @click="importModalOpen = false"
-                         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                         class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
-
-                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-                    <div x-show="importModalOpen"
-                         x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                         x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                         class="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-xl sm:w-full">
-
-                        <form action="{{ route('super_admin.students.import') }}" method="POST" enctype="multipart/form-data" id="csvImportForm">
-                            @csrf
-                            <div class="px-6 pt-5 pb-4 bg-white">
-                                <div class="flex items-start gap-4">
-                                    <div class="flex-shrink-0 flex items-center justify-center w-10 h-10 bg-emerald-100 rounded-full">
-                                        <i class="fas fa-file-csv text-emerald-600"></i>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h3 class="text-lg font-semibold text-gray-900 leading-6">Import Students from CSV</h3>
-                                        <p class="mt-1 text-sm text-gray-500">Upload a CSV file to enroll multiple students at once. Existing students (same name + school year) will be skipped.</p>
-                                    </div>
-                                </div>
-
-                                <div class="mt-5 space-y-4">
-
-                                    <!-- Download Template -->
-                                    <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                        <div class="flex items-center gap-2 text-sm text-blue-700">
-                                            <i class="fas fa-download text-blue-500"></i>
-                                            <span>Need a template? Download the sample CSV to get started.</span>
-                                        </div>
-                                        <a href="{{ route('super_admin.students.importTemplate') }}"
-                                           class="text-xs font-semibold text-blue-700 hover:text-blue-900 border border-blue-300 hover:border-blue-500 px-2.5 py-1 rounded-md bg-white hover:bg-blue-50 transition-colors whitespace-nowrap">
-                                            <i class="fas fa-file-download mr-1"></i> Template
-                                        </a>
-                                    </div>
-
-                                    <!-- School Year Override -->
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">School Year <span class="text-gray-400 font-normal">(used when CSV row is blank)</span></label>
-                                        <select name="school_year" class="block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm focus:ring-emerald-500 focus:border-emerald-500">
-                                            @foreach($schoolYears as $sy)
-                                                <option value="{{ $sy }}" {{ $sy === $activeSy ? 'selected' : '' }}>{{ $sy }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-
-                                    <!-- File Upload -->
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">CSV File <span class="text-red-500">*</span></label>
-                                        <div x-data="{ fileName: '' }" class="mt-1">
-                                            <label class="flex items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-colors group">
-                                                <div class="text-center">
-                                                    <i class="fas fa-cloud-upload-alt text-2xl text-gray-300 group-hover:text-emerald-500 transition-colors" x-show="!fileName"></i>
-                                                    <i class="fas fa-check-circle text-2xl text-emerald-500" x-show="fileName" x-cloak></i>
-                                                    <p class="mt-1 text-sm text-gray-500" x-text="fileName || 'Click to choose a CSV file'"></p>
-                                                    <p class="text-xs text-gray-400" x-show="!fileName">Max 5 MB · .csv format</p>
-                                                </div>
-                                                <input type="file" name="csv_file" accept=".csv,text/csv"
-                                                       @change="fileName = $event.target.files[0]?.name || ''"
-                                                       class="sr-only" required>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <!-- Column Reference -->
-                                    <details class="group">
-                                        <summary class="cursor-pointer text-xs font-semibold text-gray-500 hover:text-gray-700 flex items-center gap-1 select-none">
-                                            <i class="fas fa-table text-gray-400 group-open:rotate-90 transition-transform"></i>
-                                            Expected CSV columns
-                                        </summary>
-                                        <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">
-                                            <span><code class="text-emerald-700">lrn</code> — Learner Reference No.</span>
-                                            <span><code class="text-emerald-700">first_name</code> <span class="text-red-400">*</span></span>
-                                            <span><code class="text-emerald-700">middle_name</code></span>
-                                            <span><code class="text-emerald-700">last_name</code> <span class="text-red-400">*</span></span>
-                                            <span><code class="text-emerald-700">suffix</code> — Jr., Sr., III…</span>
-                                            <span><code class="text-emerald-700">sex</code> <span class="text-red-400">*</span> Male/Female</span>
-                                            <span><code class="text-emerald-700">date_of_birth</code> — YYYY-MM-DD</span>
-                                            <span><code class="text-emerald-700">level</code> <span class="text-red-400">*</span> e.g. Grade 7</span>
-                                            <span><code class="text-emerald-700">section</code> <span class="text-red-400">*</span></span>
-                                            <span><code class="text-emerald-700">strand</code> — SHS only</span>
-                                            <span><code class="text-emerald-700">school_year</code> — e.g. 2025-2026</span>
-                                            <span><code class="text-emerald-700">parent_name</code></span>
-                                            <span><code class="text-emerald-700">parent_phone</code> — 11 digits</span>
-                                            <span><code class="text-emerald-700">parent_email</code></span>
-                                            <span><code class="text-emerald-700">relationship</code> — Mother…</span>
-                                            <span><code class="text-emerald-700">shs_voucher</code> — Yes/No</span>
-                                        </div>
-                                    </details>
-
-                                    <!-- Warning -->
-                                    <div class="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                                        <i class="fas fa-exclamation-triangle mt-0.5 flex-shrink-0"></i>
-                                        <span>Fee records are auto-generated per student (if enabled in settings). Parent accounts are <strong>not</strong> created automatically — link them manually afterwards if needed.</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="px-6 py-3 bg-gray-50 flex flex-row-reverse gap-2">
-                                <button type="submit"
-                                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                                    <i class="fas fa-upload mr-2"></i> Import Students
-                                </button>
-                                <button type="button" @click="importModalOpen = false"
-                                        class="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </template>
+        <!-- CSV Import Modal removed; importer is centralized under Bulk Operations -->
     </div>
 </body>
 </html>

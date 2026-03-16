@@ -89,13 +89,6 @@
                         <div class="text-[11px] text-slate-500">Global switch for all SMS reminders and messages.</div>
                     </div>
                 </label>
-                <label class="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
-                    <input type="checkbox" name="allow_staff_edit_fees" value="1" {{ $settings['allow_staff_edit_fees'] == '1' ? 'checked' : '' }} class="mt-1 h-4 w-4 text-blue-600 rounded border-slate-300">
-                    <div>
-                        <div class="text-sm font-semibold text-slate-800">Allow staff to edit fee records</div>
-                        <div class="text-[11px] text-slate-500">Permit non-admin staff to modify fee items within their scope.</div>
-                    </div>
-                </label>
             </div>
 
             <!-- Security -->

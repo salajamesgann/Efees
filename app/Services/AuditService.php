@@ -56,4 +56,26 @@ class AuditService
             'user_agent' => Request::userAgent(),
         ]);
     }
+
+    public static function logOnce($action, $model = null, $details = null, $oldValues = null, $newValues = null, $windowSeconds = 600)
+    {
+        $user = Auth::user();
+        $modelType = null;
+        $modelId = null;
+        if ($model) {
+            $modelType = get_class($model);
+            $modelId = $model->getKey();
+        }
+        $since = now()->subSeconds((int) $windowSeconds);
+        $existing = AuditLog::where('action', $action)
+            ->when($modelType, fn ($q) => $q->where('model_type', $modelType))
+            ->when($modelId, fn ($q) => $q->where('model_id', $modelId))
+            ->where('created_at', '>=', $since)
+            ->orderByDesc('id')
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+        return self::log($action, $model, $details, $oldValues, $newValues);
+    }
 }

@@ -11,6 +11,7 @@ use App\Models\TuitionFee;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use App\Services\AuditService;
 
 class FeeManagementService
 {
@@ -132,20 +133,12 @@ class FeeManagementService
 
                 foreach ($eligibleDiscounts as $discount) {
                     if (strcasecmp(trim((string) $discount->discount_name), 'Sibling Discount') === 0) {
-                        \App\Models\AuditLog::create([
-                            'user_id' => auth()->id(),
-                            'user_role' => 'system',
-                            'action' => 'SIBLING_DISCOUNT_APPLIED',
-                            'model_type' => 'Student',
-                            'model_id' => $student->student_id,
-                            'details' => json_encode([
-                                'discount_name' => $discount->discount_name,
-                                'grade_level' => $student->level,
-                                'discount_rate' => $discount->value,
-                            ]),
-                            'ip_address' => request()->ip(),
-                            'user_agent' => request()->userAgent(),
+                        $details = json_encode([
+                            'discount_name' => $discount->discount_name,
+                            'grade_level' => $student->level,
+                            'discount_rate' => $discount->value,
                         ]);
+                        AuditService::logOnce('SIBLING_DISCOUNT_APPLIED', $student, $details, null, null, 3600);
                     }
                 }
 

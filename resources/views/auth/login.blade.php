@@ -138,8 +138,8 @@
             <!-- Login Card -->
             <div class="glass-card rounded-2xl shadow-2xl p-8 sm:p-10">
                 <div class="text-center mb-10">
-                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500/20 to-brand-700/20 border border-brand-500/20 mb-6 shadow-lg shadow-brand-500/10">
-                        <i class="fas fa-user-circle text-3xl text-brand-400"></i>
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white mb-6 shadow-lg shadow-brand-500/30">
+                        <i class="fas fa-graduation-cap text-2xl"></i>
                     </div>
                     <h1 class="text-3xl font-bold text-white tracking-tight mb-2">Welcome Back</h1>
                     <p class="text-slate-400">Please sign in to your account</p>

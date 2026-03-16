@@ -69,24 +69,24 @@
             -webkit-text-fill-color: transparent;
         }
         .glass-nav {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
     </style>
 </head>
 <body class="bg-slate-950 text-white min-h-screen flex flex-col">
-    <nav class="glass-nav fixed w-full z-40">
+    <nav class="fixed w-full z-50 glass-nav transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                <a href="{{ url('/') }}" class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-lg shadow-brand-500/40">
-                        <i class="fas fa-graduation-cap text-sm"></i>
+            <div class="flex justify-between h-20 items-center">
+                <a href="{{ url('/') }}" class="flex items-center gap-3 group cursor-pointer hover:opacity-90 transition-opacity">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-lg shadow-brand-500/30 transition-transform group-hover:scale-105 duration-300">
+                        <i class="fas fa-graduation-cap text-lg"></i>
                     </div>
-                    <span class="text-lg font-bold tracking-tight">E-Fees<span class="text-brand-400">Portal</span></span>
+                    <span class="text-xl font-bold text-white tracking-tight">E-Fees<span class="text-brand-400">Portal</span></span>
                 </a>
-                <a href="{{ route('login') }}" class="hidden sm:inline-flex items-center px-4 py-2 rounded-full bg-white text-slate-900 text-sm font-semibold hover:bg-slate-100 transition-all hover:shadow-lg hover:-translate-y-0.5">
-                    <i class="fas fa-arrow-left mr-2 text-xs"></i>
+                <a href="{{ route('login') }}" class="text-sm font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-2">
+                    <i class="fas fa-arrow-left text-xs"></i>
                     Back to Login
                 </a>
             </div>

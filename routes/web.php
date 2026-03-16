@@ -311,6 +311,7 @@ Route::prefix('super-admin')->name('super_admin.')->middleware('ensureRole:super
         Route::patch('/{student}/unarchive', [\App\Http\Controllers\AdminStudentController::class, 'unarchive'])->name('unarchive');
         Route::patch('/{student}/status', [\App\Http\Controllers\AdminStudentController::class, 'changeStatus'])->name('changeStatus');
         Route::post('/promote-section', [\App\Http\Controllers\AdminStudentController::class, 'promoteSection'])->name('promoteSection');
+        // Importer endpoints used by Bulk Operations
         Route::get('/import-template', [\App\Http\Controllers\AdminStudentController::class, 'downloadImportTemplate'])->name('importTemplate');
         Route::post('/import', [\App\Http\Controllers\AdminStudentController::class, 'importStudents'])->name('import');
     });

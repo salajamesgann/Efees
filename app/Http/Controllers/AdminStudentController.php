@@ -999,7 +999,9 @@ class AdminStudentController extends Controller
         $studentId = ! empty($validated['student_id'])
             ? $validated['student_id']
             : $this->generateUniqueStudentId();
-        $sendSms = $request->boolean('send_sms');
+        // If the create form did not include the 'send_sms' toggle, fall back to the global notifications setting
+        $globalNotifications = \App\Models\SystemSetting::where('key', 'notifications_enabled')->value('value') === '1';
+        $sendSms = $request->has('send_sms') ? $request->boolean('send_sms') : $globalNotifications;
 
         $result = DB::transaction(function () use ($validated, $studentId, $autoGenerate) {
             $student = Student::create([

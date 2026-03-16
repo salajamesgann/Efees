@@ -71,7 +71,8 @@
                 <label class="text-sm font-semibold text-slate-700">Gender <span class="text-red-500">*</span></label>
                 <select name="sex" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" required>
                     <option value="">Select Gender</option>
-                    @foreach(['Male', 'Female', 'Other'] as $g)
+                    @php $genders = $mode === 'create' ? ['Male','Female'] : ['Male','Female','Other']; @endphp
+                    @foreach($genders as $g)
                         <option value="{{ $g }}" {{ old('sex', $student->sex ?? '') === $g ? 'selected' : '' }}>{{ $g }}</option>
                     @endforeach
                 </select>
@@ -349,16 +350,18 @@
             </div>
             
             <!-- SMS Toggle -->
-             <div class="md:col-span-2 flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100 mt-4">
-                <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                    <input type="checkbox" name="send_sms" id="send_sms" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer peer checked:right-0 right-6 checked:border-blue-600"/>
-                    <label for="send_sms" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-blue-600"></label>
+            @if($mode !== 'create')
+                <div class="md:col-span-2 flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100 mt-4">
+                    <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="send_sms" id="send_sms" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer peer checked:right-0 right-6 checked:border-blue-600"/>
+                        <label for="send_sms" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-blue-600"></label>
+                    </div>
+                    <div>
+                        <label for="send_sms" class="font-semibold text-slate-800 text-sm cursor-pointer">Send SMS Notification</label>
+                        <p class="text-xs text-slate-500">Notify parent about enrollment/update and credentials</p>
+                    </div>
                 </div>
-                <div>
-                    <label for="send_sms" class="font-semibold text-slate-800 text-sm cursor-pointer">Send SMS Notification</label>
-                    <p class="text-xs text-slate-500">Notify parent about enrollment/update and credentials</p>
-                </div>
-            </div>
+            @endif
         </div>
     </div>
 

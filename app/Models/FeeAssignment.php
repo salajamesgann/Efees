@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Services\AuditService;
 
 class FeeAssignment extends Model
 {
@@ -364,23 +365,15 @@ class FeeAssignment extends Model
                     strcasecmp(trim((string) $discount->discount_name), 'Sibling Discount') === 0
                     || collect($discount->eligibility_rules)->contains('field', 'sibling_rank')
                 ) {
-                    AuditLog::create([
-                        'user_id' => auth()->id(),
-                        'user_role' => 'system',
-                        'action' => 'SIBLING_DISCOUNT_SKIPPED_VOUCHER',
-                        'model_type' => 'Student',
-                        'model_id' => $student->student_id,
-                        'details' => json_encode([
-                            'discount_name' => $discount->discount_name,
-                            'reason' => 'SHS Voucher Recipient',
-                            'parent_id' => $student->parents->sortByDesc('pivot.is_primary')->first()?->id,
-                            'grade_level' => $student->level,
-                            'child_order' => $discount->getSiblingRank($student),
-                            'discount_rate' => $discount->value,
-                        ]),
-                        'ip_address' => request()->ip(),
-                        'user_agent' => request()->userAgent(),
+                    $details = json_encode([
+                        'discount_name' => $discount->discount_name,
+                        'reason' => 'SHS Voucher Recipient',
+                        'parent_id' => $student->parents->sortByDesc('pivot.is_primary')->first()?->id,
+                        'grade_level' => $student->level,
+                        'child_order' => $discount->getSiblingRank($student),
+                        'discount_rate' => $discount->value,
                     ]);
+                    AuditService::logOnce('SIBLING_DISCOUNT_SKIPPED_VOUCHER', $student, $details, null, null, 3600);
 
                     // Send SMS Notification
                     if ($contactNumber = $student->parents->sortByDesc('pivot.is_primary')->first()?->phone) {
@@ -429,22 +422,14 @@ class FeeAssignment extends Model
                 strcasecmp(trim((string) $discount->discount_name), 'Sibling Discount') === 0
                 || collect($discount->eligibility_rules)->contains('field', 'sibling_rank')
             ) {
-                AuditLog::create([
-                    'user_id' => auth()->id(),
-                    'user_role' => 'system',
-                    'action' => 'SIBLING_DISCOUNT_APPLIED',
-                    'model_type' => 'Student',
-                    'model_id' => $student->student_id,
-                    'details' => json_encode([
-                        'discount_name' => $discount->discount_name,
-                        'parent_id' => $student->parents->sortByDesc('pivot.is_primary')->first()?->id,
-                        'grade_level' => $student->level,
-                        'child_order' => $discount->getSiblingRank($student),
-                        'discount_rate' => $discount->value,
-                    ]),
-                    'ip_address' => request()->ip(),
-                    'user_agent' => request()->userAgent(),
+                $details = json_encode([
+                    'discount_name' => $discount->discount_name,
+                    'parent_id' => $student->parents->sortByDesc('pivot.is_primary')->first()?->id,
+                    'grade_level' => $student->level,
+                    'child_order' => $discount->getSiblingRank($student),
+                    'discount_rate' => $discount->value,
                 ]);
+                AuditService::logOnce('SIBLING_DISCOUNT_APPLIED', $student, $details, null, null, 3600);
 
                 // Send SMS Notification
                 if ($contactNumber = $student->parents->sortByDesc('pivot.is_primary')->first()?->phone) {
