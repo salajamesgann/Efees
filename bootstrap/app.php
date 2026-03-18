@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'ensureRole' => \App\Http\Middleware\EnsureRole::class,
             'checkMaintenance' => \App\Http\Middleware\CheckMaintenanceMode::class,
+            'verifyRole' => \App\Http\Middleware\VerifyRoleConsistency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

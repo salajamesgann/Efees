@@ -188,40 +188,7 @@
             </div>
         </div>
 
-        <!-- Quick Stats Row -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <!-- Download Invoice -->
-            <button class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
-                <div class="w-10 h-10 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    <i class="fas fa-file-invoice text-lg"></i>
-                </div>
-                <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Invoice</span>
-            </button>
-            
-            <!-- Payment Methods -->
-            <button class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
-                <div class="w-10 h-10 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-purple-50 dark:group-hover:bg-purple-900/30 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                    <i class="fas fa-wallet text-lg"></i>
-                </div>
-                <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Methods</span>
-            </button>
 
-            <!-- Support -->
-            <button class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
-                <div class="w-10 h-10 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-green-50 dark:group-hover:bg-green-900/30 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-                    <i class="fas fa-headset text-lg"></i>
-                </div>
-                <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Support</span>
-            </button>
-
-            <!-- Settings -->
-            <a href="{{ route('parent.profile.edit') }}" class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 text-center group hover:-translate-y-1">
-                <div class="w-10 h-10 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:bg-orange-50 dark:group-hover:bg-orange-900/30 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                    <i class="fas fa-cog text-lg"></i>
-                </div>
-                <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Settings</span>
-            </a>
-        </div>
         
         <!-- Recent Transactions -->
         <div id="transactions" class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">

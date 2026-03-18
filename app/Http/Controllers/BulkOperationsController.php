@@ -18,6 +18,9 @@ class BulkOperationsController extends Controller
             'total_students' => Student::count(),
             'active_students' => Student::where('enrollment_status', 'Enrolled')->count(),
             'graduating_students' => Student::whereIn('level', ['Grade 6', 'Grade 10', 'Grade 12'])->count(),
+            'graduated_students' => Student::where('enrollment_status', 'Graduated')->count(),
+            'withdrawn_students' => Student::where('enrollment_status', 'Withdrawn')->count(),
+            'dropped_students' => Student::where('enrollment_status', 'Dropped')->count(),
         ];
 
         $levels = Student::select('level')->distinct()->orderBy('level')->pluck('level');

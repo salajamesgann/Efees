@@ -89,6 +89,9 @@ class AuthLoginController extends Controller
                 }
             }
 
+            // Set the role in the session
+            $request->session()->put('active_role', $roleName);
+
             switch ($roleName) {
                 case 'super_admin':
                     return redirect()->intended('super-admin/dashboard');

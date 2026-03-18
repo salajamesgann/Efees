@@ -58,6 +58,23 @@
             <i class="fas fa-archive text-amber-600"></i>
             Bulk Archiving
         </h2>
+
+        <!-- Archiving Stats -->
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <div class="p-3 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                <div class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Graduated</div>
+                <div class="text-xl font-black text-blue-800">{{ number_format($stats['graduated_students']) }}</div>
+            </div>
+            <div class="p-3 bg-orange-50 rounded-xl border border-orange-100 text-center">
+                <div class="text-xs font-bold text-orange-600 uppercase tracking-wider mb-1">Withdrawn</div>
+                <div class="text-xl font-black text-orange-800">{{ number_format($stats['withdrawn_students']) }}</div>
+            </div>
+            <div class="p-3 bg-red-50 rounded-xl border border-red-100 text-center">
+                <div class="text-xs font-bold text-red-600 uppercase tracking-wider mb-1">Dropped</div>
+                <div class="text-xl font-black text-red-800">{{ number_format($stats['dropped_students']) }}</div>
+            </div>
+        </div>
+
         <form action="{{ route('super_admin.bulk.archive') }}" method="POST" class="space-y-4">
             @csrf
             <div>
