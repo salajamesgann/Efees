@@ -26,9 +26,32 @@ class AuthLoginController extends Controller
     /**
      * Display the login form.
      */
-    public function login(): View
+    public function login(): View|RedirectResponse
     {
+        if (Auth::check()) {
+            return $this->redirectUserByRole(Auth::user());
+        }
         return view('auth.login');
+    }
+
+    /**
+     * Redirect user based on their role.
+     */
+    private function redirectUserByRole($user): RedirectResponse
+    {
+        $roleName = $user->getRoleName();
+        switch ($roleName) {
+            case 'super_admin':
+                return redirect()->intended('super-admin/dashboard');
+            case 'admin':
+                return redirect()->intended('admin_dashboard');
+            case 'staff':
+                return redirect()->intended('staff_dashboard');
+            case 'parent':
+                return redirect()->intended('user_dashboard');
+            default:
+                return redirect()->intended('user_dashboard');
+        }
     }
 
     /**
@@ -36,6 +59,13 @@ class AuthLoginController extends Controller
      */
     public function authenticate(Request $request): RedirectResponse
     {
+        // Force logout any existing session to prevent role mixing
+        if (Auth::check()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
@@ -87,21 +117,11 @@ class AuthLoginController extends Controller
                 }
             }
 
-            // Set the role in the session
+            // Set the role and user ID in the session for consistency checking
             $request->session()->put('active_role', $roleName);
+            $request->session()->put('active_user_id', $user->user_id);
 
-            switch ($roleName) {
-                case 'super_admin':
-                    return redirect()->intended('super-admin/dashboard');
-                case 'admin':
-                    return redirect()->intended('admin_dashboard');
-                case 'staff':
-                    return redirect()->intended('staff_dashboard');
-                case 'parent':
-                    return redirect()->intended('user_dashboard');
-                default:
-                    return redirect()->intended('user_dashboard');
-            }
+            return $this->redirectUserByRole($user);
         }
 
         // Increment failed login attempts

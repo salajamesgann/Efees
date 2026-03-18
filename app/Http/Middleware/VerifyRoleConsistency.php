@@ -19,9 +19,12 @@ class VerifyRoleConsistency
 
         if ($user) {
             $sessionRole = $request->session()->get('active_role');
+            $sessionUserId = $request->session()->get('active_user_id');
             $currentRole = $user->getRoleName();
+            $currentUserId = $user->user_id;
 
-            if ($sessionRole && $sessionRole !== $currentRole) {
+            // Strict check: Both role and User ID must match the initial login session
+            if (($sessionRole && $sessionRole !== $currentRole) || ($sessionUserId && (string)$sessionUserId !== (string)$currentUserId)) {
                 auth()->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
@@ -29,9 +32,12 @@ class VerifyRoleConsistency
                 return redirect('/')->with('error', 'Session conflict detected. You have been logged out for security reasons.');
             }
 
-            // Set the role in the session if it's not there
+            // Lock the role and user ID in the session if not already set
             if (!$sessionRole) {
                 $request->session()->put('active_role', $currentRole);
+            }
+            if (!$sessionUserId) {
+                $request->session()->put('active_user_id', $currentUserId);
             }
         }
 
