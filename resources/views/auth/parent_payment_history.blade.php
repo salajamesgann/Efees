@@ -65,11 +65,11 @@
                     <div class="flex items-start justify-between gap-3 mb-3">
                         <div class="flex items-center gap-3 min-w-0">
                             <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                                {{ substr($payment->student->first_name, 0, 1) }}{{ substr($payment->student->last_name, 0, 1) }}
+                                {{ substr(optional($payment->student)->first_name ?? 'U', 0, 1) }}{{ substr(optional($payment->student)->last_name ?? 'N', 0, 1) }}
                             </div>
                             <div class="min-w-0">
-                                <p class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ $payment->student->full_name }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ $payment->student->student_id }}</p>
+                                <p class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ optional($payment->student)->full_name ?? 'Unknown Student' }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ $payment->student_id }}</p>
                             </div>
                         </div>
                         <div class="text-right flex-shrink-0">
@@ -150,11 +150,11 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-2">
                                     <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold">
-                                        {{ substr($payment->student->first_name, 0, 1) }}{{ substr($payment->student->last_name, 0, 1) }}
+                                        {{ substr(optional($payment->student)->first_name ?? 'U', 0, 1) }}{{ substr(optional($payment->student)->last_name ?? 'N', 0, 1) }}
                                     </div>
                                     <div>
-                                        <div class="font-medium text-gray-900 dark:text-gray-100">{{ $payment->student->full_name }}</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ $payment->student->student_id }}</div>
+                                        <div class="font-medium text-gray-900 dark:text-gray-100">{{ optional($payment->student)->full_name ?? 'Unknown Student' }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ $payment->student_id }}</div>
                                     </div>
                                 </div>
                             </td>

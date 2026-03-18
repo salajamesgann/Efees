@@ -189,6 +189,6 @@ class User extends Authenticatable
     {
         // Only maps roleable_id to students; do not filter on roleable_type here
         // because roleable_type lives on the users table, not students.
-        return $this->belongsTo(Student::class, 'roleable_id', 'student_id');
+        return $this->belongsTo(Student::class, 'roleable_id', 'student_id')->withTrashed();
     }
 }

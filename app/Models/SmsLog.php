@@ -33,7 +33,7 @@ class SmsLog extends Model
 
     public function student(): BelongsTo
     {
-        return $this->belongsTo(Student::class, 'student_id', 'student_id');
+        return $this->belongsTo(Student::class, 'student_id', 'student_id')->withTrashed();
     }
 
     public function user(): BelongsTo

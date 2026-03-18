@@ -284,7 +284,13 @@
                         @forelse($history as $log)
                             <tr class="hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-4">
-                                    <div class="font-medium text-gray-900">{{ $log->student->first_name }} {{ $log->student->last_name }}</div>
+                                    <div class="font-medium text-gray-900">
+                                        @if($log->student)
+                                            {{ $log->student->first_name }} {{ $log->student->last_name }}
+                                        @else
+                                            <span class="text-gray-400 italic">Deleted Student</span>
+                                        @endif
+                                    </div>
                                     <div class="text-xs text-gray-500">{{ $log->mobile_number }}</div>
                                 </td>
                                 <td class="px-6 py-4">
