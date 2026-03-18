@@ -13,27 +13,14 @@ class EnsureRole
         if ($role === null) {
             return $next($request);
         }
+        
         $user = Auth::user();
 
         if (! $user) {
             abort(403);
         }
 
-        // Check if role matches directly (support multiple roles separated by |)
-        $roles = explode('|', $role);
-        if (in_array(optional($user->role)->role_name, $roles)) {
-            return $next($request);
-        }
-
-        // Check roleable_type as fallback
-        $roleableMap = [
-            'parent' => \App\Models\ParentContact::class,
-            'student' => \App\Models\Student::class,
-            'staff' => \App\Models\Staff::class,
-            'super_admin' => \App\Models\User::class, // Assuming Super Admin is a user type
-        ];
-
-        if (isset($roleableMap[$role]) && ($user->roleable_type ?? '') === $roleableMap[$role]) {
+        if ($user->hasRole($role)) {
             return $next($request);
         }
 

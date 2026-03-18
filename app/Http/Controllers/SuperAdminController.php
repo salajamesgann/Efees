@@ -26,9 +26,19 @@ class SuperAdminController extends Controller
                 ->get(),
             
             // Financial Stats
-            'total_collected' => Payment::whereIn('status', ['confirmed', 'approved'])->sum('amount_paid'),
+            // 'total_collected' should include all successful payment statuses:
+            // - 'confirmed': PayMongo confirmed
+            // - 'approved': Staff cash payment approved by admin
+            // - 'paid' / 'success': Fallback successful statuses
+            'total_collected' => Payment::whereIn('status', ['confirmed', 'approved', 'paid', 'success'])->sum('amount_paid'),
+            
+            // 'total_outstanding' should exclude:
+            // - 'tuition_total' (to avoid double counting with individual 'tuition' records)
+            // - 'payment' (payments are credited, not debited)
+            // - 'adjustment' (we'll sum adjustments separately or include if signed balance is correct)
+            // Actually, adjustment records carry the net effect of discounts/charges.
             'total_outstanding' => FeeRecord::where('status', '!=', 'paid')
-                ->where('record_type', '!=', 'tuition_total')
+                ->whereNotIn('record_type', ['tuition_total', 'payment'])
                 ->sum('balance'),
             
             // Enrollment Trends

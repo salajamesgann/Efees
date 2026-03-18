@@ -19,7 +19,7 @@ class VerifyRoleConsistency
 
         if ($user) {
             $sessionRole = $request->session()->get('active_role');
-            $currentRole = $user->getRoleNames()->first(); // Assuming user has one role
+            $currentRole = $user->getRoleName();
 
             if ($sessionRole && $sessionRole !== $currentRole) {
                 auth()->logout();

@@ -74,18 +74,16 @@ class AuthLoginController extends Controller
                 return redirect()->route('auth.password.change');
             }
 
-            $roleName = optional($user->role)->role_name;
+            $roleName = $user->getRoleName();
 
-            // Fallback: Check roleable_type if role_name is missing
-            if (! $roleName) {
-                if ($user->roleable_type === 'App\Models\Admin') {
-                    $roleName = 'admin';
-                } elseif ($user->roleable_type === 'App\Models\Staff') {
-                    $roleName = 'staff';
-                } elseif ($user->roleable_type === 'App\Models\ParentContact') {
-                    $roleName = 'parent';
-                } elseif ($user->roleable_type === 'App\Models\Student') {
-                    $roleName = 'student';
+            // Check if the user is a Parent and is active
+            if ($roleName === 'parent') {
+                $parent = $user->roleable;
+                if ($parent && $parent->account_status !== 'Active') {
+                    Auth::logout();
+                    return back()->withErrors([
+                        'email' => 'Your parent account is currently inactive. Please contact the administrator.',
+                    ])->onlyInput('email');
                 }
             }
 
@@ -133,7 +131,7 @@ class AuthLoginController extends Controller
     {
         $user = Auth::user();
 
-        $isParent = optional($user->role)->role_name === 'parent' || (($user->roleable_type ?? '') === \App\Models\ParentContact::class);
+        $isParent = $user->hasRole('parent') || (($user->roleable_type ?? '') === \App\Models\ParentContact::class);
         $studentId = null;
 
         // Logic for Student User
@@ -336,7 +334,7 @@ class AuthLoginController extends Controller
             return response()->json(['error' => 'unauthorized'], 403);
         }
 
-        $isParent = optional($user->role)->role_name === 'parent' || (($user->roleable_type ?? '') === \App\Models\ParentContact::class);
+        $isParent = $user->hasRole('parent') || (($user->roleable_type ?? '') === \App\Models\ParentContact::class);
         if (! $isParent) {
             return response()->json(['error' => 'unauthorized'], 403);
         }
@@ -908,8 +906,8 @@ class AuthLoginController extends Controller
         if (! $user) {
             abort(403);
         }
-        $isStudent = ($user->roleable_type ?? '') === 'App\\Models\\Student';
-        $isParent = optional($user->role)->role_name === 'parent' || (($user->roleable_type ?? '') === \App\Models\ParentContact::class);
+        $isStudent = $user->hasRole('student') || ($user->roleable_type ?? '') === 'App\\Models\\Student';
+        $isParent = $user->hasRole('parent') || (($user->roleable_type ?? '') === \App\Models\ParentContact::class);
         if ($isStudent) {
             if ($payment->student_id !== ($user->roleable_id ?? null)) {
                 abort(403);

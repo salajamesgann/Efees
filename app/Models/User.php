@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -90,18 +89,45 @@ class User extends Authenticatable
     ];
 
     /**
+     * Get the role name for the user.
+     */
+    public function getRoleName(): ?string
+    {
+        $roleName = optional($this->role)->role_name;
+
+        // Fallback: Check roleable_type if role_name is missing
+        if (! $roleName) {
+            if ($this->roleable_type === 'App\\Models\\Admin') {
+                $roleName = 'admin';
+            } elseif ($this->roleable_type === 'App\\Models\\Staff') {
+                $roleName = 'staff';
+            } elseif ($this->roleable_type === 'App\\Models\\ParentContact') {
+                $roleName = 'parent';
+            } elseif ($this->roleable_type === 'App\\Models\\Student') {
+                $roleName = 'student';
+            }
+        }
+
+        return $roleName;
+    }
+
+    /**
+     * Check if user has a specific role.
+     * Support multiple roles separated by |
+     */
+    public function hasRole(string $role): bool
+    {
+        $roles = explode('|', $role);
+        return in_array($this->getRoleName(), $roles);
+    }
+
+    /**
      * Get the name from the roleable entity.
      */
     public function getNameAttribute()
     {
         if ($this->roleable) {
-            if ($this->roleable_type === 'App\\Models\\Student') {
-                return $this->roleable->full_name;
-            }
-            if ($this->roleable_type === 'App\\Models\\Staff') {
-                return $this->roleable->full_name;
-            }
-            if ($this->roleable_type === 'App\\Models\\ParentContact') {
+            if ($this->roleable_type === 'App\\Models\\Student' || $this->roleable_type === 'App\\Models\\Staff' || $this->roleable_type === 'App\\Models\\ParentContact') {
                 return $this->roleable->full_name;
             }
         }
@@ -123,14 +149,6 @@ class User extends Authenticatable
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class, 'role_id', 'role_id');
-    }
-
-    /**
-     * Check if user has a specific role.
-     */
-    public function hasRole(string $role): bool
-    {
-        return optional($this->role)->role_name === $role;
     }
 
     /**
