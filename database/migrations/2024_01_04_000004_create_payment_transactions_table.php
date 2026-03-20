@@ -15,7 +15,7 @@ return new class extends Migration
             Schema::create('payment_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('user_id');
-                $table->unsignedBigInteger('student_id');
+                $table->string('student_id');
                 $table->decimal('amount', 10, 2);
                 $table->string('type');
                 $table->text('note')->nullable();

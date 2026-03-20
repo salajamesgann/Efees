@@ -1155,7 +1155,6 @@
                                         <div>
                                             <h4 class="text-sm font-bold text-yellow-800">No Fee Assignment Found</h4>
                                             <p class="text-xs text-yellow-700 mt-1">This student has not been assigned a fee structure yet. Please enroll the student properly to enable fee management.</p>
-                                            <a href="{{ route('admin.enrollment.edit', $selectedStudent) }}" class="inline-block mt-2 text-xs font-bold text-yellow-800 underline hover:text-yellow-900">Manage Enrollment</a>
                                         </div>
                                     </div>
                                 @endif

@@ -347,5 +347,6 @@ Route::prefix('super-admin')->name('super_admin.')->middleware('ensureRole:super
         Route::get('/', [\App\Http\Controllers\BulkOperationsController::class, 'index'])->name('index');
         Route::post('/promote', [\App\Http\Controllers\BulkOperationsController::class, 'promote'])->name('promote');
         Route::post('/archive', [\App\Http\Controllers\BulkOperationsController::class, 'archive'])->name('archive');
+        Route::post('/status-update', [\App\Http\Controllers\BulkOperationsController::class, 'statusUpdate'])->name('statusUpdate');
     });
 });

@@ -106,14 +106,6 @@
                     <input type="number" name="password_expiry_days" min="7" max="365" value="{{ $settings['password_expiry_days'] }}" class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl">
                 </div>
             </div>
-
-            <!-- System Notice -->
-            <div class="mt-8">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Global System Notice</label>
-                <textarea name="system_notice" rows="3" placeholder="Display a banner to all users..."
-                          class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none">{{ $settings['system_notice'] }}</textarea>
-                <p class="text-[10px] text-slate-400 mt-2 italic">This message will appear on all dashboards when enabled.</p>
-            </div>
         </div>
 
         <!-- Danger Zone / Actions -->

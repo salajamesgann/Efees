@@ -19,7 +19,6 @@ class SuperAdminSettingsController extends Controller
         $settings = [
             'school_year' => SystemSetting::getValue('school_year', date('Y').'-'.(date('Y') + 1)),
             'maintenance_mode' => SystemSetting::getValue('maintenance_mode', 'off'), // off, read-only, maintenance
-            'system_notice' => SystemSetting::getValue('system_notice'),
             'semester' => SystemSetting::getValue('semester', 'Full Year'),
             'student_id_format' => SystemSetting::getValue('student_id_format', 'STU-{SY}-{####}'),
             'auto_generate_fees_on_enrollment' => SystemSetting::getValue('auto_generate_fees_on_enrollment', '1'),
@@ -40,7 +39,6 @@ class SuperAdminSettingsController extends Controller
         $request->validate([
             'school_year' => 'required|string|max:9',
             'maintenance_mode' => 'required|in:off,read-only,maintenance',
-            'system_notice' => 'nullable|string|max:500',
             'semester' => 'nullable|string|max:50',
             'student_id_format' => 'nullable|string|max:100',
             'auto_generate_fees_on_enrollment' => 'nullable|in:0,1',
@@ -54,7 +52,6 @@ class SuperAdminSettingsController extends Controller
         $newSettings = $request->only([
             'school_year',
             'maintenance_mode',
-            'system_notice',
             'semester',
             'student_id_format',
             'auto_generate_fees_on_enrollment',
