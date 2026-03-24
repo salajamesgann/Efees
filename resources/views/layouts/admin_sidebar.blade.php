@@ -39,7 +39,7 @@
               <div class="w-8 flex justify-center">
                   <i class="fas fa-users text-lg {{ request()->routeIs('super_admin.students.*') ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500 transition-colors' }}"></i>
               </div>
-              <span class="text-sm font-medium">Student Registry</span>
+              <span class="text-sm font-medium">Student Management</span>
           </a>
 
           <!-- SECURITY & ACCESS -->
