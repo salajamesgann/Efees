@@ -1546,7 +1546,7 @@ class AdminFeeController extends Controller
             'school_year' => ['required', 'string', 'max:20'],
             'applies_to' => ['required', 'in:all,grades'],
             'grade_levels' => ['nullable', 'array'],
-            'grade_levels.*' => ['string', 'in:Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
+            'grade_levels.*' => ['string', 'in:Grade 1,Grade 2,Grade 3,Grade 4,Grade 5,Grade 6,Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
             'track' => ['nullable', 'string', 'max:100'],
             'strand' => ['nullable', 'string', 'max:100'],
             // 5) Payment Rules
@@ -1803,7 +1803,7 @@ class AdminFeeController extends Controller
             'school_year' => ['required', 'string'],
             'applies_to' => ['required', 'in:all,grades'],
             'grade_levels' => ['nullable', 'array'],
-            'grade_levels.*' => ['string', 'in:Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
+            'grade_levels.*' => ['string', 'in:Grade 1,Grade 2,Grade 3,Grade 4,Grade 5,Grade 6,Grade 7,Grade 8,Grade 9,Grade 10,Grade 11,Grade 12'],
             'required_or_optional' => ['required', 'in:required,optional'],
             'allow_installment' => ['nullable', 'boolean'],
             'include_in_total' => ['nullable', 'boolean'],

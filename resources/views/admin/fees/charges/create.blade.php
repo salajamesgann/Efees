@@ -101,7 +101,7 @@
                         <div class="col-span-1 md:col-span-2" x-data="{ show: '{{ old('applies_to') }}' === 'grades' }" @applies-change.window="show = ($event.detail === 'grades')" x-show="show" x-cloak>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Select Grade Levels</label>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                @foreach(['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'] as $grade)
+                                @foreach($gradeLevels as $grade)
                                     <div class="flex items-center">
                                         <input type="checkbox" name="grade_levels[]" value="{{ $grade }}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {{ is_array(old('grade_levels')) && in_array($grade, old('grade_levels')) ? 'checked' : '' }}>
                                         <label class="ml-2 block text-sm text-gray-900">{{ $grade }}</label>
