@@ -572,16 +572,14 @@ class AdminStudentController extends Controller
             fputcsv($f, [
                 'lrn', 'first_name', 'middle_name', 'last_name', 'suffix',
                 'sex', 'date_of_birth', 'level', 'section', 'strand',
-                'school_year', 'parent_name', 'parent_phone', 'parent_email',
-                'relationship', 'shs_voucher',
+                'school_year', 'shs_voucher',
             ]);
             // One sample row
             fputcsv($f, [
                 '123456789012', 'Juan', 'Santos', 'Dela Cruz', '',
                 'Male', '2010-06-15', 'Grade 7', 'Section A', '',
                 date('Y').'-'.date('Y', strtotime('+1 year')),
-                'Maria Dela Cruz', '09171234567', 'parent@example.com',
-                'Mother', 'No',
+                'No',
             ]);
             fclose($f);
         };
@@ -669,10 +667,6 @@ class AdminStudentController extends Controller
             $lrn        = $col('lrn', $row) ?: null;
             $middleName = $col('middle_name', $row) ?: null;
             $suffix     = $col('suffix', $row) ?: null;
-            $parentName = $col('parent_name', $row);
-            $parentPhone= $col('parent_phone', $row) ?: null;
-            $parentEmail= $col('parent_email', $row) ?: null;
-            $relationship = $col('relationship', $row) ?: 'Parent/Guardian';
             $shsVoucher = strtolower($col('shs_voucher', $row));
             $isVoucher  = in_array($shsVoucher, ['yes', 'y', '1', 'true'], true);
 
@@ -706,7 +700,6 @@ class AdminStudentController extends Controller
                 DB::transaction(function () use (
                     $firstName, $middleName, $lastName, $suffix, $sex, $dob,
                     $level, $section, $schoolYear, $strand, $lrn,
-                    $parentName, $parentPhone, $parentEmail, $relationship,
                     $isVoucher, $autoGenerate, &$deferRecompute
                 ) {
                     $studentId = $this->generateUniqueStudentId();
@@ -733,30 +726,6 @@ class AdminStudentController extends Controller
                         'is_shs_voucher'   => $isVoucher,
                         'enrollment_status' => 'Active',
                     ]);
-
-                    // Link or create parent
-                    if ($parentPhone || $parentName) {
-                        $parentContact = null;
-                        if ($parentPhone) {
-                            $parentContact = \App\Models\ParentContact::where('phone', $parentPhone)->first();
-                        }
-                        if (! $parentContact && $parentName) {
-                            $parentContact = \App\Models\ParentContact::create([
-                                'full_name'      => $parentName,
-                                'phone'          => $parentPhone,
-                                'email'          => $parentEmail ?: null,
-                                'account_status' => 'Active',
-                            ]);
-                        }
-                        if ($parentContact) {
-                            $parentContact->students()->syncWithoutDetaching([
-                                $student->student_id => [
-                                    'relationship' => $relationship,
-                                    'is_primary'   => true,
-                                ],
-                            ]);
-                        }
-                    }
 
                     if ($autoGenerate === '1') {
                         // Defer fee computation to after the transaction commits.
@@ -805,7 +774,7 @@ class AdminStudentController extends Controller
         $flashKey = $skipped > 0 && $imported === 0 ? 'error' : ($skipped > 0 ? 'warning' : 'success');
 
         return redirect()
-            ->route('super_admin.students.index', ['school_year' => $overrideSy])
+            ->route('super_admin.bulk.index')
             ->with($flashKey, $summary);
     }
 
