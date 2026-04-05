@@ -602,7 +602,36 @@ class AdminStudentController extends Controller
             return back()->with('error', 'No active School Year is set. Please configure it first.');
         }
 
-        $overrideSy    = $request->input('school_year', $activeSy) ?: $activeSy;
+        $normalizeSchoolYear = function (?string $value): ?string {
+            $value = trim((string) $value);
+            if ($value === '') {
+                return null;
+            }
+
+            if (! preg_match('/^(\d{4})-(\d{4})$/', $value, $matches)) {
+                return null;
+            }
+
+            $start = (int) $matches[1];
+            $end = (int) $matches[2];
+
+            if ($end !== ($start + 1)) {
+                return null;
+            }
+
+            return $start . '-' . $end;
+        };
+
+        $requestedSy = trim((string) $request->input('school_year', ''));
+        $hasOverrideSy = $requestedSy !== '';
+        $overrideSy = $hasOverrideSy ? $normalizeSchoolYear($requestedSy) : $activeSy;
+
+        if ($hasOverrideSy && ! $overrideSy) {
+            return back()->withErrors([
+                'school_year' => 'School Year must be in YYYY-YYYY format and must be consecutive (example: 2026-2027).',
+            ])->withInput();
+        }
+
         $autoGenerate  = SystemSetting::where('key', 'auto_generate_fees_on_enrollment')->value('value');
 
         $file = $request->file('csv_file');
@@ -662,7 +691,8 @@ class AdminStudentController extends Controller
             $section    = $col('section', $row);
             $sex        = ucfirst(strtolower($col('sex', $row)));
             $dob        = $col('date_of_birth', $row) ?: null;
-            $schoolYear = $col('school_year', $row) ?: $overrideSy;
+            $csvSchoolYear = $col('school_year', $row);
+            $schoolYear = $hasOverrideSy ? $overrideSy : ($normalizeSchoolYear($csvSchoolYear) ?: $activeSy);
             $strand     = $col('strand', $row) ?: null;
             $lrn        = $col('lrn', $row) ?: null;
             $middleName = $col('middle_name', $row) ?: null;
@@ -677,6 +707,9 @@ class AdminStudentController extends Controller
             if (! in_array($level, $validGrades, true)) $rowErrors[] = "invalid level '{$level}'";
             if (! $section)                          $rowErrors[] = 'section required';
             if (! in_array($sex, ['Male','Female','Other'], true)) $rowErrors[] = "invalid sex '{$sex}'";
+            if (! $hasOverrideSy && $csvSchoolYear !== '' && ! $normalizeSchoolYear($csvSchoolYear)) {
+                $rowErrors[] = "invalid school_year '{$csvSchoolYear}' (expected YYYY-YYYY)";
+            }
 
             if ($rowErrors) {
                 $errors[] = "Row {$rowNum}: ".implode(', ', $rowErrors);
@@ -690,7 +723,7 @@ class AdminStudentController extends Controller
                 ->where('school_year', $schoolYear)
                 ->exists();
             if ($duplicate) {
-                $errors[] = "Row {$rowNum}: {$firstName} {$lastName} ({$schoolYear}) already enrolled — skipped.";
+                $errors[] = "Row {$rowNum}: {$firstName} {$lastName} ({$schoolYear}) already exists — skipped.";
                 $skipped++;
                 continue;
             }

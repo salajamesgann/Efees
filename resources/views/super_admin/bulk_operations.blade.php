@@ -222,15 +222,31 @@
             </div>
         </div>
         <div class="md:col-span-2">
-            <form id="student-import-form" action="{{ route('super_admin.students.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col md:flex-row gap-4">
+            <form id="student-import-form" action="{{ route('super_admin.students.import') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
                 @csrf
-                <div class="flex-1 relative">
-                    <input type="file" name="csv_file" required class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="md:col-span-2 relative">
+                        <input type="file" name="csv_file" required class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none">
+                    </div>
+                    <div>
+                        <input
+                            type="text"
+                            name="school_year"
+                            value="{{ old('school_year', $activeSY) }}"
+                            placeholder="School Year (YYYY-YYYY)"
+                            class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
+                        >
+                    </div>
                 </div>
-                <button id="student-import-submit" type="submit" class="px-8 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-100 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                    <i class="fas fa-upload"></i>
-                    <span id="student-import-submit-label">Upload & Import</span>
-                </button>
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <p class="text-[10px] text-slate-500">
+                        The School Year field overrides CSV values for every row. Format: YYYY-YYYY.
+                    </p>
+                    <button id="student-import-submit" type="submit" class="px-8 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-100 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                        <i class="fas fa-upload"></i>
+                        <span id="student-import-submit-label">Upload & Import</span>
+                    </button>
+                </div>
             </form>
             <p id="student-import-status" class="text-[10px] text-slate-400 mt-4">
                 <i class="fas fa-info-circle mr-1"></i>
