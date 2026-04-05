@@ -16,11 +16,32 @@ class SuperAdminController extends Controller
 {
     public function dashboard(): View
     {
+        $gradeLevels = collect(range(1, 12))
+            ->map(fn ($grade) => 'Grade ' . $grade);
+
+        $countsByLevel = Student::select('level', DB::raw('count(*) as total'))
+            ->whereIn('level', $gradeLevels->all())
+            ->groupBy('level')
+            ->pluck('total', 'level');
+
+        $enrollmentByLevel = $gradeLevels
+            ->map(function ($level) use ($countsByLevel) {
+                return (object) [
+                    'level' => $level,
+                    'total' => (int) ($countsByLevel[$level] ?? 0),
+                ];
+            });
+
         $stats = [
             'total_students' => Student::count(),
-            'total_users' => User::count(),
+            'total_users' => User::whereHas('role', function ($query) {
+                $query->whereRaw('LOWER(role_name) != ?', ['super_admin']);
+            })->count(),
             'recent_activity' => AuditLog::with('user')->latest()->limit(5)->get(),
             'role_distribution' => User::select('role_id', DB::raw('count(*) as total'))
+                ->whereHas('role', function ($query) {
+                    $query->whereRaw('LOWER(role_name) != ?', ['super_admin']);
+                })
                 ->with('role')
                 ->groupBy('role_id')
                 ->get(),
@@ -42,10 +63,7 @@ class SuperAdminController extends Controller
                 ->sum('balance'),
             
             // Enrollment Trends
-            'enrollment_by_level' => Student::select('level', DB::raw('count(*) as total'))
-                ->groupBy('level')
-                ->orderBy('level')
-                ->get(),
+            'enrollment_by_level' => $enrollmentByLevel,
             'enrollment_by_strand' => Student::select('strand', DB::raw('count(*) as total'))
                 ->whereNotNull('strand')
                 ->groupBy('strand')

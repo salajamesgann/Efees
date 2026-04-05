@@ -23,9 +23,34 @@ class BulkOperationsController extends Controller
             'dropped_students' => Student::where('enrollment_status', 'Dropped')->count(),
         ];
 
-        $levels = Student::select('level')->distinct()->orderBy('level')->pluck('level');
-        $schoolYears = Student::select('school_year')->distinct()->whereNotNull('school_year')->orderBy('school_year', 'desc')->pluck('school_year');
         $activeSY = SystemSetting::getActiveSchoolYear();
+
+        $levels = collect(range(1, 12))
+            ->map(fn ($grade) => 'Grade ' . $grade)
+            ->values();
+
+        $schoolYears = Student::select('school_year')
+            ->whereNotNull('school_year')
+            ->distinct()
+            ->pluck('school_year')
+            ->map(fn ($sy) => trim((string) $sy))
+            ->filter(function ($sy) {
+                if (! preg_match('/^(\d{4})-(\d{4})$/', $sy, $matches)) {
+                    return false;
+                }
+
+                return ((int) $matches[2]) === (((int) $matches[1]) + 1);
+            })
+            ->unique()
+            ->sortBy(fn ($sy) => (int) substr($sy, 0, 4))
+            ->values();
+
+        if ($activeSY && preg_match('/^(\d{4})-(\d{4})$/', $activeSY, $matches) && ((int) $matches[2]) === (((int) $matches[1]) + 1) && ! $schoolYears->contains($activeSY)) {
+            $schoolYears = $schoolYears
+                ->push($activeSY)
+                ->sortBy(fn ($sy) => (int) substr($sy, 0, 4))
+                ->values();
+        }
 
         return view('super_admin.bulk_operations', compact('stats', 'levels', 'schoolYears', 'activeSY'));
     }
