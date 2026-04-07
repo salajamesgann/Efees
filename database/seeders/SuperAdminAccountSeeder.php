@@ -27,7 +27,6 @@ class SuperAdminAccountSeeder extends Seeder
                 'contact_number' => '00000000000',
                 'department' => 'System',
                 'position' => 'Super Admin',
-                'is_active' => true,
             ]);
         }
         
