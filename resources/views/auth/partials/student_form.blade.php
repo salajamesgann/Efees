@@ -284,26 +284,20 @@
             <div x-show="['new', 'current'].includes(parentMode)" class="contents">
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-slate-700">Parent Name</label>
-                    <input name="parent_guardian_name" value="{{ old('parent_guardian_name', $pgName) }}" type="text" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
+                    <input name="parent_guardian_name" value="{{ old('parent_guardian_name', $pgName) }}" type="text" x-bind:disabled="parentMode === 'existing'" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-slate-700">Phone Number (11 digits)</label>
-                    <input name="parent_contact_number" value="{{ old('parent_contact_number', $pgPhone) }}" type="text" maxlength="11" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" placeholder="09xxxxxxxxx" />
+                    <input name="parent_contact_number" value="{{ old('parent_contact_number', $pgPhone) }}" type="text" maxlength="11" x-bind:disabled="parentMode === 'existing'" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" placeholder="09xxxxxxxxx" />
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-slate-700">Email (Optional)</label>
-                    <input name="parent_email" value="{{ old('parent_email', $pgEmail) }}" type="email" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
-                </div>
-                
-                <!-- Password Field for New Parent -->
-                <div class="space-y-2" x-show="parentMode === 'new'">
-                    <label class="text-sm font-semibold text-slate-700">Password <span class="text-red-500">*</span></label>
-                    <input name="parent_password" type="password" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" placeholder="Create password for parent" />
+                    <input name="parent_email" value="{{ old('parent_email', $pgEmail) }}" type="email" x-bind:disabled="parentMode === 'existing'" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
                 </div>
 
                 <div class="space-y-2 md:col-span-2">
                     <label class="text-sm font-semibold text-slate-700">Address (Optional)</label>
-                    <input name="parent_address" value="{{ old('parent_address', $pgAddress) }}" type="text" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
+                    <input name="parent_address" value="{{ old('parent_address', $pgAddress) }}" type="text" x-bind:disabled="parentMode === 'existing'" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm" />
                 </div>
             </div>
 

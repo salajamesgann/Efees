@@ -82,14 +82,6 @@ Route::middleware(['auth', 'checkMaintenance', 'verifyRole'])->group(function ()
     Route::get('/admin_dashboard', [AuthLoginController::class, 'admin_dashboard'])->middleware('ensureRole:admin')->name('admin_dashboard');
     Route::get('/admin_dashboard/metrics', [AuthLoginController::class, 'admin_metrics'])->middleware('ensureRole:admin|staff')->name('admin_dashboard.metrics');
 
-    // Admin Password Requests
-    Route::prefix('admin/requests')->name('admin.requests.')->middleware('ensureRole:admin')->group(function () {
-        Route::get('/', [\App\Http\Controllers\AdminPasswordRequestController::class, 'index'])->name('index');
-        Route::post('/{request}/approve', [\App\Http\Controllers\AdminPasswordRequestController::class, 'approve'])->name('approve');
-        Route::post('/{request}/reject', [\App\Http\Controllers\AdminPasswordRequestController::class, 'reject'])->name('reject');
-        Route::delete('/{request}', [\App\Http\Controllers\AdminPasswordRequestController::class, 'destroy'])->name('destroy');
-    });
-
     // Staff Dashboard and actions
     Route::get('/staff_dashboard', [StaffDashboardController::class, 'index'])->middleware('ensureRole:staff')->name('staff_dashboard');
     Route::get('/staff_dashboard/list', [StaffDashboardController::class, 'list'])->middleware('ensureRole:staff')->name('staff_dashboard.list');

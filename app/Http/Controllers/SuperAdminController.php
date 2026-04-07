@@ -12,11 +12,14 @@ use App\Models\Payment;
 use App\Models\FeeRecord;
 use App\Enums\PaymentStatus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class SuperAdminController extends Controller
 {
     public function dashboard(): View
     {
+        $hasPaymentStatus = Schema::hasColumn('payments', 'status');
+
         $gradeLevels = collect(range(1, 12))
             ->map(fn ($grade) => 'Grade ' . $grade);
 
@@ -44,7 +47,9 @@ class SuperAdminController extends Controller
             
             // Financial Stats
             // 'total_collected' should include all successful payment statuses
-            'total_collected' => Payment::whereIn('status', PaymentStatus::successful())->sum('amount_paid'),
+            'total_collected' => Payment::query()
+                ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
+                ->sum('amount_paid'),
             
             // Shared outstanding-debt policy used across dashboards
             'total_outstanding' => FeeRecord::outstandingDebt()->sum('balance'),

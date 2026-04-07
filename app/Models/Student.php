@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
 
 class Student extends Model
 {
@@ -173,12 +174,16 @@ class Student extends Model
      */
     public function getTotalPaidAttribute()
     {
-        return $this->payments()
-            ->where(function ($q) {
-                $q->whereIn('status', ['approved', 'paid'])
+        $query = $this->payments();
+
+        if (Schema::hasColumn('payments', 'status')) {
+            $query->where(function ($paymentQuery) {
+                $paymentQuery->whereIn('status', ['approved', 'paid'])
                     ->orWhereNull('status');
-            })
-            ->sum('amount_paid');
+            });
+        }
+
+        return $query->sum('amount_paid');
     }
 
     /**

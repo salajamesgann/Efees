@@ -28,17 +28,33 @@ class AdminStudentController extends Controller
      */
     public function create(): View
     {
-        // Fetch all parents for the search dropdown
-        $existingParents = \App\Models\ParentContact::select('id', 'full_name', 'phone')
-            ->orderBy('full_name')
-            ->get()
-            ->map(function ($p) {
-                return [
-                    'id' => $p->id,
-                    'label' => $p->full_name.' ('.$p->phone.')',
-                    'phone' => $p->phone,
-                ];
-            });
+        // Fetch all parents for the search dropdown (supports both new and legacy schemas)
+        if (Schema::hasTable('parents')) {
+            $existingParents = \App\Models\ParentContact::select('id', 'full_name', 'phone')
+                ->orderBy('full_name')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'label' => $p->full_name.' ('.$p->phone.')',
+                        'phone' => $p->phone,
+                    ];
+                });
+        } elseif (Schema::hasTable('parents_guardians')) {
+            $existingParents = DB::table('parents_guardians')
+                ->select('id', DB::raw('parent_guardian_name as full_name'), DB::raw('contact_number as phone'))
+                ->orderBy('parent_guardian_name')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'label' => $p->full_name.' ('.$p->phone.')',
+                        'phone' => $p->phone,
+                    ];
+                });
+        } else {
+            $existingParents = collect();
+        }
 
         return view('auth.admin_students_create', [
             'existingParents' => $existingParents,
@@ -85,8 +101,19 @@ class AdminStudentController extends Controller
             return response()->json([]);
         }
 
+        // Fallback for legacy schema where sections table is not yet migrated
+        if (! Schema::hasTable('sections')) {
+            $sections = Student::where('level', $level)
+                ->whereNotNull('section')
+                ->distinct()
+                ->orderBy('section')
+                ->pluck('section');
+
+            return response()->json($sections);
+        }
+
         $query = Section::where('level', $level);
-        if (in_array($level, ['Grade 11', 'Grade 12'], true) && $strandName) {
+        if (in_array($level, ['Grade 11', 'Grade 12'], true) && $strandName && Schema::hasTable('strands')) {
             $strand = Strand::where('name', $strandName)->first();
             if ($strand) {
                 $query->where('strand_id', $strand->id);
@@ -146,17 +173,33 @@ class AdminStudentController extends Controller
         $selectedStudent = null;
         $recentActivity = [];
 
-        // Fetch all parents for the search dropdown
-        $existingParents = \App\Models\ParentContact::select('id', 'full_name', 'phone')
-            ->orderBy('full_name')
-            ->get()
-            ->map(function ($p) {
-                return [
-                    'id' => $p->id,
-                    'label' => $p->full_name.' ('.$p->phone.')',
-                    'phone' => $p->phone,
-                ];
-            });
+        // Fetch all parents for the search dropdown (supports both new and legacy schemas)
+        if (Schema::hasTable('parents')) {
+            $existingParents = \App\Models\ParentContact::select('id', 'full_name', 'phone')
+                ->orderBy('full_name')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'label' => $p->full_name.' ('.$p->phone.')',
+                        'phone' => $p->phone,
+                    ];
+                });
+        } elseif (Schema::hasTable('parents_guardians')) {
+            $existingParents = DB::table('parents_guardians')
+                ->select('id', DB::raw('parent_guardian_name as full_name'), DB::raw('contact_number as phone'))
+                ->orderBy('parent_guardian_name')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'label' => $p->full_name.' ('.$p->phone.')',
+                        'phone' => $p->phone,
+                    ];
+                });
+        } else {
+            $existingParents = collect();
+        }
 
         if ($selectedId && ! $isCreating) {
             $selectedId = trim($selectedId);
@@ -311,22 +354,32 @@ class AdminStudentController extends Controller
             // Check if level is Grade 11 or 12
             $isSHS = in_array($level, ['Grade 11', 'Grade 12']);
 
-            if ($isSHS && ! $strandName) {
+            if ($isSHS && ! $strandName && Schema::hasTable('strands')) {
                 $viewState = 'strands';
                 $strands = Strand::orderBy('name')->get();
             } else {
                 $viewState = 'sections';
 
-                $sectionsQuery = Section::where('level', $level);
+                if (Schema::hasTable('sections')) {
+                    $sectionsQuery = Section::where('level', $level);
 
-                if ($isSHS && $strandName) {
-                    $strand = Strand::where('name', $strandName)->first();
-                    if ($strand) {
-                        $sectionsQuery->where('strand_id', $strand->id);
+                    if ($isSHS && $strandName && Schema::hasTable('strands')) {
+                        $strand = Strand::where('name', $strandName)->first();
+                        if ($strand) {
+                            $sectionsQuery->where('strand_id', $strand->id);
+                        }
                     }
-                }
 
-                $sections = $sectionsQuery->orderBy('name')->get();
+                    $sections = $sectionsQuery->orderBy('name')->get();
+                } else {
+                    // Fallback to existing student sections when sections table is unavailable
+                    $sections = Student::where('school_year', $selectedSchoolYear)
+                        ->where('level', $level)
+                        ->whereNotNull('section')
+                        ->distinct()
+                        ->orderBy('section')
+                        ->get(['section as name']);
+                }
             }
         } else {
             $viewState = 'levels';
@@ -407,10 +460,18 @@ class AdminStudentController extends Controller
 
     public function storeSection(Request $request): RedirectResponse
     {
+        if (! Schema::hasTable('sections')) {
+            return back()->with('error', 'Sections table is not yet available in this database. Please run pending migrations first.');
+        }
+
+        $hasStrandsTable = Schema::hasTable('strands');
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'level' => ['required', 'string', 'max:255'],
-            'strand' => ['nullable', 'string', 'exists:strands,name'],
+            'strand' => $hasStrandsTable
+                ? ['nullable', 'string', 'exists:strands,name']
+                : ['nullable', 'string', 'max:255'],
             'shs_voucher_type' => ['nullable', 'string', 'in:regular,shs_voucher'],
         ]);
 
@@ -445,6 +506,10 @@ class AdminStudentController extends Controller
 
     public function storeStrand(Request $request): RedirectResponse
     {
+        if (! Schema::hasTable('strands')) {
+            return back()->with('error', 'Strands table is not yet available in this database. Please run pending migrations first.');
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:strands,name'],
             'level' => ['required', 'string'], // pass level back for redirect
@@ -458,8 +523,17 @@ class AdminStudentController extends Controller
             ->with('success', 'Strand added successfully.');
     }
 
-    public function destroySection(Request $request, Section $section): RedirectResponse
+    public function destroySection(Request $request, $sectionId): RedirectResponse
     {
+        if (! Schema::hasTable('sections')) {
+            return back()->with('error', 'Sections table is not yet available in this database.');
+        }
+
+        $section = Section::find($sectionId);
+        if (! $section) {
+            return back()->with('error', 'Section not found.');
+        }
+
         // Check if section has students
         $studentCount = Student::where('section', $section->name)
             ->where('level', $section->level)
@@ -913,6 +987,18 @@ class AdminStudentController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $hasParentsTable = Schema::hasTable('parents');
+        $hasStrandsTable = Schema::hasTable('strands');
+        $hasDobColumn = Schema::hasColumn('students', 'date_of_birth');
+
+        if (! $hasParentsTable) {
+            return back()
+                ->with('error', 'Parent management table is not available in this database. Please run pending migrations before enrolling students.')
+                ->withInput();
+        }
+
+        $parentMode = $request->input('parent_mode');
+
         $validated = $request->validate([
             // Student Details
             'student_id'  => ['nullable', 'string', 'max:50', 'unique:students,student_id'],
@@ -928,17 +1014,24 @@ class AdminStudentController extends Controller
             'level' => ['required', 'string', 'max:255'],
             'section' => ['required', 'string', 'max:255'],
             'school_year' => ['required', 'string', 'max:20'],
-            'strand' => ['nullable', 'string', 'exists:strands,name'],
+            'strand' => $hasStrandsTable
+                ? ['nullable', 'string', 'exists:strands,name']
+                : ['nullable', 'string', 'max:255'],
             'shs_voucher_type' => ['nullable', 'string', 'in:regular,shs_voucher'],
 
             // Parent Linking
             'parent_mode' => ['required', 'in:new,existing'],
 
             // New Parent Fields
-            'parent_guardian_name' => ['required_if:parent_mode,new', 'nullable', 'string', 'max:255'],
-            'parent_contact_number' => ['required_if:parent_mode,new', 'nullable', 'string', 'min:11', 'max:11', 'unique:parents,phone'],
-            'parent_email' => ['required_if:parent_mode,new', 'nullable', 'email', 'max:255'], // Required for password reset
-            'parent_password' => ['nullable', 'string', 'min:6'], // Optional - will use email reset if empty
+            'parent_guardian_name' => $parentMode === 'new'
+                ? ['required', 'string', 'max:255']
+                : ['nullable', 'string', 'max:255'],
+            'parent_contact_number' => $parentMode === 'new'
+                ? ['required', 'string', 'min:11', 'max:11', 'unique:parents,phone']
+                : ['nullable', 'string', 'min:11', 'max:11'],
+            'parent_email' => $parentMode === 'new'
+                ? ['required', 'email', 'max:255']
+                : ['nullable', 'email', 'max:255'], // Required for password reset
             'parent_address' => ['nullable', 'string', 'max:500'],
             'relationship' => ['required', 'string', 'max:50'],
 
@@ -966,13 +1059,13 @@ class AdminStudentController extends Controller
                 ->withInput();
         }
 
-        // Soft-check for duplicate: same first name + last name + school year (+ DOB if provided)
+        // Soft-check for duplicate: same first name + last name + school year (+ DOB if the column exists)
         if (! $request->boolean('force_save')) {
             $dupeQuery = Student::where('first_name', $validated['first_name'])
                 ->where('last_name', $validated['last_name'])
                 ->where('school_year', $validated['school_year']);
 
-            if (! empty($validated['date_of_birth'])) {
+            if ($hasDobColumn && ! empty($validated['date_of_birth'])) {
                 $dupeQuery->whereDate('date_of_birth', $validated['date_of_birth']);
             }
 
@@ -1005,8 +1098,8 @@ class AdminStudentController extends Controller
         $globalNotifications = \App\Models\SystemSetting::where('key', 'notifications_enabled')->value('value') === '1';
         $sendSms = $request->has('send_sms') ? $request->boolean('send_sms') : $globalNotifications;
 
-        $result = DB::transaction(function () use ($validated, $studentId, $autoGenerate) {
-            $student = Student::create([
+        $result = DB::transaction(function () use ($validated, $studentId, $autoGenerate, $hasDobColumn) {
+            $studentData = [
                 'student_id' => $studentId,
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,
@@ -1014,7 +1107,6 @@ class AdminStudentController extends Controller
                 'last_name' => $validated['last_name'],
                 'suffix' => $validated['suffix'] ?? null,
                 'sex' => $validated['sex'],
-                'date_of_birth' => $validated['date_of_birth'] ?? null,
                 'nationality' => $validated['nationality'] ?? null,
                 'address' => $validated['address'] ?? null,
                 'level' => $validated['level'],
@@ -1023,7 +1115,13 @@ class AdminStudentController extends Controller
                 'strand' => $validated['strand'] ?? null,
                 'is_shs_voucher' => (isset($validated['shs_voucher_type']) && $validated['shs_voucher_type'] === 'shs_voucher'),
                 'enrollment_status' => 'Active', // Default
-            ]);
+            ];
+
+            if ($hasDobColumn) {
+                $studentData['date_of_birth'] = $validated['date_of_birth'] ?? null;
+            }
+
+            $student = Student::create($studentData);
 
             $parentContact = null;
             $isNewParent = false;
@@ -1044,7 +1142,7 @@ class AdminStudentController extends Controller
                 ]);
 
                 // Create User Account for Parent
-                $parentPassword = $validated['parent_password'] ?? null;
+                $parentPassword = Str::random(16);
                 $parentRole = \App\Models\Role::firstOrCreate(['role_name' => 'parent'], ['description' => 'Parent']);
 
                 // Username is email if provided, otherwise phone (but email is preferred for login)
@@ -1052,22 +1150,17 @@ class AdminStudentController extends Controller
 
                 // Check if user exists (shouldn't if validation passed, but safety check)
                 if (! \App\Models\User::where('email', $username)->exists()) {
-                    // Generate a random password if none provided
-                    if (empty($parentPassword)) {
-                        $parentPassword = Str::random(16); // Generate secure random password
-                    }
-
                     $user = \App\Models\User::create([
                         'email' => $username, // Using email as username/email field for login
                         'password' => Hash::make($parentPassword),
-                        'must_change_password' => empty($validated['parent_password']), // Force change if no password was provided by admin
+                        'must_change_password' => true,
                         'role_id' => $parentRole->role_id,
                         'roleable_type' => \App\Models\ParentContact::class,
                         'roleable_id' => (string) $parentContact->id,
                     ]);
 
-                    // Send password reset email if no password was provided by admin and it's a Gmail address
-                    if (empty($validated['parent_password']) && str_contains(strtolower($parentEmail), '@gmail.com')) {
+                    // Send password reset email for Gmail-based parent accounts
+                    if (! empty($parentEmail) && str_contains(strtolower($parentEmail), '@gmail.com')) {
                         try {
                             // Create password reset token
                             $token = \Illuminate\Support\Facades\Password::createToken($user);
@@ -1100,12 +1193,18 @@ class AdminStudentController extends Controller
             }
 
             if ($parentContact) {
-                $parentContact->students()->syncWithoutDetaching([
-                    $student->student_id => [
-                        'relationship' => $validated['relationship'],
-                        'is_primary' => true, // Default to true for enrollment
+                DB::table('parent_student')->updateOrInsert(
+                    [
+                        'parent_id' => $parentContact->id,
+                        'student_id' => $student->student_id,
                     ],
-                ]);
+                    [
+                        'relationship' => $validated['relationship'],
+                        'is_primary' => true,
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ]
+                );
             }
 
             return [
@@ -1143,13 +1242,12 @@ class AdminStudentController extends Controller
 
         // 5. Send SMS (if new parent and toggle is on, and email wasn't used for password setup)
         if ($sendSms && $result['isNewParent'] && $result['parentContact'] && $result['parentContact']->phone) {
-            // Only send SMS if no email was provided, or if email is not Gmail, or if password was provided
+            // Only send SMS if no email was provided, or if email is not Gmail
             $parentEmail = $result['parentContact']->email;
             $parentPassword = $result['parentPassword'];
             
             $shouldSendSms = empty($parentEmail) || 
-                            !str_contains(strtolower($parentEmail), '@gmail.com') || 
-                            !empty($parentPassword);
+                            !str_contains(strtolower($parentEmail), '@gmail.com');
             
             if ($shouldSendSms) {
                 try {
@@ -1197,6 +1295,13 @@ class AdminStudentController extends Controller
         $student->load(['user', 'parents']);
         $oldValues = $student->toArray();
 
+        $hasParentsTable = Schema::hasTable('parents');
+        $hasStrandsTable = Schema::hasTable('strands');
+
+        if (! $hasParentsTable) {
+            return back()->with('error', 'Parent management table is not available in this database. Please run pending migrations before updating parent links.');
+        }
+
         $activeYear = SystemSetting::where('key', 'school_year')->value('value');
 
         if (! $activeYear) {
@@ -1225,7 +1330,9 @@ class AdminStudentController extends Controller
             'level' => ['required', 'string', 'max:255'],
             'section' => ['required', 'string', 'max:255'],
             'school_year' => ['nullable', 'string', 'max:20'],
-            'strand' => ['nullable', 'string', 'exists:strands,name'],
+            'strand' => $hasStrandsTable
+                ? ['nullable', 'string', 'exists:strands,name']
+                : ['nullable', 'string', 'max:255'],
             'shs_voucher_type' => ['nullable', 'string', 'in:regular,shs_voucher'],
 
             // Parent Linking
@@ -1248,7 +1355,6 @@ class AdminStudentController extends Controller
                 },
             ],
             'parent_email' => ['required_if:parent_mode,new', 'nullable', 'email', 'max:255'],
-            'parent_password' => ['nullable', 'required_if:parent_mode,new', 'string', 'min:6'],
             'parent_address' => ['nullable', 'string', 'max:500'],
             'is_primary_contact' => ['nullable', 'boolean'],
         ]);
@@ -1350,7 +1456,7 @@ class AdminStudentController extends Controller
                 ]);
 
                 // Create User Account
-                $parentPassword = $validated['parent_password'] ?? \Illuminate\Support\Str::random(10);
+                $parentPassword = \Illuminate\Support\Str::random(10);
                 $parentRole = \App\Models\Role::firstOrCreate(['role_name' => 'parent'], ['description' => 'Parent']);
                 $parentEmail = $validated['parent_email'] ?? null;
                 $parentPhone = $validated['parent_contact_number'];
@@ -1389,9 +1495,13 @@ class AdminStudentController extends Controller
                     ]);
                     // Update pivot relationship if changed
                     if (! empty($validated['relationship'])) {
-                        $student->parents()->updateExistingPivot($currentParent->id, [
-                            'relationship' => $validated['relationship'],
-                        ]);
+                        DB::table('parent_student')
+                            ->where('student_id', $student->student_id)
+                            ->where('parent_id', $currentParent->id)
+                            ->update([
+                                'relationship' => $validated['relationship'],
+                                'updated_at' => now(),
+                            ]);
                     }
                 } else {
                     // No parent exists, but fields provided -> Create New
@@ -1412,16 +1522,25 @@ class AdminStudentController extends Controller
 
             // Link the new/existing parent if one was identified (from 'new', 'existing', or created in 'current')
             if ($parentContact) {
-                // Set all others to non-primary
-                $student->parents()->updateExistingPivot($student->parents->pluck('id'), ['is_primary' => false]);
+                DB::table('parent_student')
+                    ->where('student_id', $student->student_id)
+                    ->update([
+                        'is_primary' => false,
+                        'updated_at' => now(),
+                    ]);
 
-                // Attach or Update new primary
-                $student->parents()->syncWithoutDetaching([
-                    $parentContact->id => [
+                DB::table('parent_student')->updateOrInsert(
+                    [
+                        'parent_id' => $parentContact->id,
+                        'student_id' => $student->student_id,
+                    ],
+                    [
                         'relationship' => $validated['relationship'] ?? 'Parent',
                         'is_primary' => true,
-                    ],
-                ]);
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ]
+                );
             }
         });
 
@@ -1826,12 +1945,18 @@ class AdminStudentController extends Controller
             $siblingPrimaryParent = $sibling->parents->where('pivot.is_primary', true)->first();
             $isPrimary = ! $siblingPrimaryParent; // Only set as primary if sibling has no primary yet
 
-            $sibling->parents()->syncWithoutDetaching([
-                $primaryParent->id => [
+            DB::table('parent_student')->updateOrInsert(
+                [
+                    'parent_id' => $primaryParent->id,
+                    'student_id' => $sibling->student_id,
+                ],
+                [
                     'relationship' => 'Parent',
                     'is_primary' => $isPrimary,
-                ],
-            ]);
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
         });
 
         // Recalculate fees for ALL family members (to apply/update sibling discounts)
@@ -1885,7 +2010,10 @@ class AdminStudentController extends Controller
             // Remove the shared parent link from the sibling
             // (We remove the sibling's link to the shared parent, not the current student's)
             foreach ($sharedParentIds as $parentId) {
-                $sibling->parents()->detach($parentId);
+                DB::table('parent_student')
+                    ->where('student_id', $sibling->student_id)
+                    ->where('parent_id', $parentId)
+                    ->delete();
             }
 
             // If sibling has no more parents linked, that's okay — admin can re-add later
@@ -1893,7 +2021,13 @@ class AdminStudentController extends Controller
             $sibling->load('parents');
             if ($sibling->parents->isNotEmpty() && ! $sibling->parents->where('pivot.is_primary', true)->first()) {
                 $newPrimary = $sibling->parents->first();
-                $sibling->parents()->updateExistingPivot($newPrimary->id, ['is_primary' => true]);
+                DB::table('parent_student')
+                    ->where('student_id', $sibling->student_id)
+                    ->where('parent_id', $newPrimary->id)
+                    ->update([
+                        'is_primary' => true,
+                        'updated_at' => now(),
+                    ]);
             }
         });
 

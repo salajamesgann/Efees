@@ -30,41 +30,6 @@ class ForgotPasswordController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        // Check if user is a parent
-        $user = \App\Models\User::where('email', $request->email)->first();
-
-        if ($user) {
-            // Identify if user is a parent
-            $isParent = false;
-
-            // Check by role name if available
-            if ($user->role && strtolower($user->role->role_name) === 'parent') {
-                $isParent = true;
-            }
-            // Fallback to roleable_type
-            elseif ($user->roleable_type === 'App\Models\ParentContact') {
-                $isParent = true;
-            }
-
-            if ($isParent) {
-                // Check for existing pending request
-                $existingRequest = \App\Models\PasswordResetRequest::where('email', $request->email)
-                    ->where('status', 'pending')
-                    ->first();
-
-                if ($existingRequest) {
-                    return back()->with('success', 'A password reset request is already pending for this email.');
-                }
-
-                \App\Models\PasswordResetRequest::create([
-                    'email' => $request->email,
-                    'status' => 'pending',
-                ]);
-
-                return back()->with('success', 'Password reset request submitted. Please wait for admin approval.');
-            }
-        }
-
         // We will send the password reset link to this user. Once we have attempted
         // to send the link, we will examine the response then see the message we
         // need to show to the user. Finally, we'll send out a proper response.

@@ -524,6 +524,14 @@
                 </div>
                 @endif
 
+                @if (session('error'))
+                <div class="absolute top-4 right-4 z-50 bg-rose-50 text-rose-700 px-4 py-3 rounded-xl border border-rose-200 shadow-sm flex items-center gap-3 animate-fade-in-down" x-data="{ show: true }" x-show="show">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>{{ session('error') }}</span>
+                    <button @click="show = false" class="ml-2 hover:text-rose-900"><i class="fas fa-times"></i></button>
+                </div>
+                @endif
+
                 @if($isCreating)
                     <!-- CREATE MODE -->
                     <div class="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10">

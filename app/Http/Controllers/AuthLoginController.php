@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -443,6 +444,7 @@ class AuthLoginController extends Controller
     public function admin_dashboard(): View
     {
         $hasStudents = Student::exists();
+        $hasPaymentStatus = Schema::hasColumn('payments', 'status');
 
         $activeSy = SystemSetting::getActiveSchoolYear();
         $schoolYearPattern = '/^\d{4}-\d{4}$/';
@@ -464,7 +466,9 @@ class AuthLoginController extends Controller
         }
 
         $levels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-        $sections = Section::orderBy('name')->pluck('name');
+        $sections = Schema::hasTable('sections')
+            ? Section::orderBy('name')->pluck('name')
+            : collect();
 
         // Date ranges for Trends
         $startOfMonth = now()->startOfMonth();
@@ -489,7 +493,8 @@ class AuthLoginController extends Controller
             // Reconcile ledger for students in active School Year so metrics reflect assignment totals
             // Disabled on dashboard load to avoid long-running requests
             // 1. Total Collected (This Month vs Last Month) - filtered to active SY successful payments
-            $totalCollected = \App\Models\Payment::whereIn('status', PaymentStatus::successful())
+            $totalCollected = \App\Models\Payment::query()
+                ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
                 ->whereHas('student', function ($q) use ($activeSy) {
                     if ($activeSy) {
                         $q->where('school_year', $activeSy);
@@ -498,7 +503,8 @@ class AuthLoginController extends Controller
                 })
                 ->where('paid_at', '>=', $startOfMonth)
                 ->sum('amount_paid');
-            $prevTotalCollected = \App\Models\Payment::whereIn('status', PaymentStatus::successful())
+            $prevTotalCollected = \App\Models\Payment::query()
+                ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
                 ->whereHas('student', function ($q) use ($activeSy) {
                     if ($activeSy) {
                         $q->where('school_year', $activeSy);
@@ -509,14 +515,16 @@ class AuthLoginController extends Controller
                 ->sum('amount_paid');
 
             // Pending Approvals (Real-time) - filtered by active school year
-            $pendingApprovals = \App\Models\Payment::where('status', 'pending')
-                ->whereHas('student', function ($q) use ($activeSy) {
-                    if ($activeSy) {
-                        $q->where('school_year', $activeSy);
-                    }
-                    $q->whereNotIn('enrollment_status', ['Withdrawn', 'Archived']);
-                })
-                ->sum('amount_paid');
+            $pendingApprovals = $hasPaymentStatus
+                ? \App\Models\Payment::where('status', 'pending')
+                    ->whereHas('student', function ($q) use ($activeSy) {
+                        if ($activeSy) {
+                            $q->where('school_year', $activeSy);
+                        }
+                        $q->whereNotIn('enrollment_status', ['Withdrawn', 'Archived']);
+                    })
+                    ->sum('amount_paid')
+                : 0.0;
 
             // 2. Pending Outstanding – shared outstanding-debt policy for active SY
             $pendingOutstanding = \App\Models\FeeRecord::outstandingDebt()
@@ -616,7 +624,7 @@ class AuthLoginController extends Controller
                 ->keyBy('student_id');
             $paidSums = \App\Models\Payment::select('student_id', DB::raw('SUM(amount_paid) as total_paid'))
                 ->whereIn('student_id', $topIds)
-                ->whereIn('status', PaymentStatus::successful())
+                ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
                 ->groupBy('student_id')
                 ->pluck('total_paid', 'student_id');
             $pendingPayments = collect($topBalances)->map(function ($row) use ($students, $paidSums) {
@@ -670,6 +678,8 @@ class AuthLoginController extends Controller
 
     public function admin_metrics(Request $request): \Illuminate\Http\JsonResponse
     {
+        $hasPaymentStatus = Schema::hasColumn('payments', 'status');
+
         // Apply Filters
         $schoolYear = $request->input('school_year');
         $schoolYearPattern = '/^\d{4}-\d{4}$/';
@@ -748,7 +758,7 @@ class AuthLoginController extends Controller
 
         // 1. Total Collected (Filtered)
         $paymentQuery = \App\Models\Payment::whereIn('student_id', $studentIds)
-            ->whereIn('status', PaymentStatus::successful());
+            ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()));
         if ($startDate && $endDate) {
             $paymentQuery->whereBetween('paid_at', [$startDate, $endDate]);
         } else {
@@ -757,15 +767,17 @@ class AuthLoginController extends Controller
         $totalCollected = $paymentQuery->sum('amount_paid');
 
         // Pending Approvals (Filtered)
-        $pendingApprovals = \App\Models\Payment::where('status', 'pending')
-            ->whereIn('student_id', $studentIds)
-            ->sum('amount_paid');
+        $pendingApprovals = $hasPaymentStatus
+            ? \App\Models\Payment::where('status', 'pending')
+                ->whereIn('student_id', $studentIds)
+                ->sum('amount_paid')
+            : 0.0;
 
         // Previous collected (for trend)
         $prevTotalCollected = 0;
         if (! $startDate) {
             $prevTotalCollected = \App\Models\Payment::whereIn('student_id', $studentIds)
-                ->whereIn('status', PaymentStatus::successful())
+                ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
                 ->whereBetween('paid_at', [$startOfLastMonth, $endOfLastMonth])
                 ->sum('amount_paid');
         }
@@ -806,7 +818,7 @@ class AuthLoginController extends Controller
         $collectionsQuery = DB::table('payments')
             ->join('students', 'payments.student_id', '=', 'students.student_id')
             ->whereIn('students.student_id', $studentIds)
-            ->whereIn('payments.status', PaymentStatus::successful());
+            ->when($hasPaymentStatus, fn ($q) => $q->whereIn('payments.status', PaymentStatus::successful()));
 
         if ($startDate && $endDate) {
             $collectionsQuery->whereBetween('payments.paid_at', [$startDate, $endDate]);
@@ -916,7 +928,7 @@ class AuthLoginController extends Controller
             ->keyBy('student_id');
         $paidSums = \App\Models\Payment::select('student_id', DB::raw('SUM(amount_paid) as total_paid'))
             ->whereIn('student_id', $topIds)
-            ->whereIn('status', PaymentStatus::successful())
+            ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
             ->groupBy('student_id')
             ->pluck('total_paid', 'student_id');
         $pendingPayments = collect($topBalances)->map(function ($row) use ($students, $paidSums) {
