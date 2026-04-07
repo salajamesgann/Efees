@@ -215,12 +215,11 @@
                 },
                 scales: {
                     y: {
-                        min: 1,
+                        beginAtZero: true,
                         max: 100,
-                        afterBuildTicks: (axis) => {
-                            axis.ticks = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((value) => ({ value }));
-                        },
                         ticks: {
+                            stepSize: 10,
+                            precision: 0,
                             callback: (value) => value
                         },
                         grid: {

@@ -187,6 +187,24 @@ class FeeRecord extends Model
     }
 
     /**
+     * Scope for outstanding debt balances.
+     *
+     * Uses one shared policy across dashboards:
+     * - balance must be positive
+     * - paid records are excluded
+     * - adjustment, payment, and tuition_total rows are excluded
+     */
+    public function scopeOutstandingDebt($query)
+    {
+        return $query->where('balance', '>', 0)
+            ->where(function ($builder) {
+                $builder->whereNull('status')
+                    ->orWhere('status', '!=', 'paid');
+            })
+            ->whereNotIn('record_type', ['adjustment', 'payment', 'tuition_total']);
+    }
+
+    /**
      * Get formatted amount.
      */
     public function getFormattedAmountAttribute(): string

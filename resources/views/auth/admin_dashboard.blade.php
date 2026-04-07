@@ -659,7 +659,7 @@
         const startDate = document.getElementById('filterStartDate');
         const endDate = document.getElementById('filterEndDate');
 
-        if (schoolYear) schoolYear.value = ACTIVE_SCHOOL_YEAR || '';
+        if (schoolYear) schoolYear.value = '';
         if (level) level.value = '';
         if (section) section.value = '';
         if (startDate) startDate.value = '';
@@ -822,11 +822,8 @@
         if (collectionsByGradeChart) {
             collectionsByGradeChart.data.labels = data.collectionsByGrade.map(item => item.label);
             collectionsByGradeChart.data.datasets[0].data = data.collectionsByGrade.map(item => item.total);
-            // Ensure enough colors
             const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
-            while (collectionsByGradeChart.data.datasets[0].backgroundColor.length < data.collectionsByGrade.length) {
-                collectionsByGradeChart.data.datasets[0].backgroundColor.push(colors[collectionsByGradeChart.data.datasets[0].backgroundColor.length % colors.length]);
-            }
+            collectionsByGradeChart.data.datasets[0].backgroundColor = data.collectionsByGrade.map((_, index) => colors[index % colors.length]);
             collectionsByGradeChart.update();
         }
 
