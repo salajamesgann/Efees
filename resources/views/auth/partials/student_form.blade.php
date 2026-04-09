@@ -168,7 +168,7 @@
                 <label class="text-sm font-semibold text-slate-700">Strand</label>
                 <select name="strand" x-model="strandName" class="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm">
                     <option value="">Select Strand</option>
-                    @foreach(['STEM','ABM','HUMSS','GAS'] as $s)
+                    @foreach(['STEM','ABM','HUMSS','GAS','ICT','HE'] as $s)
                         <option value="{{ $s }}" {{ old('strand', $student->strand ?? '') === $s ? 'selected' : '' }}>{{ $s }}</option>
                     @endforeach
                 </select>

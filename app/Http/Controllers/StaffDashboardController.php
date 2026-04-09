@@ -94,7 +94,7 @@ class StaffDashboardController extends Controller
 
         // Transform collection
         $transformedCollection = $students->getCollection()->map(function ($student) use ($svc) {
-            $totals = $svc->computeTotalsForStudent($student);
+            $totals = $svc->computeTotalsForStudent($student, false);
             $totalFee = (float) ($totals['totalAmount'] ?? 0);
             $paidAmount = (float) ($totals['paidAmount'] ?? 0);
             $dueAmount = (float) ($totals['remainingBalance'] ?? max($totalFee - $paidAmount, 0));
@@ -146,7 +146,7 @@ class StaffDashboardController extends Controller
             ->select(['student_id', 'level', 'school_year'])
             ->chunk(200, function ($chunk) use (&$counters, $svc) {
                 foreach ($chunk as $stu) {
-                    $totals = $svc->computeTotalsForStudent($stu);
+                    $totals = $svc->computeTotalsForStudent($stu, false);
                     $total = (float) ($totals['totalAmount'] ?? 0);
                     $paid = (float) ($totals['paidAmount'] ?? 0);
                     $due = max(0.0, $total - $paid);
@@ -260,7 +260,7 @@ class StaffDashboardController extends Controller
 
             // Compute Net Payable for message
             $svc = app(FeeManagementService::class);
-            $totals = $svc->computeTotalsForStudent($student);
+            $totals = $svc->computeTotalsForStudent($student, false);
             $netDue = max(0.0, ((float) ($totals['totalAmount'] ?? 0)) - ((float) ($totals['paidAmount'] ?? 0)));
 
             // Insert a realtime notification row (Supabase listens to inserts)

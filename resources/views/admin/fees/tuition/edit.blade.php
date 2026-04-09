@@ -177,6 +177,8 @@
                                 <option value="ABM" {{ ($tuitionFee->strand ?? '') === 'ABM' ? 'selected' : '' }}>ABM</option>
                                 <option value="HUMSS" {{ ($tuitionFee->strand ?? '') === 'HUMSS' ? 'selected' : '' }}>HUMSS</option>
                                 <option value="ICT" {{ ($tuitionFee->strand ?? '') === 'ICT' ? 'selected' : '' }}>ICT</option>
+                                <option value="GAS" {{ ($tuitionFee->strand ?? '') === 'GAS' ? 'selected' : '' }}>GAS</option>
+                                <option value="HE" {{ ($tuitionFee->strand ?? '') === 'HE' ? 'selected' : '' }}>Home Economics (HE)</option>
                             </select>
                         </div>
                         <div class="col-span-1 md:col-span-2 lg:col-span-3">
@@ -320,9 +322,40 @@
                     strandSelect.value = '';
                 }
             }
+
+            function filterStrandsByTrack() {
+                const track = trackSelect.value;
+                const allOptions = strandSelect.querySelectorAll('option');
+                
+                allOptions.forEach(option => {
+                    if (option.value === '') {
+                        option.style.display = 'block';
+                        return;
+                    }
+                    
+                    if (track === 'Academic') {
+                        if (['STEM', 'ABM', 'HUMSS', 'GAS'].includes(option.value)) {
+                            option.style.display = 'block';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    } else if (track === 'TVL') {
+                        if (['ICT', 'HE'].includes(option.value)) {
+                            option.style.display = 'block';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    } else {
+                        option.style.display = 'block';
+                    }
+                });
+            }
+
             gradeSelect.addEventListener('change', toggleSHSFields);
+            trackSelect.addEventListener('change', filterStrandsByTrack);
             // Initial run
             toggleSHSFields();
+            filterStrandsByTrack();
 
             // Installment Logic & Preview
             const installSelect = document.getElementById('edit_allow_installment');

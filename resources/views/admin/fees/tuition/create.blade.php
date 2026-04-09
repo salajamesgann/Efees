@@ -157,6 +157,8 @@
                                 <option value="ABM">ABM</option>
                                 <option value="HUMSS">HUMSS</option>
                                 <option value="ICT">ICT</option>
+                                <option value="GAS">GAS</option>
+                                <option value="HE">Home Economics (HE)</option>
                             </select>
                         </div>
                         <div class="col-span-1 md:col-span-2 lg:col-span-3">
@@ -310,9 +312,43 @@
                 }
             }
 
+            function filterStrandsByTrack() {
+                const track = trackSelect.value;
+                const allOptions = strandSelect.querySelectorAll('option');
+                
+                allOptions.forEach(option => {
+                    if (option.value === '') {
+                        option.style.display = 'block';
+                        return;
+                    }
+                    
+                    if (track === 'Academic') {
+                        if (['STEM', 'ABM', 'HUMSS', 'GAS'].includes(option.value)) {
+                            option.style.display = 'block';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    } else if (track === 'TVL') {
+                        if (['ICT', 'HE'].includes(option.value)) {
+                            option.style.display = 'block';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    } else {
+                        option.style.display = 'block';
+                    }
+                });
+                
+                strandSelect.value = '';
+            }
+
             if(gradeSelect) {
                 gradeSelect.addEventListener('change', toggleSHSFields);
                 toggleSHSFields(); // Init
+            }
+
+            if(trackSelect) {
+                trackSelect.addEventListener('change', filterStrandsByTrack);
             }
 
             // Installment Logic

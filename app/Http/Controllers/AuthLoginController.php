@@ -195,7 +195,7 @@ class AuthLoginController extends Controller
             $student = Student::where('student_id', $studentId)->first();
             if ($student) {
                 $svc = app(FeeManagementService::class);
-                $totals = $svc->computeTotalsForStudent($student);
+                $totals = $svc->computeTotalsForStudent($student, false);
                 $totalPaid = (float) ($totals['paidAmount'] ?? 0.0);
                 $balanceDue = (float) ($totals['remainingBalance'] ?? max(((float) ($totals['totalAmount'] ?? 0.0)) - $totalPaid, 0.0));
             }
@@ -230,7 +230,7 @@ class AuthLoginController extends Controller
 
             // $myChildren is already fetched above
             $childrenSummaries = $myChildren->map(function ($child) use ($svc) {
-                $totals = $svc->computeTotalsForStudent($child);
+                $totals = $svc->computeTotalsForStudent($child, false);
                 $childTotalPaid = (float) ($totals['paidAmount'] ?? 0.0);
                 $childBalanceDue = (float) ($totals['remainingBalance'] ?? max(((float) ($totals['totalAmount'] ?? 0.0)) - $childTotalPaid, 0.0));
 
@@ -301,7 +301,7 @@ class AuthLoginController extends Controller
 
         $student = Student::where('student_id', $studentId)->first();
         $svc = app(FeeManagementService::class);
-        $totals = $student ? $svc->computeTotalsForStudent($student) : ['totalAmount' => 0.0];
+        $totals = $student ? $svc->computeTotalsForStudent($student, false) : ['totalAmount' => 0.0];
         $totalPaid = (float) ($totals['paidAmount'] ?? 0.0);
         $balanceDue = (float) ($totals['remainingBalance'] ?? max(((float) ($totals['totalAmount'] ?? 0.0)) - $totalPaid, 0.0));
 
@@ -376,7 +376,7 @@ class AuthLoginController extends Controller
         }
 
         $childrenSummaries = $myChildren->map(function ($child) use ($svc, $activeSy, $prevSy) {
-            $totals = $svc->computeTotalsForStudent($child);
+            $totals = $svc->computeTotalsForStudent($child, false);
             $childTotalPaid = (float) ($totals['paidAmount'] ?? 0.0);
             $childBalanceDue = (float) ($totals['remainingBalance'] ?? max(((float) ($totals['totalAmount'] ?? 0.0)) - $childTotalPaid, 0.0));
 

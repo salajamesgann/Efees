@@ -34,11 +34,13 @@ class FeeManagementService
         return $query->first();
     }
 
-    public function computeTotalsForStudent(Student $student): array
+    public function computeTotalsForStudent(Student $student, bool $allowSyncWrites = true): array
     {
-        // Use savepoints so a failed write doesn't poison the PG transaction
-        try { DB::transaction(fn () => \App\Models\Discount::ensureSiblingDefaults()); } catch (\Throwable $e) {}
-        try { DB::transaction(fn () => \App\Models\Discount::ensureAcademicScholarExclusive()); } catch (\Throwable $e) {}
+        if ($allowSyncWrites) {
+            // Use savepoints so a failed write doesn't poison the PG transaction
+            try { DB::transaction(fn () => \App\Models\Discount::ensureSiblingDefaults()); } catch (\Throwable $e) {}
+            try { DB::transaction(fn () => \App\Models\Discount::ensureAcademicScholarExclusive()); } catch (\Throwable $e) {}
+        }
 
         $tuitionFee = $this->resolveTuitionFeeForStudent($student);
 
@@ -57,7 +59,7 @@ class FeeManagementService
             }
 
             // If still no assignment exists, create one now to keep totals and ledger consistent
-            if (! $assignment) {
+            if (! $assignment && $allowSyncWrites) {
                 try {
                     $assignment = FeeAssignment::assignForStudent(
                         $student->student_id,
@@ -73,7 +75,8 @@ class FeeManagementService
             if ($assignment) {
                 // Ensure additional charges are attached to assignment (fallback for older tuition records)
                 // Wrapped in a savepoint so a failure here doesn't poison the PG transaction
-                try { DB::transaction(function () use ($assignment, $student) {
+                if ($allowSyncWrites) {
+                    try { DB::transaction(function () use ($assignment, $student) {
                     if ($assignment->additionalCharges()->count() === 0) {
                         $chargeIds = [];
 
@@ -115,7 +118,8 @@ class FeeManagementService
                             $assignment->additionalCharges()->syncWithoutDetaching($chargeIds);
                         }
                     }
-                }); } catch (\Throwable $e) {
+                    }); } catch (\Throwable $e) {
+                    }
                 }
                 $existingDiscounts = $assignment->discounts()->get();
                 $manualDiscountIds = $existingDiscounts->filter(function ($discount) {
@@ -166,7 +170,7 @@ class FeeManagementService
                     $eligibleDiscounts->pluck('id')->all()
                 )));
 
-                if (! empty($finalDiscountIds)) {
+                if (! empty($finalDiscountIds) && $allowSyncWrites) {
                     try { DB::transaction(function () use ($assignment, $finalDiscountIds) {
                         $assignment->discounts()->sync($finalDiscountIds);
                         $assignment->discount_ids = $finalDiscountIds;
@@ -194,31 +198,34 @@ class FeeManagementService
                     }
                 }
 
-                try { DB::transaction(fn () => $assignment->calculateTotal());
-                } catch (\Throwable $e) {
-                    \App\Services\AuditService::log(
-                        'DISCOUNT_CALCULATION_FAILED',
-                        $student,
-                        'Failed to calculate discounts',
-                        null,
-                        ['error' => $e->getMessage()]
-                    );
-                    $adminRole = \App\Models\Role::where('role_name', 'admin')->first();
-                    if ($adminRole) {
-                        $adminUsers = $adminRole->users()->get();
-                        foreach ($adminUsers as $adminUser) {
-                            \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                                'user_id' => $adminUser->user_id,
-                                'title' => 'Fee Calculation Failure',
-                                'body' => 'Failed to calculate fee totals for student '.$student->student_id,
-                                'created_at' => now(),
-                            ]);
+                if ($allowSyncWrites) {
+                    try { DB::transaction(fn () => $assignment->calculateTotal());
+                    } catch (\Throwable $e) {
+                        \App\Services\AuditService::log(
+                            'DISCOUNT_CALCULATION_FAILED',
+                            $student,
+                            'Failed to calculate discounts',
+                            null,
+                            ['error' => $e->getMessage()]
+                        );
+                        $adminRole = \App\Models\Role::where('role_name', 'admin')->first();
+                        if ($adminRole) {
+                            $adminUsers = $adminRole->users()->get();
+                            foreach ($adminUsers as $adminUser) {
+                                \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                                    'user_id' => $adminUser->user_id,
+                                    'title' => 'Fee Calculation Failure',
+                                    'body' => 'Failed to calculate fee totals for student '.$student->student_id,
+                                    'created_at' => now(),
+                                ]);
+                            }
                         }
                     }
                 }
 
                 // Ensure ledger 'tuition_total' reflects assignment total; skip if installment records exist
-                try { DB::transaction(function () use ($student, $assignment) {
+                if ($allowSyncWrites) {
+                    try { DB::transaction(function () use ($student, $assignment) {
                     $hasInstallments = \App\Models\FeeRecord::where('student_id', $student->student_id)
                         ->whereIn('record_type', ['tuition_installment', 'tuition_base'])
                         ->exists();
@@ -246,7 +253,8 @@ class FeeManagementService
                             $record->save();
                         }
                     }
-                }); } catch (\Throwable $e) {
+                    }); } catch (\Throwable $e) {
+                    }
                 }
 
                 $paidAmount = (float) \App\Models\Payment::where('student_id', $student->student_id)
