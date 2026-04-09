@@ -268,6 +268,8 @@ Route::middleware(['auth', 'checkMaintenance', 'verifyRole'])->group(function ()
         Route::post('/', [\App\Http\Controllers\AdminParentController::class, 'store'])->name('store');
         Route::get('/{parent}/edit', [\App\Http\Controllers\AdminParentController::class, 'edit'])->name('edit');
         Route::put('/{parent}', [\App\Http\Controllers\AdminParentController::class, 'update'])->name('update');
+        Route::post('/{parent}/link', [\App\Http\Controllers\AdminParentController::class, 'link'])->name('link');
+        Route::post('/{parent}/unlink', [\App\Http\Controllers\AdminParentController::class, 'unlink'])->name('unlink');
         Route::delete('/{parent}', [\App\Http\Controllers\AdminParentController::class, 'destroy'])->name('destroy');
     });
 });
