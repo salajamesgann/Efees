@@ -147,7 +147,7 @@ Route::middleware(['auth', 'checkMaintenance', 'verifyRole'])->group(function ()
     Route::get('/admin/staff', [\App\Http\Controllers\AdminStaffController::class, 'index'])->name('admin.staff.index')->middleware('ensureRole:admin');
 
     // Admin Student Enrollment
-    Route::prefix('admin/enrollment')->name('admin.enrollment.')->middleware('ensureRole:admin')->group(function () {
+    Route::prefix('admin/enrollment')->name('admin.enrollment.')->middleware('ensureRole:admin|super_admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\AdminStudentEnrollmentController::class, 'index'])->name('index');
         
         Route::get('/{student}', [\App\Http\Controllers\AdminStudentEnrollmentController::class, 'show'])->name('show');

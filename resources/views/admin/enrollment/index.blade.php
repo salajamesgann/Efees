@@ -65,7 +65,7 @@
                         <div class="md:col-span-4">
                             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Search</label>
                             <div class="relative">
-                                <input type="text" name="q" value="{{ $search }}" placeholder="Search by name, ID, or section..." 
+                                <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search by name, ID, or section..." 
                                     class="w-full pl-10 pr-4 py-2 rounded-lg border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 transition-shadow">
                                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                             </div>
@@ -75,9 +75,9 @@
                         <div class="md:col-span-2">
                             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Level</label>
                             <select name="level" onchange="this.form.submit()" class="w-full rounded-lg border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500">
-                                <option value="all" {{ $level == 'all' ? 'selected' : '' }}>All Levels</option>
-                                <option value="Grade 11" {{ $level == 'Grade 11' ? 'selected' : '' }}>Grade 11</option>
-                                <option value="Grade 12" {{ $level == 'Grade 12' ? 'selected' : '' }}>Grade 12</option>
+                                <option value="all" {{ ($level ?? 'all') == 'all' ? 'selected' : '' }}>All Levels</option>
+                                <option value="Grade 11" {{ ($level ?? 'all') == 'Grade 11' ? 'selected' : '' }}>Grade 11</option>
+                                <option value="Grade 12" {{ ($level ?? 'all') == 'Grade 12' ? 'selected' : '' }}>Grade 12</option>
                             </select>
                         </div>
 
@@ -85,12 +85,12 @@
                         <div class="md:col-span-2">
                             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Strand</label>
                             <select name="strand" onchange="this.form.submit()" class="w-full rounded-lg border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500">
-                                <option value="all" {{ $strand == 'all' ? 'selected' : '' }}>All Strands</option>
-                                <option value="STEM" {{ $strand == 'STEM' ? 'selected' : '' }}>STEM</option>
-                                <option value="ABM" {{ $strand == 'ABM' ? 'selected' : '' }}>ABM</option>
-                                <option value="HUMSS" {{ $strand == 'HUMSS' ? 'selected' : '' }}>HUMSS</option>
-                                <option value="GAS" {{ $strand == 'GAS' ? 'selected' : '' }}>GAS</option>
-                                <option value="TVL" {{ $strand == 'TVL' ? 'selected' : '' }}>TVL</option>
+                                <option value="all" {{ ($strand ?? 'all') == 'all' ? 'selected' : '' }}>All Strands</option>
+                                <option value="STEM" {{ ($strand ?? 'all') == 'STEM' ? 'selected' : '' }}>STEM</option>
+                                <option value="ABM" {{ ($strand ?? 'all') == 'ABM' ? 'selected' : '' }}>ABM</option>
+                                <option value="HUMSS" {{ ($strand ?? 'all') == 'HUMSS' ? 'selected' : '' }}>HUMSS</option>
+                                <option value="GAS" {{ ($strand ?? 'all') == 'GAS' ? 'selected' : '' }}>GAS</option>
+                                <option value="TVL" {{ ($strand ?? 'all') == 'TVL' ? 'selected' : '' }}>TVL</option>
                             </select>
                         </div>
 
@@ -98,18 +98,18 @@
                         <div class="md:col-span-2">
                             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Status</label>
                             <select name="status" onchange="this.form.submit()" class="w-full rounded-lg border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500">
-                                <option value="all" {{ $status == 'all' ? 'selected' : '' }}>All Status</option>
-                                <option value="Active" {{ $status == 'Active' ? 'selected' : '' }}>Active</option>
-                                <option value="Inactive" {{ $status == 'Inactive' ? 'selected' : '' }}>Inactive</option>
-                                <option value="Archived" {{ $status == 'Archived' ? 'selected' : '' }}>Archived</option>
-                                <option value="Graduated" {{ $status == 'Graduated' ? 'selected' : '' }}>Graduated</option>
-                                <option value="Dropped" {{ $status == 'Dropped' ? 'selected' : '' }}>Dropped</option>
+                                <option value="all" {{ ($status ?? 'all') == 'all' ? 'selected' : '' }}>All Status</option>
+                                <option value="Active" {{ ($status ?? 'all') == 'Active' ? 'selected' : '' }}>Active</option>
+                                <option value="Inactive" {{ ($status ?? 'all') == 'Inactive' ? 'selected' : '' }}>Inactive</option>
+                                <option value="Archived" {{ ($status ?? 'all') == 'Archived' ? 'selected' : '' }}>Archived</option>
+                                <option value="Graduated" {{ ($status ?? 'all') == 'Graduated' ? 'selected' : '' }}>Graduated</option>
+                                <option value="Dropped" {{ ($status ?? 'all') == 'Dropped' ? 'selected' : '' }}>Dropped</option>
                             </select>
                         </div>
                         
                         <!-- Reset Button -->
                          <div class="md:col-span-2 flex justify-end">
-                            @if($search || $status != 'all' || $level != 'all' || $strand != 'all')
+                            @if(($search ?? '') || ($status ?? 'all') != 'all' || ($level ?? 'all') != 'all' || ($strand ?? 'all') != 'all')
                                 <a href="{{ route('admin.enrollment.index') }}" class="flex items-center justify-center gap-2 w-full text-gray-600 bg-gray-100 hover:bg-gray-200 font-medium py-2 px-4 rounded-lg transition-colors text-sm">
                                     <i class="fas fa-times"></i> Clear
                                 </a>
@@ -193,9 +193,6 @@
                                             <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <a href="{{ route('admin.enrollment.show', $student) }}" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="View Profile">
                                                     <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('admin.enrollment.edit', $student) }}" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Edit Enrollment">
-                                                    <i class="fas fa-edit"></i>
                                                 </a>
                                                 <form action="{{ route('admin.enrollment.destroy', $student) }}" method="POST" onsubmit="return confirm('Are you sure you want to archive this student?');" class="inline">
                                                     @csrf

@@ -184,7 +184,7 @@ class Discount extends Model
                 return false;
             }
 
-            if ($this->countStudentSiblings($student) < 2) {
+            if ($this->countStudentSiblings($student) < 1) {
                 return false;
             }
         }
@@ -414,5 +414,29 @@ class Discount extends Model
             'Sibling Discount - 2nd Child',
             'Sibling Discount - 3rd Child',
         ])->update(['is_active' => false]);
+    }
+
+    /**
+     * Ensure the SHS voucher discount exists and is configured for SHS students.
+     */
+    public static function ensureShsVoucherDefault(): void
+    {
+        if (! Schema::hasTable('discounts')) {
+            return;
+        }
+
+        $voucher = static::firstOrNew(['discount_name' => 'Senior High School (SHS) Voucher']);
+        $rules = is_array($voucher->eligibility_rules) ? $voucher->eligibility_rules : [];
+        $rules['apply_scope'] = 'tuition_only';
+        $rules['is_stackable'] = true;
+        $voucher->type = 'percentage';
+        $voucher->value = 100.00;
+        $voucher->description = 'Automatic 100% tuition waiver for SHS voucher recipients.';
+        $voucher->is_automatic = true;
+        $voucher->is_active = true;
+        $voucher->priority = 1000;
+        $voucher->eligibility_rules = $rules;
+        $voucher->applicable_grades = ['Grade 11', 'Grade 12'];
+        $voucher->save();
     }
 }

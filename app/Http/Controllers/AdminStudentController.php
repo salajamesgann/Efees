@@ -428,6 +428,7 @@ class AdminStudentController extends Controller
         return view('auth.admin_students_index', [
             'students' => $students,
             'q' => $q,
+            'search' => $q,
             'totalStudents' => $totalStudents,
             'levelStudentCounts' => $levelStudentCounts,
             'selectedStudent' => $selectedStudent,
@@ -441,6 +442,9 @@ class AdminStudentController extends Controller
             'currentLevel' => $level,
             'currentStrand' => $strandName,
             'currentSection' => $section,
+            'level' => $level ?? 'all',
+            'strand' => $strandName ?? 'all',
+            'status' => $statusFilter !== '' ? $statusFilter : 'all',
             'schoolYears' => $schoolYears,
             'currentSchoolYear' => $currentSchoolYear,
             'activeSy' => $activeSy,

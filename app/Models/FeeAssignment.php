@@ -365,6 +365,9 @@ class FeeAssignment extends Model
         }
 
         // Get applicable discounts (check eligibility)
+        Discount::ensureSiblingDefaults();
+        Discount::ensureShsVoucherDefault();
+
         $automaticDiscounts = Discount::active()
             ->automatic()
             ->applicableToGrade($gradeLevel)

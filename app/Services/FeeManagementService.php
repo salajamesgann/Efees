@@ -39,6 +39,7 @@ class FeeManagementService
         if ($allowSyncWrites) {
             // Use savepoints so a failed write doesn't poison the PG transaction
             try { DB::transaction(fn () => \App\Models\Discount::ensureSiblingDefaults()); } catch (\Throwable $e) {}
+            try { DB::transaction(fn () => \App\Models\Discount::ensureShsVoucherDefault()); } catch (\Throwable $e) {}
             try { DB::transaction(fn () => \App\Models\Discount::ensureAcademicScholarExclusive()); } catch (\Throwable $e) {}
         }
 

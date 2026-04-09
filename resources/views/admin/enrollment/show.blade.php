@@ -37,14 +37,17 @@
         <!-- Main Content -->
         <main class="flex-1 md:h-screen overflow-y-auto bg-gray-50 custom-scrollbar">
             <div class="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+                @php
+                    $backUrl = request()->query('return_to');
+                    if (! is_string($backUrl) || ! str_starts_with($backUrl, url('/'))) {
+                        $backUrl = route('admin.enrollment.index');
+                    }
+                @endphp
                 <div class="flex items-center gap-4">
-                    <a href="{{ route('admin.enrollment.index') }}" class="text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1">
+                    <a href="{{ $backUrl }}" class="text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1">
                         <i class="fas fa-arrow-left"></i> <span class="text-sm font-medium">Back to List</span>
                     </a>
                     <div class="flex-grow"></div>
-                    <a href="{{ route('admin.enrollment.edit', $student) }}" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors shadow-sm">
-                        <i class="fas fa-edit"></i> Edit Details
-                    </a>
                 </div>
 
                 <!-- Profile Header -->

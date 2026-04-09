@@ -18,10 +18,13 @@ class AdminStudentEnrollmentController extends Controller
     public function index(Request $request): View
     {
         $query = Student::query();
+        $search = trim((string) $request->query('q', ''));
+        $level = $request->query('level', 'all');
+        $strand = $request->query('strand', 'all');
+        $status = $request->query('status', 'all');
 
         // Search functionality
-        if ($request->filled('search')) {
-            $search = $request->search;
+        if ($search !== '') {
             $query->where(function($q) use ($search) {
                 $q->where('first_name', 'ilike', "%{$search}%")
                   ->orWhere('last_name', 'ilike', "%{$search}%")
@@ -30,19 +33,19 @@ class AdminStudentEnrollmentController extends Controller
         }
 
         // Filters
-        if ($request->filled('level')) {
-            $query->where('level', $request->level);
+        if ($level !== 'all' && $level !== '') {
+            $query->where('level', $level);
         }
-        if ($request->filled('section')) {
-            $query->where('section', $request->section);
+        if ($strand !== 'all' && $strand !== '') {
+            $query->where('strand', $strand);
         }
-        if ($request->filled('school_year')) {
-            $query->where('school_year', $request->school_year);
+        if ($status !== 'all' && $status !== '') {
+            $query->where('enrollment_status', $status);
         }
 
         $students = $query->orderBy('last_name')->paginate(20)->withQueryString();
 
-        return view('admin.enrollment.index', compact('students'));
+        return view('admin.enrollment.index', compact('students', 'search', 'level', 'strand', 'status'));
     }
 
     /**
@@ -50,7 +53,7 @@ class AdminStudentEnrollmentController extends Controller
      */
     public function edit(Student $student): View
     {
-        return view('admin.enrollment.edit', compact('student'));
+        abort(404);
     }
 
     /**
@@ -58,38 +61,7 @@ class AdminStudentEnrollmentController extends Controller
      */
     public function update(Request $request, Student $student): RedirectResponse
     {
-        $activeYear = SystemSetting::getActiveSchoolYear();
-        if ($activeYear && $student->school_year !== $activeYear) {
-            return back()->withErrors(['error' => 'Cannot update enrollment details for a locked School Year.']);
-        }
-
-        $validated = $request->validate([
-            'level' => ['required', 'string', 'max:255'],
-            'section' => ['required', 'string', 'max:255'],
-            'school_year' => ['required', 'string', 'max:20'],
-            'enrollment_status' => ['required', 'string', 'in:Active,Inactive,Archived,Graduated,Dropped'],
-            'strand' => ['nullable', 'string', 'in:STEM,ABM,HUMSS,GAS'],
-        ]);
-
-        if (in_array($validated['level'], ['Grade 11', 'Grade 12'], true) && empty($validated['strand'])) {
-            return back()->withErrors(['strand' => 'Strand is required for Grade 11 and 12.'])->withInput();
-        }
-
-        DB::transaction(function () use ($student, $validated) {
-            $student->update($validated);
-
-            // Log audit
-            DB::table('audit_logs')->insert([
-                'user_id' => auth()->id() ?? 'SYSTEM',
-                'action' => 'update_enrollment',
-                'details' => "Updated enrollment for {$student->student_id}: ".json_encode($validated),
-                'ip_address' => request()->ip(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        });
-
-        return redirect()->route('admin.enrollment.index')->with('success', 'Enrollment details updated successfully.');
+        abort(404);
     }
 
     /**

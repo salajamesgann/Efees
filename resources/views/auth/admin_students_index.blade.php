@@ -687,7 +687,7 @@
                                                     </button>
                                                 </form>
                                                 @endunless
-                                                <a href="{{ route('admin.enrollment.show', $selectedStudent) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200">
+                                                <a href="{{ route('admin.enrollment.show', ['student' => $selectedStudent, 'return_to' => request()->fullUrl()]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200">
                                                     View Full Details <i class="fas fa-arrow-right ml-1"></i>
                                                 </a>
                                             </div>
