@@ -290,6 +290,7 @@ Route::prefix('super-admin')->name('super_admin.')->middleware('ensureRole:super
         Route::post('/', [\App\Http\Controllers\AdminStudentController::class, 'store'])->name('store');
         Route::post('/section', [\App\Http\Controllers\AdminStudentController::class, 'storeSection'])->name('storeSection');
         Route::post('/strand', [\App\Http\Controllers\AdminStudentController::class, 'storeStrand'])->name('storeStrand');
+        Route::delete('/strands/{strand}', [\App\Http\Controllers\AdminStudentController::class, 'destroyStrand'])->name('destroyStrand');
         Route::delete('/sections/{section}', [\App\Http\Controllers\AdminStudentController::class, 'destroySection'])->name('destroySection');
         Route::get('/{student}/edit', [\App\Http\Controllers\AdminStudentController::class, 'edit'])->name('edit');
         Route::get('/{student}/siblings', [\App\Http\Controllers\AdminStudentController::class, 'siblings'])->name('siblings');

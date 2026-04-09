@@ -357,8 +357,9 @@
                         @elseif($viewState === 'strands')
                             @forelse($strands as $strand)
                             <li>
+                                <div class="relative group">
                                 <a href="{{ route('super_admin.students.index', array_merge(request()->query(), ['level' => $currentLevel, 'strand' => $strand->name])) }}" 
-                                   class="block p-4 hover:bg-slate-50 transition-colors group">
+                                   class="block p-4 pr-24 hover:bg-slate-50 transition-colors">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
@@ -369,6 +370,17 @@
                                         <i class="fas fa-chevron-right text-slate-300 group-hover:text-teal-400"></i>
                                     </div>
                                 </a>
+                                @unless($isReadOnly)
+                                    <form action="{{ route('super_admin.students.destroyStrand', $strand) }}" method="POST" class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" onsubmit="return confirm('Are you sure you want to delete strand {{ $strand->name }}?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="level" value="{{ $currentLevel }}">
+                                        <button type="submit" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete Strand">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                @endunless
+                                </div>
                             </li>
                             @empty
                             <li class="p-8 text-center text-slate-500 text-sm">No strands found for {{ $currentLevel }}.</li>

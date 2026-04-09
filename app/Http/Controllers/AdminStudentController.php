@@ -523,6 +523,38 @@ class AdminStudentController extends Controller
             ->with('success', 'Strand added successfully.');
     }
 
+    public function destroyStrand(Request $request, Strand $strand): RedirectResponse
+    {
+        if (! Schema::hasTable('strands')) {
+            return back()->with('error', 'Strands table is not yet available in this database.');
+        }
+
+        $level = $request->input('level');
+
+        $sectionCount = Section::where('strand_id', $strand->id)->count();
+        if ($sectionCount > 0) {
+            return back()->with('error', "Cannot delete strand '{$strand->name}' because it is still linked to {$sectionCount} section(s).");
+        }
+
+        $studentCount = 0;
+        if ($level) {
+            $studentCount = Student::where('level', $level)
+                ->where('strand', $strand->name)
+                ->count();
+        }
+
+        if ($studentCount > 0) {
+            return back()->with('error', "Cannot delete strand '{$strand->name}' because it is still assigned to {$studentCount} student(s).");
+        }
+
+        $strand->delete();
+
+        $redirectParams = ['level' => $level ?: $request->query('level')];
+
+        return redirect()->route('super_admin.students.index', $redirectParams)
+            ->with('success', "Strand '{$strand->name}' deleted successfully.");
+    }
+
     public function destroySection(Request $request, $sectionId): RedirectResponse
     {
         if (! Schema::hasTable('sections')) {
