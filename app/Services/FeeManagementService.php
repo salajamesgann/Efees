@@ -15,13 +15,32 @@ use App\Services\AuditService;
 
 class FeeManagementService
 {
+    private function resolveTuitionFeeForStudent(Student $student): ?TuitionFee
+    {
+        $query = TuitionFee::active()->forGrade($student->level);
+
+        if (! empty($student->school_year)) {
+            $query->where('school_year', $student->school_year);
+        }
+
+        $strand = in_array($student->level, ['Grade 11', 'Grade 12'], true) ? ($student->strand ?? null) : null;
+        if ($strand) {
+            $strandFee = (clone $query)->where('strand', $strand)->first();
+            if ($strandFee) {
+                return $strandFee;
+            }
+        }
+
+        return $query->first();
+    }
+
     public function computeTotalsForStudent(Student $student): array
     {
-        // Use savepoints so a failed write doesn't poison the PG connection
+        // Use savepoints so a failed write doesn't poison the PG transaction
         try { DB::transaction(fn () => \App\Models\Discount::ensureSiblingDefaults()); } catch (\Throwable $e) {}
         try { DB::transaction(fn () => \App\Models\Discount::ensureAcademicScholarExclusive()); } catch (\Throwable $e) {}
 
-        $tuitionFee = TuitionFee::active()->forGrade($student->level)->first();
+        $tuitionFee = $this->resolveTuitionFeeForStudent($student);
 
         // 1. Check for specific FeeAssignment first
         if ($tuitionFee) {

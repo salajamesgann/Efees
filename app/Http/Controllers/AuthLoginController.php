@@ -381,8 +381,22 @@ class AuthLoginController extends Controller
             $childBalanceDue = (float) ($totals['remainingBalance'] ?? max(((float) ($totals['totalAmount'] ?? 0.0)) - $childTotalPaid, 0.0));
 
             // Year-over-year fee comparison
-            $currentTuition = $activeSy ? TuitionFee::forGrade($child->level)->forSchoolYear($activeSy)->first() : null;
-            $prevTuition = $prevSy ? TuitionFee::forGrade($child->level)->forSchoolYear($prevSy)->first() : null;
+            $currentTuition = $activeSy
+                ? TuitionFee::forGrade($child->level)
+                    ->forSchoolYear($activeSy)
+                    ->when(in_array($child->level, ['Grade 11', 'Grade 12'], true) && ! empty($child->strand), function ($query) use ($child) {
+                        $query->where('strand', $child->strand);
+                    })
+                    ->first()
+                : null;
+            $prevTuition = $prevSy
+                ? TuitionFee::forGrade($child->level)
+                    ->forSchoolYear($prevSy)
+                    ->when(in_array($child->level, ['Grade 11', 'Grade 12'], true) && ! empty($child->strand), function ($query) use ($child) {
+                        $query->where('strand', $child->strand);
+                    })
+                    ->first()
+                : null;
             $currentBaseFee = $currentTuition ? (float) $currentTuition->amount : (float) ($totals['baseTuition'] ?? 0.0);
             $prevBaseFee = $prevTuition ? (float) $prevTuition->amount : null;
             $changeAmount = $prevBaseFee !== null ? $currentBaseFee - $prevBaseFee : null;

@@ -167,6 +167,24 @@ class AdminFeeController extends Controller
         }
     }
 
+    private function findDuplicateTuitionFee(string $gradeLevel, string $schoolYear, ?string $track = null, ?string $strand = null, ?int $ignoreId = null): ?TuitionFee
+    {
+        $query = TuitionFee::where('grade_level', $gradeLevel)
+            ->where('school_year', $schoolYear);
+
+        if ($strand !== null && $strand !== '') {
+            $query->where('strand', $strand);
+        } elseif ($track !== null && $track !== '') {
+            $query->where('track', $track);
+        }
+
+        if ($ignoreId !== null) {
+            $query->whereKeyNot($ignoreId);
+        }
+
+        return $query->first();
+    }
+
     public function assignDiscountToGroup(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -636,31 +654,14 @@ class AdminFeeController extends Controller
         $totalTuition = $computedSubtotal;
 
         // Duplicate guard before transaction
-        $dupQuery = TuitionFee::where('grade_level', $validated['grade_level'])
-            ->where('school_year', $validated['school_year']);
-        if (\Illuminate\Support\Facades\Schema::hasColumn('tuition_fees', 'track')) {
-            $dupQuery->where(function ($q) use ($validated) {
-                $t = $validated['track'] ?? null;
-                if ($t === null || $t === '') {
-                    $q->whereNull('track')->orWhere('track', '');
-                } else {
-                    $q->where('track', $t);
-                }
-            });
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('tuition_fees', 'strand')) {
-            $dupQuery->where(function ($q) use ($validated) {
-                $s = $validated['strand'] ?? null;
-                if ($s === null || $s === '') {
-                    $q->whereNull('strand')->orWhere('strand', '');
-                } else {
-                    $q->where('strand', $s);
-                }
-            });
-        }
-        $existingDup = $dupQuery->first();
+        $existingDup = $this->findDuplicateTuitionFee(
+            $validated['grade_level'],
+            $validated['school_year'],
+            $validated['track'] ?? null,
+            $validated['strand'] ?? null
+        );
         if ($existingDup) {
-            $msg = 'Duplicate tuition configuration for this grade, year, and track/strand.';
+            $msg = 'Duplicate tuition configuration for this grade, year, and strand.';
             if ($request->expectsJson()) {
                 return response()->json(['errors' => ['grade_level' => [$msg]]], 422);
             }
@@ -1099,35 +1100,17 @@ class AdminFeeController extends Controller
             $charges = is_array($parsedCharges) ? $parsedCharges : [];
         }
 
-        $existsElsewhereQuery = TuitionFee::where('grade_level', $validated['grade_level'])
-            ->where('school_year', $validated['school_year'] ?? $tuitionFee->school_year);
-        if (\Illuminate\Support\Facades\Schema::hasColumn('tuition_fees', 'track')) {
-            $existsElsewhereQuery->where(function ($q) use ($validated, $tuitionFee) {
-                $t = $validated['track'] ?? $tuitionFee->track ?? null;
-                if ($t === null || $t === '') {
-                    $q->whereNull('track')->orWhere('track', '');
-                } else {
-                    $q->where('track', $t);
-                }
-            });
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('tuition_fees', 'strand')) {
-            $existsElsewhereQuery->where(function ($q) use ($validated, $tuitionFee) {
-                $s = $validated['strand'] ?? $tuitionFee->strand ?? null;
-                if ($s === null || $s === '') {
-                    $q->whereNull('strand')->orWhere('strand', '');
-                } else {
-                    $q->where('strand', $s);
-                }
-            });
-        }
-        $existsElsewhere = $existsElsewhereQuery
-            ->whereKeyNot($tuitionFee->getKey())
-            ->exists();
+        $existsElsewhere = $this->findDuplicateTuitionFee(
+            $validated['grade_level'],
+            $validated['school_year'] ?? $tuitionFee->school_year,
+            $validated['track'] ?? $tuitionFee->track ?? null,
+            $validated['strand'] ?? $tuitionFee->strand ?? null,
+            $tuitionFee->getKey()
+        ) !== null;
 
         if ($existsElsewhere) {
             return redirect()->route('admin.fees.edit-tuition', $tuitionFee)
-                ->withErrors(['grade_level' => 'Another tuition fee already uses this grade, school year, and term.'])
+                ->withErrors(['grade_level' => 'Another tuition fee already uses this grade, school year, and strand.'])
                 ->withInput();
         }
 

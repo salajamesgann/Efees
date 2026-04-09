@@ -289,15 +289,32 @@ class FeeAssignment extends Model
         }
 
         $gradeLevel = $student->level;
+        $strand = in_array($gradeLevel, ['Grade 11', 'Grade 12'], true) ? ($student->strand ?? null) : null;
 
-        // Get tuition fee with period filtering, fallback to active by grade
+        // Get tuition fee with period filtering, prefer SHS strand match when available
         $tuitionFee = TuitionFee::forGrade($gradeLevel)
             ->forSchoolYear($schoolYear)
             ->forSemester($semester)
+            ->when($strand, function ($query) use ($strand) {
+                $query->where('strand', $strand);
+            })
             ->first();
+        if (! $tuitionFee && $strand) {
+            $tuitionFee = TuitionFee::forGrade($gradeLevel)
+                ->forSchoolYear($schoolYear)
+                ->forSemester($semester)
+                ->first();
+        }
         if (! $tuitionFee) {
             $tuitionFee = TuitionFee::active()
                 ->forGrade($gradeLevel)
+                ->when($strand, function ($query) use ($strand) {
+                    $query->where(function ($strandQuery) use ($strand) {
+                        $strandQuery->where('strand', $strand)
+                            ->orWhereNull('strand')
+                            ->orWhere('strand', '');
+                    });
+                })
                 ->first();
         }
 

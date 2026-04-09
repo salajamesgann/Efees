@@ -132,6 +132,7 @@ class Student extends Model
         $query = $this->feeAssignments()->with('tuitionFee')->orderByDesc('created_at');
 
         $sy = $schoolYear ?: ($this->school_year ?? null);
+        $strand = in_array($this->level, ['Grade 11', 'Grade 12'], true) ? ($this->strand ?? null) : null;
         if ($sy) {
             $query->where('school_year', $sy);
         }
@@ -141,16 +142,34 @@ class Student extends Model
         }
 
         // Prefer assignments whose tuition fee matches student's current grade
-        $query->where(function ($q) {
-            $q->whereHas('tuitionFee', function ($tq) {
+        $query->where(function ($q) use ($strand) {
+            $q->whereHas('tuitionFee', function ($tq) use ($strand) {
                 $tq->where('grade_level', $this->level);
+                if ($strand) {
+                    $tq->where(function ($strandQuery) use ($strand) {
+                        $strandQuery->where('strand', $strand)
+                            ->orWhereNull('strand')
+                            ->orWhere('strand', '');
+                    });
+                }
             })->orWhereNull('tuition_fee_id');
         });
 
         $assignment = $query->first();
 
         // If no tuition fee exists for this grade/year, ignore any stale assignment
-        $hasTuition = \App\Models\TuitionFee::active()->forGrade($this->level)->where('school_year', $sy)->exists();
+        $hasTuitionQuery = \App\Models\TuitionFee::active()->forGrade($this->level);
+        if ($sy) {
+            $hasTuitionQuery->where('school_year', $sy);
+        }
+        if ($strand) {
+            $hasTuitionQuery->where(function ($strandQuery) use ($strand) {
+                $strandQuery->where('strand', $strand)
+                    ->orWhereNull('strand')
+                    ->orWhere('strand', '');
+            });
+        }
+        $hasTuition = $hasTuitionQuery->exists();
         if (! $hasTuition) {
             return null;
         }

@@ -105,6 +105,22 @@ class TuitionFee extends Model
     }
 
     /**
+     * Scope to filter by strand.
+     */
+    public function scopeForStrand($query, $strand)
+    {
+        return $query->where('strand', $strand);
+    }
+
+    /**
+     * Scope to filter by track.
+     */
+    public function scopeForTrack($query, $track)
+    {
+        return $query->where('track', $track);
+    }
+
+    /**
      * Scope to filter by semester.
      */
     public function scopeForSemester($query, $semester)
