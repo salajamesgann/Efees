@@ -169,7 +169,7 @@
                                                         </div>
                                                         <div>
                                                             <div class="text-sm font-medium text-slate-900">
-                                                                <a href="{{ route('admin.students.index', ['search' => $student->student_id]) }}" class="hover:text-blue-600 hover:underline">
+                                                                <a href="{{ route('super_admin.students.index', ['id' => $student->student_id]) }}" class="hover:text-blue-600 hover:underline">
                                                                     {{ $student->first_name }} {{ $student->last_name }}
                                                                 </a>
                                                             </div>

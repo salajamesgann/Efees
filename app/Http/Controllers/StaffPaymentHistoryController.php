@@ -39,7 +39,13 @@ class StaffPaymentHistoryController extends Controller
         }
 
         $payments = $query->orderBy('paid_at', 'desc')->paginate(15);
-        $methods = Payment::select('method')->distinct()->pluck('method');
+
+        $defaultMethods = collect(['gcash', 'grab_pay', 'paymaya', 'card']);
+        $existingMethods = Payment::select('method')->distinct()->pluck('method');
+        $methods = $defaultMethods->merge($existingMethods)
+            ->filter()
+            ->unique()
+            ->values();
 
         return view('auth.staff_payment_history', compact('payments', 'search', 'from', 'to', 'method', 'methods'));
     }

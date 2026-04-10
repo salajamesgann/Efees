@@ -108,7 +108,15 @@
                 <select name="method" id="method" class="w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring focus:ring-primary/20">
                     <option value="">All Methods</option>
                     @foreach($methods as $m)
-                        <option value="{{ $m }}" {{ $method == $m ? 'selected' : '' }}>{{ ucfirst($m) }}</option>
+                        @php
+                            $methodLabels = [
+                                'gcash' => 'GCash',
+                                'grab_pay' => 'Grab',
+                                'paymaya' => 'Maya',
+                                'card' => 'Credit/Debit Card',
+                            ];
+                        @endphp
+                        <option value="{{ $m }}" {{ $method == $m ? 'selected' : '' }}>{{ $methodLabels[$m] ?? ucwords(str_replace(['_', '-'], ' ', $m)) }}</option>
                     @endforeach
                 </select>
             </div>
