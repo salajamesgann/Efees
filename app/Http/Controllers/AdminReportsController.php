@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PaymentStatus;
 use App\Models\AuditLog;
 use App\Models\FeeRecord;
 use App\Models\GeneratedReport;
@@ -12,12 +13,16 @@ use App\Models\Student;
 use App\Services\ExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class AdminReportsController extends Controller
 {
     public function index(Request $request): View
     {
+        $hasPaymentStatus = Schema::hasColumn('payments', 'status');
+        $startOfMonth = now()->startOfMonth();
+
         // Audit Log
         AuditLog::create([
             'user_id' => auth()->id(),
@@ -28,7 +33,21 @@ class AdminReportsController extends Controller
 
         // Dropdown data
         $schoolYears = Student::distinct()->whereNotNull('school_year')->orderBy('school_year', 'desc')->pluck('school_year');
-        $levels = Student::distinct()->whereNotNull('level')->orderBy('level')->pluck('level');
+        $levelsInData = Student::distinct()
+            ->whereNotNull('level')
+            ->pluck('level')
+            ->map(fn ($level) => trim((string) $level))
+            ->filter()
+            ->unique();
+
+        $gradeOrder = collect(range(1, 12))->map(fn ($grade) => 'Grade '.$grade);
+        $orderedGrades = $gradeOrder->filter(fn ($level) => $levelsInData->contains($level));
+        $otherLevels = $levelsInData
+            ->reject(fn ($level) => $gradeOrder->contains($level))
+            ->sort()
+            ->values();
+
+        $levels = $orderedGrades->concat($otherLevels)->values();
         $sections = Student::distinct()->whereNotNull('section')->orderBy('section')->pluck('section');
 
         // Filter Parameters
@@ -48,20 +67,23 @@ class AdminReportsController extends Controller
         $statsStudentIds = $statsStudentQuery->pluck('student_id');
 
         // Dashboard Stats (Filtered)
-        $totalCollected = Payment::whereIn('student_id', $statsStudentIds)->where('status', 'approved')->sum('amount_paid');
-        $pendingApprovals = Payment::whereIn('student_id', $statsStudentIds)->where('status', 'pending')->sum('amount_paid');
+        $totalCollected = Payment::whereIn('student_id', $statsStudentIds)
+            ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
+            ->where('paid_at', '>=', $startOfMonth)
+            ->sum('amount_paid');
+        $pendingApprovals = $hasPaymentStatus
+            ? Payment::whereIn('student_id', $statsStudentIds)->where('status', 'pending')->sum('amount_paid')
+            : 0.0;
         // Pending Outstanding + Total Fees Payable computed in one pass per student
         $svc = app(\App\Services\FeeManagementService::class);
-        $pendingOutstanding = 0.0;
+        $pendingOutstanding = FeeRecord::outstandingDebt()->whereIn('student_id', $statsStudentIds)->sum('balance');
         $totalFeesPayable   = 0.0;
         $studentTotals      = [];
-        Student::whereIn('student_id', $statsStudentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, &$totalFeesPayable, &$studentTotals, $svc) {
+        Student::whereIn('student_id', $statsStudentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$totalFeesPayable, &$studentTotals, $svc) {
             foreach ($chunk as $stu) {
                 $t           = $svc->computeTotalsForStudent($stu);
                 $total       = (float) ($t['totalAmount'] ?? 0);
-                $paid        = (float) ($t['paidAmount'] ?? 0);
                 $totalFeesPayable   += $total;
-                $pendingOutstanding += max(0.0, $total - $paid);
                 $studentTotals[$stu->student_id] = $t;
             }
         });
@@ -276,6 +298,8 @@ class AdminReportsController extends Controller
 
     public function metrics(Request $request): \Illuminate\Http\JsonResponse
     {
+        $hasPaymentStatus = Schema::hasColumn('payments', 'status');
+
         $year = $request->get('school_year');
         $level = $request->get('level');
         $section = $request->get('section');
@@ -320,22 +344,26 @@ class AdminReportsController extends Controller
         $studentIds = $studentQuery->pluck('student_id');
 
         // Core metrics
-        $totalCollected = Payment::whereIn('student_id', $studentIds)->where('status', 'approved')->sum('amount_paid');
-        $pendingApprovals = Payment::whereIn('student_id', $studentIds)->where('status', 'pending')->sum('amount_paid');
+        $startOfMonth = now()->startOfMonth();
+        $totalCollected = Payment::whereIn('student_id', $studentIds)
+            ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
+            ->where('paid_at', '>=', $startOfMonth)
+            ->sum('amount_paid');
+        $pendingApprovals = $hasPaymentStatus
+            ? Payment::whereIn('student_id', $studentIds)->where('status', 'pending')->sum('amount_paid')
+            : 0.0;
         $pendingPayments = FeeRecord::whereIn('student_id', $studentIds)
             ->where('record_type', '!=', 'tuition_total')
             ->whereIn('status', ['pending', 'partial'])
             ->sum('balance');
         $svc = app(\App\Services\FeeManagementService::class);
-        $pendingOutstanding = 0.0;
+        $pendingOutstanding = FeeRecord::outstandingDebt()->whereIn('student_id', $studentIds)->sum('balance');
         $totalFeesPayable   = 0.0;
-        Student::whereIn('student_id', $studentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$pendingOutstanding, &$totalFeesPayable, $svc) {
+        Student::whereIn('student_id', $studentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$totalFeesPayable, $svc) {
             foreach ($chunk as $stu) {
                 $t     = $svc->computeTotalsForStudent($stu);
                 $total = (float) ($t['totalAmount'] ?? 0);
-                $paid  = (float) ($t['paidAmount'] ?? 0);
                 $totalFeesPayable   += $total;
-                $pendingOutstanding += max(0.0, $total - $paid);
             }
         });
         $overdueBalances = FeeRecord::whereIn('student_id', $studentIds)->overdue()->sum('balance');
@@ -346,7 +374,7 @@ class AdminReportsController extends Controller
             $collectionsByGrade = \Illuminate\Support\Facades\DB::table('payments')
                 ->join('students', 'payments.student_id', '=', 'students.student_id')
                 ->whereIn('students.student_id', $studentIds)
-                ->where('payments.status', 'approved')
+                ->when($hasPaymentStatus, fn ($q) => $q->whereIn('payments.status', PaymentStatus::successful()))
                 ->select('students.section as label', \Illuminate\Support\Facades\DB::raw('SUM(payments.amount_paid) as total'))
                 ->groupBy('students.section')
                 ->orderBy('students.section')
@@ -355,7 +383,7 @@ class AdminReportsController extends Controller
             $rawGrades = \Illuminate\Support\Facades\DB::table('payments')
                 ->join('students', 'payments.student_id', '=', 'students.student_id')
                 ->whereIn('students.student_id', $studentIds)
-                ->where('payments.status', 'approved')
+                ->when($hasPaymentStatus, fn ($q) => $q->whereIn('payments.status', PaymentStatus::successful()))
                 ->select('students.level as label', \Illuminate\Support\Facades\DB::raw('SUM(payments.amount_paid) as total'))
                 ->groupBy('students.level')
                 ->get();
@@ -374,7 +402,7 @@ class AdminReportsController extends Controller
         // 2. Payment Trends (Monthly, Jan-Dec)
         $rawTrends = \Illuminate\Support\Facades\DB::table('payments')
             ->whereIn('student_id', $studentIds)
-            ->where('status', 'approved')
+            ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
             ->selectRaw('EXTRACT(MONTH FROM COALESCE(paid_at, created_at)) as month_num, SUM(amount_paid) as total')
             ->groupBy('month_num')
             ->orderBy('month_num')

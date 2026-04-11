@@ -79,7 +79,6 @@
                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">User</th>
                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Action</th>
                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Entity</th>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">IP Address</th>
                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Details</th>
                 </tr>
             </thead>
@@ -113,9 +112,6 @@
                             <div class="text-sm text-slate-600">{{ class_basename($log->model_type) }}</div>
                             <div class="text-xs text-slate-400">ID: {{ $log->model_id ?? 'N/A' }}</div>
                         </td>
-                        <td class="px-6 py-4 font-mono text-xs text-slate-500">
-                            {{ $log->ip_address }}
-                        </td>
                         <td class="px-6 py-4 text-right">
                             <a href="{{ route('super_admin.audit-logs.show', $log) }}" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
                                 <i class="fas fa-chevron-right"></i>
@@ -124,7 +120,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-slate-400 italic">
+                        <td colspan="5" class="px-6 py-12 text-center text-slate-400 italic">
                             No activity logs found for the selected criteria.
                         </td>
                     </tr>

@@ -40,11 +40,6 @@
                         </div>
                     </div>
                 </div>
-                <div>
-                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Network Info</div>
-                    <div class="text-sm font-semibold text-slate-700 font-mono">{{ $log->ip_address }}</div>
-                    <div class="text-[10px] text-slate-400 mt-1 leading-relaxed truncate" title="{{ $log->user_agent }}">{{ $log->user_agent }}</div>
-                </div>
             </div>
         </div>
     </div>
@@ -53,15 +48,41 @@
     <div class="lg:col-span-2 space-y-6">
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Data Snapshot</h2>
+
+            @php
+                $redactedKeys = ['ip', 'ip_address', 'user_agent'];
+                $sanitize = function ($data) use (&$sanitize, $redactedKeys) {
+                    if (is_array($data)) {
+                        $out = [];
+                        foreach ($data as $key => $value) {
+                            $normalizedKey = strtolower((string) $key);
+                            if (in_array($normalizedKey, $redactedKeys, true)) {
+                                continue;
+                            }
+                            $out[$key] = $sanitize($value);
+                        }
+                        return $out;
+                    }
+
+                    if (is_object($data)) {
+                        return $sanitize((array) $data);
+                    }
+
+                    return $data;
+                };
+
+                $oldValuesRedacted = $log->old_values ? $sanitize($log->old_values) : null;
+                $newValuesRedacted = $log->new_values ? $sanitize($log->new_values) : null;
+            @endphp
             
-            @if($log->old_values || $log->new_values)
+            @if($oldValuesRedacted || $newValuesRedacted)
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <!-- Previous State -->
                     <div>
                         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Previous Values</div>
-                        @if($log->old_values)
+                        @if($oldValuesRedacted)
                             <div class="bg-slate-50 rounded-xl p-4 overflow-x-auto custom-scrollbar">
-                                <pre class="text-xs text-slate-600 font-mono leading-relaxed">{{ json_encode($log->old_values, JSON_PRETTY_PRINT) }}</pre>
+                                <pre class="text-xs text-slate-600 font-mono leading-relaxed">{{ json_encode($oldValuesRedacted, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                             </div>
                         @else
                             <div class="bg-slate-50 rounded-xl p-4 text-xs text-slate-400 italic">No previous values recorded</div>
@@ -71,9 +92,9 @@
                     <!-- New State -->
                     <div>
                         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Updated Values</div>
-                        @if($log->new_values)
+                        @if($newValuesRedacted)
                             <div class="bg-green-50 rounded-xl p-4 border border-green-100 overflow-x-auto custom-scrollbar">
-                                <pre class="text-xs text-green-700 font-mono leading-relaxed">{{ json_encode($log->new_values, JSON_PRETTY_PRINT) }}</pre>
+                                <pre class="text-xs text-green-700 font-mono leading-relaxed">{{ json_encode($newValuesRedacted, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
                             </div>
                         @else
                             <div class="bg-slate-50 rounded-xl p-4 text-xs text-slate-400 italic">No updated values recorded</div>
