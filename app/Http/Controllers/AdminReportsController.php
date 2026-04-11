@@ -51,7 +51,7 @@ class AdminReportsController extends Controller
         $sections = Student::distinct()->whereNotNull('section')->orderBy('section')->pluck('section');
 
         // Filter Parameters
-        $selectedYear = $request->get('school_year');
+        $selectedYear = $this->resolveSchoolYear($request->get('school_year'));
         $selectedLevel = $request->get('level');
         $selectedSection = $request->get('section');
         $search = $request->get('search');
@@ -129,6 +129,7 @@ class AdminReportsController extends Controller
 
         return view('auth.admin_reports_index', compact(
             'schoolYears', 'levels', 'sections',
+            'selectedYear',
             'totalCollected', 'pendingApprovals', 'pendingOutstanding', 'overdueBalances', 'remindersSent',
             'totalFeesPayable', 'studentTotals',
             'students', 'recentSmsLogs', 'scheduledReports', 'generatedReports'
@@ -300,7 +301,7 @@ class AdminReportsController extends Controller
     {
         $hasPaymentStatus = Schema::hasColumn('payments', 'status');
 
-        $year = $request->get('school_year');
+        $year = $this->resolveSchoolYear($request->get('school_year'));
         $level = $request->get('level');
         $section = $request->get('section');
 
@@ -337,6 +338,7 @@ class AdminReportsController extends Controller
 
         // Base student query for filtering
         $studentQuery = Student::query()
+            ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
             ->when($year, fn ($q) => $q->where('school_year', $year))
             ->when($level, fn ($q) => $q->where('level', $level))
             ->when($section, fn ($q) => $q->where('section', $section));
@@ -479,6 +481,28 @@ class AdminReportsController extends Controller
         ]);
 
         return back()->with('success', 'Report scheduled successfully.');
+    }
+
+    private function resolveSchoolYear(?string $schoolYear): ?string
+    {
+        $pattern = '/^\d{4}-\d{4}$/';
+
+        $isValid = function (?string $sy) use ($pattern): bool {
+            if (! $sy || ! preg_match($pattern, $sy)) {
+                return false;
+            }
+
+            return ((int) substr($sy, 5, 4) === ((int) substr($sy, 0, 4) + 1));
+        };
+
+        $requested = is_string($schoolYear) ? trim($schoolYear) : null;
+        if ($isValid($requested)) {
+            return $requested;
+        }
+
+        $active = \App\Models\SystemSetting::getActiveSchoolYear();
+
+        return $isValid($active) ? $active : null;
     }
 
     public function downloadReport($id)

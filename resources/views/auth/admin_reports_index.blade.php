@@ -59,7 +59,7 @@
                 <form method="POST" action="{{ route('admin.reports.export.csv') }}">
                     @csrf
                     <!-- Pass current filters to export -->
-                    <input type="hidden" name="school_year" value="{{ request('school_year') }}">
+                    <input type="hidden" name="school_year" value="{{ $selectedYear ?? request('school_year') }}">
                     <input type="hidden" name="level" value="{{ request('level') }}">
                     <input type="hidden" name="section" value="{{ request('section') }}">
                     <input type="hidden" name="status" value="{{ request('status') }}">
@@ -203,7 +203,7 @@
                         <select name="school_year" class="w-full rounded-lg border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="">All Years</option>
                             @foreach($schoolYears as $year)
-                                <option value="{{ $year }}" {{ request('school_year') == $year ? 'selected' : '' }}>{{ $year }}</option>
+                                <option value="{{ $year }}" {{ ($selectedYear ?? request('school_year')) == $year ? 'selected' : '' }}>{{ $year }}</option>
                             @endforeach
                         </select>
                     </div>

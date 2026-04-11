@@ -65,7 +65,8 @@ class SuperAdminController extends Controller
                     ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
                     ->when($activeSchoolYear, function ($query) use ($activeSchoolYear) {
                         $query->whereHas('student', function ($studentQuery) use ($activeSchoolYear) {
-                            $studentQuery->where('school_year', $activeSchoolYear);
+                            $studentQuery->where('school_year', $activeSchoolYear)
+                                ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived']);
                         });
                     })
                     ->sum('amount_paid')
@@ -76,7 +77,8 @@ class SuperAdminController extends Controller
                 ? FeeRecord::outstandingDebt()
                     ->when($activeSchoolYear, function ($query) use ($activeSchoolYear) {
                         $query->whereHas('student', function ($studentQuery) use ($activeSchoolYear) {
-                            $studentQuery->where('school_year', $activeSchoolYear);
+                            $studentQuery->where('school_year', $activeSchoolYear)
+                                ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived']);
                         });
                     })
                     ->sum('balance')
