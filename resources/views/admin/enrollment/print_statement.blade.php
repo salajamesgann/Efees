@@ -343,11 +343,6 @@
                 padding-right: 14px;
             }
 
-            .meta-grid,
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
-
             .ledger-title {
                 font-size: 22px;
             }
