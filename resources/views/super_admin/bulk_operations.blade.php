@@ -86,8 +86,8 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2 px-1">
-                    <input type="checkbox" name="clear_sections" id="clear_sections" value="1" checked class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
-                    <label for="clear_sections" class="text-[10px] font-bold text-slate-500 uppercase tracking-wide cursor-pointer">Clear Section Assignments</label>
+                    <input type="checkbox" name="clear_sections" id="clear_sections" value="1" class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                    <label for="clear_sections" class="text-[10px] font-bold text-slate-500 uppercase tracking-wide cursor-pointer">Clear Section Assignments (Optional)</label>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <button type="submit" name="preview" value="1" class="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all">

@@ -101,7 +101,7 @@ class BulkOperationsController extends Controller
         $to = $request->to_level;
         $sy = $request->school_year;
         $targetSy = $request->target_school_year;
-        $clearSections = $request->has('clear_sections');
+        $clearSections = $request->boolean('clear_sections');
 
         if ($from === $to && $sy === $targetSy) {
             return back()->withInput()->with('error', 'Source and target are identical. Choose a different level or school year.');

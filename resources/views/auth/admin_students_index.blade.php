@@ -391,20 +391,21 @@
                         @elseif($viewState === 'sections')
                             @forelse($sections as $sec)
                             @php
-                                $secCount      = $sectionStudentCounts[$sec->name] ?? 0;
-                                $secPromotable = $sectionPromotableCounts[$sec->name] ?? 0;
+                                $secName       = $sec->name ?? 'Unassigned';
+                                $secCount      = $sectionStudentCounts[$secName] ?? 0;
+                                $secPromotable = $sectionPromotableCounts[$secName] ?? 0;
                                 $secSkipped    = $secCount - $secPromotable;
                             @endphp
                             <li>
                                 <div class="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors group relative">
-                                    <a href="{{ route('super_admin.students.index', array_merge(request()->query(), ['level' => $currentLevel, 'section' => $sec->name])) }}" 
+                                    <a href="{{ route('super_admin.students.index', array_merge(request()->query(), ['level' => $currentLevel, 'section' => $secName])) }}" 
                                        class="flex-1 flex items-center justify-between pr-24">
                                         <div class="flex items-center gap-3">
                                             <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
                                                 <i class="fas fa-users"></i>
                                             </div>
                                             <div>
-                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-700 transition-colors">{{ $sec->name }}</span>
+                                                <span class="font-semibold text-slate-700 group-hover:text-indigo-700 transition-colors">{{ $secName }}</span>
                                                 <div class="text-xs text-slate-400 mt-0.5">
                                                     {{ $secCount }} {{ Str::plural('student', $secCount) }}
                                                 </div>
@@ -416,16 +417,17 @@
                                     <!-- Action Buttons -->
                                     <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         @unless($isReadOnly)
-                                        @if($nextLevel)
+                                        @if($nextLevel && $secName !== 'Unassigned')
                                         <!-- Promote Button -->
                                         <button type="button"
-                                            @click="promoteTargetSection = '{{ $sec->name }}'; promoteStudentCount = {{ $secPromotable }}; promoteSkipCount = {{ $secSkipped }}; promoteModalOpen = true"
+                                            @click="promoteTargetSection = '{{ $secName }}'; promoteStudentCount = {{ $secPromotable }}; promoteSkipCount = {{ $secSkipped }}; promoteModalOpen = true"
                                             class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
                                             title="Promote to {{ $nextLevel }}">
                                             <i class="fas fa-graduation-cap"></i>
                                         </button>
                                         @endif
                                         <!-- Delete Button -->
+                                        @if($secName !== 'Unassigned')
                                         <form action="{{ route('super_admin.students.destroySection', $sec->id) }}" method="POST"
                                               onsubmit="return confirm('Are you sure you want to delete section {{ $sec->name }}?');">
                                             @csrf
@@ -437,6 +439,7 @@
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </form>
+                                        @endif
                                         @endunless
                                     </div>
                             @empty

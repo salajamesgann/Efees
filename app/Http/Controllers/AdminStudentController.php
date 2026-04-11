@@ -330,7 +330,14 @@ class AdminStudentController extends Controller
                     $query->where('level', $level);
                 })
                 ->when($section, function ($query) use ($section) {
-                    $query->where('section', $section);
+                    if ($section === 'Unassigned') {
+                        $query->where(function ($sectionQuery) {
+                            $sectionQuery->whereNull('section')
+                                ->orWhere('section', '');
+                        });
+                    } else {
+                        $query->where('section', $section);
+                    }
                 })
                 ->when($statusFilter !== '', function ($query) use ($statusFilter) {
                     $query->whereRaw('LOWER(enrollment_status) = ?', [strtolower($statusFilter)]);
@@ -371,6 +378,21 @@ class AdminStudentController extends Controller
                     }
 
                     $sections = $sectionsQuery->orderBy('name')->get();
+
+                    $unassignedCount = Student::where('school_year', $selectedSchoolYear)
+                        ->where('level', $level)
+                        ->where(function ($query) {
+                            $query->whereNull('section')->orWhere('section', '');
+                        })
+                        ->count();
+
+                    if ($unassignedCount > 0) {
+                        $sections = $sections->push((object) [
+                            'id' => null,
+                            'name' => 'Unassigned',
+                            'student_count' => $unassignedCount,
+                        ]);
+                    }
                 } else {
                     // Fallback to existing student sections when sections table is unavailable
                     $sections = Student::where('school_year', $selectedSchoolYear)
@@ -399,19 +421,31 @@ class AdminStudentController extends Controller
             $sectionNames = $sections->pluck('name');
             $sectionStudentCounts = Student::where('school_year', $selectedSchoolYear)
                 ->where('level', $level)
-                ->whereIn('section', $sectionNames)
-                ->selectRaw('section, count(*) as cnt')
-                ->groupBy('section')
-                ->pluck('cnt', 'section')
+                ->where(function ($query) use ($sectionNames) {
+                    $query->whereIn('section', $sectionNames);
+                    if ($sectionNames->contains('Unassigned')) {
+                        $query->orWhereNull('section')
+                            ->orWhere('section', '');
+                    }
+                })
+                ->selectRaw("COALESCE(NULLIF(section, ''), 'Unassigned') as section_label, count(*) as cnt")
+                ->groupBy('section_label')
+                ->pluck('cnt', 'section_label')
                 ->toArray();
             // Only Active/Irregular students are eligible for promotion
             $sectionPromotableCounts = Student::where('school_year', $selectedSchoolYear)
                 ->where('level', $level)
-                ->whereIn('section', $sectionNames)
+                ->where(function ($query) use ($sectionNames) {
+                    $query->whereIn('section', $sectionNames);
+                    if ($sectionNames->contains('Unassigned')) {
+                        $query->orWhereNull('section')
+                            ->orWhere('section', '');
+                    }
+                })
                 ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
-                ->selectRaw('section, count(*) as cnt')
-                ->groupBy('section')
-                ->pluck('cnt', 'section')
+                ->selectRaw("COALESCE(NULLIF(section, ''), 'Unassigned') as section_label, count(*) as cnt")
+                ->groupBy('section_label')
+                ->pluck('cnt', 'section_label')
                 ->toArray();
         }
 
