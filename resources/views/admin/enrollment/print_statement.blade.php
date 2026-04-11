@@ -23,16 +23,16 @@
 
         body {
             margin: 0;
-            background: linear-gradient(160deg, #e2e8f0 0%, #f8fafc 55%, #f1f5f9 100%);
+            background: #e6ebf2;
             color: var(--text);
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 14px;
-            line-height: 1.45;
-            padding: 28px;
+            font-size: 13px;
+            line-height: 1.35;
+            padding: 16px;
         }
 
         .page {
-            max-width: 860px;
+            max-width: 930px;
             margin: 0 auto;
         }
 
@@ -40,16 +40,16 @@
             display: flex;
             justify-content: flex-end;
             gap: 10px;
-            margin-bottom: 14px;
+            margin-bottom: 10px;
         }
 
         .btn {
             border: 1px solid #cbd5e1;
             background: #ffffff;
             color: #0f172a;
-            padding: 9px 14px;
-            border-radius: 8px;
-            font-size: 13px;
+            padding: 7px 14px;
+            border-radius: 10px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
         }
@@ -63,49 +63,49 @@
         .ledger-card {
             background: var(--card);
             border: 1px solid var(--line);
-            border-radius: 16px;
-            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
             overflow: hidden;
         }
 
         .ledger-header {
             background: linear-gradient(140deg, #0f172a 0%, #1e293b 60%, #334155 100%);
             color: #ffffff;
-            padding: 22px 24px;
+            padding: 10px 14px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            gap: 12px;
+            gap: 10px;
         }
 
         .ledger-title {
             margin: 0;
-            font-size: 26px;
-            letter-spacing: 0.2px;
+            font-size: 16px;
+            letter-spacing: 0;
         }
 
         .ledger-subtitle {
-            margin-top: 4px;
+            margin-top: 2px;
             color: #cbd5e1;
-            font-size: 12px;
+            font-size: 9px;
             text-transform: uppercase;
-            letter-spacing: 0.14em;
+            letter-spacing: 0.18em;
         }
 
         .generated {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.22);
-            border-radius: 10px;
-            padding: 8px 10px;
+            border-radius: 6px;
+            padding: 4px 8px;
             text-align: right;
-            font-size: 12px;
+            font-size: 10px;
         }
 
         .meta-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-            padding: 16px 24px;
+            gap: 8px;
+            padding: 10px 10px 8px;
             border-bottom: 1px solid var(--line);
             background: #f8fafc;
         }
@@ -113,22 +113,22 @@
         .meta-item {
             background: #ffffff;
             border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 10px 12px;
+            border-radius: 6px;
+            padding: 8px 10px;
         }
 
         .meta-label {
             display: block;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             color: var(--muted);
-            margin-bottom: 3px;
+            margin-bottom: 1px;
         }
 
         .meta-value {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             color: var(--text);
             word-break: break-word;
@@ -137,19 +137,19 @@
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-            padding: 16px 24px;
+            gap: 8px;
+            padding: 8px 10px 10px;
         }
 
         .summary-box {
             border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 12px 14px;
+            border-radius: 6px;
+            padding: 8px 10px;
             background: #ffffff;
         }
 
         .summary-box .label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.08em;
@@ -157,10 +157,10 @@
         }
 
         .summary-box .amount {
-            margin-top: 6px;
-            font-size: 24px;
+            margin-top: 2px;
+            font-size: 14px;
             font-weight: 800;
-            letter-spacing: 0.2px;
+            letter-spacing: 0;
         }
 
         .summary-box.debit .amount {
@@ -176,7 +176,7 @@
         }
 
         .table-wrap {
-            padding: 0 24px 24px;
+            padding: 0 10px 10px;
             overflow: visible;
         }
 
@@ -190,20 +190,20 @@
         thead th {
             background: var(--header);
             color: #ffffff;
-            font-size: 11px;
-            letter-spacing: 0.04em;
+            font-size: 9.5px;
+            letter-spacing: 0.03em;
             text-transform: uppercase;
-            padding: 8px 6px;
+            padding: 5px 4px;
             border: 1px solid #334155;
             text-align: center;
         }
 
         tbody td {
-            padding: 7px 6px;
+            padding: 4px 4px;
             border: 1px solid var(--line);
             vertical-align: top;
             background: #ffffff;
-            font-size: 12px;
+            font-size: 10px;
         }
 
         tbody tr:nth-child(even) td {
@@ -221,6 +221,7 @@
         .desc {
             font-weight: 600;
             color: #0f172a;
+            font-size: 10px;
         }
 
         .notes {
@@ -236,7 +237,7 @@
             word-break: break-word;
             overflow-wrap: anywhere;
             line-height: 1.3;
-            font-size: 11px;
+            font-size: 9px;
         }
 
         .muted {
@@ -244,7 +245,7 @@
         }
 
         .empty-row td {
-            height: 36px;
+            height: 22px;
         }
 
         @media print {
