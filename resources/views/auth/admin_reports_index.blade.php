@@ -491,8 +491,8 @@
                             },
                             y: { 
                                 beginAtZero: false,
-                                min: 100,
-                                max: 10000,
+                                min: 1000,
+                                max: 100000,
                                 grid: { color: '#e5e7eb' },
                                 ticks: { 
                                     color: '#6b7280',
@@ -540,8 +540,8 @@
                             x: { grid: { color: '#e5e7eb' }, ticks: { color: '#6b7280' } },
                             y: { 
                                 beginAtZero: false,
-                                min: 100,
-                                max: 10000,
+                                min: 1000,
+                                max: 100000,
                                 grid: { color: '#e5e7eb' },
                                 ticks: { 
                                     color: '#6b7280',

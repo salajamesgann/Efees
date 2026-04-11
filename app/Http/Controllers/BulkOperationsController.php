@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\SystemSetting;
+use App\Models\TuitionFee;
 use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -104,6 +105,16 @@ class BulkOperationsController extends Controller
 
         if ($from === $to && $sy === $targetSy) {
             return back()->withInput()->with('error', 'Source and target are identical. Choose a different level or school year.');
+        }
+
+        $hasTargetTuition = TuitionFee::query()
+            ->active()
+            ->forSchoolYear($targetSy)
+            ->forGrade($to)
+            ->exists();
+
+        if (! $hasTargetTuition) {
+            return back()->withInput()->with('error', "Cannot promote to {$to} ({$targetSy}) because no active tuition is configured for that level and school year.");
         }
 
         $nonPromotableStatuses = ['Withdrawn', 'Archived', 'Graduated', 'Dropped'];

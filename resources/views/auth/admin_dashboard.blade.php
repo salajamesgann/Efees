@@ -558,8 +558,8 @@
          grid: {
           color: '#e5e7eb'
           },
-         min: 100,
-         max: 10000,
+         min: 1000,
+         max: 100000,
          ticks: {
           color: '#6b7280',
           callback: function(value) {
@@ -622,8 +622,8 @@
          grid: {
           color: '#e5e7eb'
          },
-         min: 100,
-         max: 10000,
+         min: 1000,
+         max: 100000,
          ticks: {
           color: '#6b7280',
           callback: function(value) {

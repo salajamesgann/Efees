@@ -100,7 +100,7 @@
             </form>
         </div>
         <p class="text-[10px] text-slate-400 italic text-center mt-4">
-            Moves promotable students (Active, Irregular, Enrolled) from the selected level & SY to the target level & SY.
+            Moves promotable students (Active, Irregular, Enrolled) from the selected level & SY to the target level & SY. Target SY must already have active tuition setup.
         </p>
     </div>
 

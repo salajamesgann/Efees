@@ -259,6 +259,37 @@ class AdminReportsController extends Controller
         $level = $request->get('level');
         $section = $request->get('section');
 
+        $effectiveSchoolYear = $year ?: \App\Models\SystemSetting::getActiveSchoolYear();
+        $hasEffectiveSyTuitionConfigured = ! $effectiveSchoolYear || \App\Models\TuitionFee::query()
+            ->active()
+            ->forSchoolYear($effectiveSchoolYear)
+            ->exists();
+
+        if (! $hasEffectiveSyTuitionConfigured) {
+            return response()->json([
+                'totalCollected' => 0.0,
+                'pendingApprovals' => 0.0,
+                'pendingPayments' => 0.0,
+                'pendingOutstanding' => 0.0,
+                'totalFeesPayable' => 0.0,
+                'overdueBalances' => 0.0,
+                'remindersSent' => 0,
+                'collectionsByGrade' => [],
+                'paymentTrends' => collect(range(1, 12))->map(function ($m) {
+                    return [
+                        'month' => \Carbon\Carbon::createFromDate(null, $m, 1)->format('M'),
+                        'total' => 0.0,
+                    ];
+                }),
+                'statusOverview' => [
+                    ['label' => 'Paid', 'count' => 0, 'color' => '#10b981'],
+                    ['label' => 'Pending', 'count' => 0, 'color' => '#f59e0b'],
+                    ['label' => 'Overdue', 'count' => 0, 'color' => '#ef4444'],
+                ],
+                'financialDataReady' => false,
+            ]);
+        }
+
         // Base student query for filtering
         $studentQuery = Student::query()
             ->when($year, fn ($q) => $q->where('school_year', $year))
@@ -370,6 +401,7 @@ class AdminReportsController extends Controller
             'collectionsByGrade' => $collectionsByGrade,
             'paymentTrends'     => $paymentTrends,
             'statusOverview'    => $statusOverview,
+            'financialDataReady' => true,
         ]);
     }
 

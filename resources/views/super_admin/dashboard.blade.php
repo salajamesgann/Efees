@@ -11,6 +11,11 @@
             </span>
         @endif
     </p>
+    @if(isset($stats['financial_data_ready']) && ! $stats['financial_data_ready'])
+        <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Financial cards are set to zero because the active school year has no active tuition setup yet.
+        </div>
+    @endif
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

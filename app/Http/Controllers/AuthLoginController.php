@@ -504,6 +504,56 @@ class AuthLoginController extends Controller
             $recentTransactions = collect();
             $pendingPayments = collect();
         } else {
+            $hasActiveSyTuitionConfigured = ! $activeSy || \App\Models\TuitionFee::query()
+                ->active()
+                ->forSchoolYear($activeSy)
+                ->exists();
+
+            if (! $hasActiveSyTuitionConfigured) {
+                $totalCollected = 0.0;
+                $prevTotalCollected = 0.0;
+                $pendingOutstanding = 0.0;
+                $pendingApprovals = 0.0;
+                $expectedCollection = 0.0;
+                $recentTransactions = collect();
+                $pendingPayments = collect();
+                $pendingPaymentsTotal = 0;
+
+                $studentsCount = \App\Models\Student::where('school_year', $activeSy)
+                    ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
+                    ->count();
+                $prevStudentsCount = \App\Models\Student::where('school_year', $activeSy)
+                    ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
+                    ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
+                    ->count();
+
+                $smsSentThisWeek = \App\Models\SmsLog::where('status', 'sent')
+                    ->where('sent_at', '>=', $startOfWeek)
+                    ->count();
+                $smsSentLastWeek = \App\Models\SmsLog::where('status', 'sent')
+                    ->whereBetween('sent_at', [$startOfLastWeek, $endOfLastWeek])
+                    ->count();
+
+                return view('auth.admin_dashboard', [
+                    'totalCollected' => (float) $totalCollected,
+                    'prevTotalCollected' => (float) $prevTotalCollected,
+                    'pendingOutstanding' => (float) $pendingOutstanding,
+                    'pendingApprovals' => $pendingApprovals,
+                    'expectedCollection' => (float) $expectedCollection,
+                    'studentsCount' => (int) $studentsCount,
+                    'prevStudentsCount' => (int) $prevStudentsCount,
+                    'smsSentThisWeek' => (int) $smsSentThisWeek,
+                    'smsSentLastWeek' => (int) $smsSentLastWeek,
+                    'recentTransactions' => $recentTransactions,
+                    'pendingPayments' => $pendingPayments,
+                    'pendingPaymentsTotal' => $pendingPaymentsTotal,
+                    'schoolYears' => $schoolYears,
+                    'levels' => $levels,
+                    'sections' => $sections,
+                    'activeSy' => $activeSy,
+                ]);
+            }
+
             // Reconcile ledger for students in active School Year so metrics reflect assignment totals
             // Disabled on dashboard load to avoid long-running requests
             // 1. Total Collected (This Month vs Last Month) - filtered to active SY successful payments
@@ -702,10 +752,54 @@ class AuthLoginController extends Controller
                 || ((int) substr($schoolYear, 5, 4) !== ((int) substr($schoolYear, 0, 4) + 1)))) {
             $schoolYear = null;
         }
+
         $level = $request->input('level');
         $section = $request->input('section');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
+
+        $effectiveSchoolYear = $schoolYear ?: SystemSetting::getActiveSchoolYear();
+        $hasEffectiveSyTuitionConfigured = ! $effectiveSchoolYear || \App\Models\TuitionFee::query()
+            ->active()
+            ->forSchoolYear($effectiveSchoolYear)
+            ->exists();
+
+        if (! $hasEffectiveSyTuitionConfigured) {
+            $studentCountForScope = \App\Models\Student::query()
+                ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
+                ->when($schoolYear, fn ($q) => $q->where('school_year', $schoolYear))
+                ->when($level, fn ($q) => $q->where('level', $level))
+                ->when($section, fn ($q) => $q->where('section', $section))
+                ->count();
+
+            $startOfLastMonth = now()->subMonth()->startOfMonth();
+            $endOfLastMonth = now()->subMonth()->endOfMonth();
+            $prevStudentCountForScope = \App\Models\Student::query()
+                ->whereNotIn('enrollment_status', ['Withdrawn', 'Archived'])
+                ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
+                ->when($schoolYear, fn ($q) => $q->where('school_year', $schoolYear))
+                ->when($level, fn ($q) => $q->where('level', $level))
+                ->when($section, fn ($q) => $q->where('section', $section))
+                ->count();
+
+            return response()->json([
+                'totalCollected' => 0.0,
+                'prevTotalCollected' => 0.0,
+                'pendingApprovals' => 0.0,
+                'pendingOutstanding' => 0.0,
+                'expectedCollection' => 0.0,
+                'studentsCount' => (int) $studentCountForScope,
+                'prevStudentsCount' => (int) $prevStudentCountForScope,
+                'smsSentThisWeek' => 0,
+                'smsSentLastWeek' => 0,
+                'collectionsByGrade' => [],
+                'paymentTrends' => [],
+                'pendingPayments' => [],
+                'pendingPaymentsTotal' => 0,
+                'recentTransactions' => [],
+                'financialDataReady' => false,
+            ]);
+        }
 
         // Normalize date range; if inverted, swap values
         if ($startDate && $endDate) {
@@ -752,6 +846,7 @@ class AuthLoginController extends Controller
             return response()->json([
                 'totalCollected' => 0.0,
                 'prevTotalCollected' => 0.0,
+                'pendingApprovals' => 0.0,
                 'pendingOutstanding' => 0.0,
                 'expectedCollection' => 0.0,
                 'studentsCount' => 0,
@@ -761,7 +856,9 @@ class AuthLoginController extends Controller
                 'collectionsByGrade' => [],
                 'paymentTrends' => [],
                 'pendingPayments' => [],
+                'pendingPaymentsTotal' => 0,
                 'recentTransactions' => [],
+                'financialDataReady' => true,
             ]);
         }
 
@@ -1019,6 +1116,7 @@ class AuthLoginController extends Controller
             'pendingPayments'      => $pendingPayments,
             'pendingPaymentsTotal' => (int) $pendingPaymentsTotal,
             'recentTransactions'   => $recentTransactions,
+            'financialDataReady'   => true,
         ]);
     }
 
