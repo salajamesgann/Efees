@@ -177,31 +177,33 @@
 
         .table-wrap {
             padding: 0 24px 24px;
-            overflow-x: auto;
+            overflow: visible;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 950px;
+            table-layout: fixed;
+            min-width: 0;
         }
 
         thead th {
             background: var(--header);
             color: #ffffff;
-            font-size: 12px;
+            font-size: 11px;
             letter-spacing: 0.04em;
             text-transform: uppercase;
-            padding: 11px 10px;
+            padding: 8px 6px;
             border: 1px solid #334155;
             text-align: center;
         }
 
         tbody td {
-            padding: 10px;
+            padding: 7px 6px;
             border: 1px solid var(--line);
             vertical-align: top;
             background: #ffffff;
+            font-size: 12px;
         }
 
         tbody tr:nth-child(even) td {
@@ -223,6 +225,18 @@
 
         .notes {
             color: #334155;
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            line-height: 1.3;
+        }
+
+        .ref-col {
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            line-height: 1.3;
+            font-size: 11px;
         }
 
         .muted {
@@ -293,12 +307,21 @@
                 background: #ffffff;
                 color: #000000;
                 border: 1px solid #000;
+                font-size: 9px;
+                padding: 5px 3px;
             }
 
             tbody td {
                 border: 1px solid #000;
                 background: #ffffff !important;
-                padding: 7px 6px;
+                padding: 5px 4px;
+                font-size: 9.5px;
+            }
+
+            .desc,
+            .notes,
+            .ref-col {
+                font-size: 9px;
             }
 
             .summary-box .amount {
@@ -330,6 +353,11 @@
 
             .generated {
                 text-align: left;
+            }
+
+            thead th,
+            tbody td {
+                font-size: 10px;
             }
         }
     </style>
@@ -392,6 +420,15 @@
 
             <div class="table-wrap">
                 <table>
+                    <colgroup>
+                        <col style="width: 13%;">
+                        <col style="width: 20%;">
+                        <col style="width: 12%;">
+                        <col style="width: 12%;">
+                        <col style="width: 14%;">
+                        <col style="width: 13%;">
+                        <col style="width: 16%;">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Date</th>
@@ -425,7 +462,7 @@
                                 <td class="text-right">
                                     {{ number_format($record->balance, 2) }}
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center ref-col">
                                     {{ $record->reference_number ?? '' }}
                                 </td>
                                 <td class="notes">
