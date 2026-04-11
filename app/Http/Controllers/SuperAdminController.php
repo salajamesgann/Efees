@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Models\FeeRecord;
+use App\Models\SystemSetting;
 use App\Enums\PaymentStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -19,11 +20,16 @@ class SuperAdminController extends Controller
     public function dashboard(): View
     {
         $hasPaymentStatus = Schema::hasColumn('payments', 'status');
+        $activeSchoolYear = SystemSetting::getActiveSchoolYear();
+
+        $studentsInActiveYear = Student::query()
+            ->when($activeSchoolYear, fn ($query) => $query->where('school_year', $activeSchoolYear));
 
         $gradeLevels = collect(range(1, 12))
             ->map(fn ($grade) => 'Grade ' . $grade);
 
-        $countsByLevel = Student::select('level', DB::raw('count(*) as total'))
+        $countsByLevel = (clone $studentsInActiveYear)
+            ->select('level', DB::raw('count(*) as total'))
             ->whereIn('level', $gradeLevels->all())
             ->groupBy('level')
             ->pluck('total', 'level');
@@ -37,7 +43,8 @@ class SuperAdminController extends Controller
             });
 
         $stats = [
-            'total_students' => Student::count(),
+            'active_school_year' => $activeSchoolYear,
+            'total_students' => (clone $studentsInActiveYear)->count(),
             'total_users' => User::count(),
             'recent_activity' => AuditLog::with('user')->latest()->limit(5)->get(),
             'role_distribution' => User::select('role_id', DB::raw('count(*) as total'))
@@ -49,14 +56,26 @@ class SuperAdminController extends Controller
             // 'total_collected' should include all successful payment statuses
             'total_collected' => Payment::query()
                 ->when($hasPaymentStatus, fn ($q) => $q->whereIn('status', PaymentStatus::successful()))
+                ->when($activeSchoolYear, function ($query) use ($activeSchoolYear) {
+                    $query->whereHas('student', function ($studentQuery) use ($activeSchoolYear) {
+                        $studentQuery->where('school_year', $activeSchoolYear);
+                    });
+                })
                 ->sum('amount_paid'),
             
             // Shared outstanding-debt policy used across dashboards
-            'total_outstanding' => FeeRecord::outstandingDebt()->sum('balance'),
+            'total_outstanding' => FeeRecord::outstandingDebt()
+                ->when($activeSchoolYear, function ($query) use ($activeSchoolYear) {
+                    $query->whereHas('student', function ($studentQuery) use ($activeSchoolYear) {
+                        $studentQuery->where('school_year', $activeSchoolYear);
+                    });
+                })
+                ->sum('balance'),
             
             // Enrollment Trends
             'enrollment_by_level' => $enrollmentByLevel,
-            'enrollment_by_strand' => Student::select('strand', DB::raw('count(*) as total'))
+            'enrollment_by_strand' => (clone $studentsInActiveYear)
+                ->select('strand', DB::raw('count(*) as total'))
                 ->whereNotNull('strand')
                 ->groupBy('strand')
                 ->get(),

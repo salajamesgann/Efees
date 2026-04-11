@@ -3,7 +3,14 @@
 @section('content')
 <div class="mb-8">
     <h1 class="text-2xl font-bold tracking-tight text-slate-900">Super Admin Dashboard</h1>
-    <p class="text-sm text-slate-500 mt-1">Platform management and statistics overview</p>
+    <p class="text-sm text-slate-500 mt-1">
+        Platform management and statistics overview
+        @if(!empty($stats['active_school_year']))
+            <span class="ml-2 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                School Year: {{ $stats['active_school_year'] }}
+            </span>
+        @endif
+    </p>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -15,7 +22,7 @@
             </div>
             <div>
                 <h3 class="text-sm font-bold text-slate-800">Total Students</h3>
-                <p class="text-[10px] text-slate-500">Platform-wide students</p>
+                <p class="text-[10px] text-slate-500">Students in active school year</p>
             </div>
         </div>
         <div class="flex items-center justify-between">
@@ -49,7 +56,7 @@
             </div>
             <div>
                 <h3 class="text-sm font-bold text-slate-800">Total Collected</h3>
-                <p class="text-[10px] text-slate-500">Confirmed payments</p>
+                <p class="text-[10px] text-slate-500">Confirmed payments in active school year</p>
             </div>
         </div>
         <div class="flex items-center justify-between">
@@ -65,7 +72,7 @@
             </div>
             <div>
                 <h3 class="text-sm font-bold text-slate-800">Outstanding Balance</h3>
-                <p class="text-[10px] text-slate-500">Remaining to collect</p>
+                <p class="text-[10px] text-slate-500">Remaining to collect in active school year</p>
             </div>
         </div>
         <div class="flex items-center justify-between">

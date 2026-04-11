@@ -298,7 +298,9 @@
                             'active'     => ['label' => 'Active',    'color' => 'bg-green-100 text-green-700 hover:bg-green-200'],
                             'irregular'  => ['label' => 'Irregular', 'color' => 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'],
                             'withdrawn'  => ['label' => 'Withdrawn', 'color' => 'bg-orange-100 text-orange-700 hover:bg-orange-200'],
-                            'archived'   => ['label' => 'Archived',  'color' => 'bg-red-100 text-red-600 hover:bg-red-200'],
+                            'graduated'  => ['label' => 'Graduated', 'color' => 'bg-blue-100 text-blue-700 hover:bg-blue-200'],
+                            'dropped'    => ['label' => 'Dropped',   'color' => 'bg-red-100 text-red-700 hover:bg-red-200'],
+                            'archived'   => ['label' => 'Archived',  'color' => 'bg-red-600 text-white hover:bg-red-700'],
                         ];
                         $baseStatusParams = array_merge(request()->except(['status', 'page']), []);
                     @endphp
@@ -464,7 +466,11 @@
                                                 @endif
                                                 @php $es = strtolower($student->enrollment_status ?? ''); @endphp
                                                 @if($es === 'archived')
-                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 uppercase">Archived</span>
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white uppercase">Archived</span>
+                                                @elseif($es === 'graduated')
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase">Graduated</span>
+                                                @elseif($es === 'dropped')
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 uppercase">Dropped</span>
                                                 @elseif($es === 'irregular')
                                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700 uppercase">Irregular</span>
                                                 @elseif($es === 'withdrawn')
@@ -618,12 +624,16 @@
                                                     'bg-green-50 text-green-700 border-green-200':   status === 'Active',
                                                     'bg-yellow-50 text-yellow-700 border-yellow-200': status === 'Irregular',
                                                     'bg-orange-50 text-orange-700 border-orange-200': status === 'Withdrawn',
-                                                    'bg-red-50 text-red-600 border-red-200':         status === 'Archived',
+                                                    'bg-blue-50 text-blue-700 border-blue-200':      status === 'Graduated',
+                                                    'bg-red-50 text-red-700 border-red-200':         status === 'Dropped',
+                                                    'bg-red-100 text-red-600 border-red-300':        status === 'Archived',
                                                 }"
                                                 class="text-xs font-semibold border rounded-lg px-2 py-1.5 pr-6 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors appearance-none">
                                             <option value="Active">Active</option>
                                             <option value="Irregular">Irregular</option>
                                             <option value="Withdrawn">Withdrawn</option>
+                                            <option value="Graduated">Graduated</option>
+                                            <option value="Dropped">Dropped</option>
                                             <option value="Archived">Archived</option>
                                         </select>
                                         <button type="submit" x-show="status !== original"

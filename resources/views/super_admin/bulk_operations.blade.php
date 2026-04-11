@@ -60,8 +60,12 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">To Level</label>
-                        <input type="text" name="to_level" required placeholder="To Level" 
-                               class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select name="to_level" required class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Level</option>
+                            @foreach($levels as $level)
+                                <option value="{{ $level }}">{{ $level }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -76,7 +80,8 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">To SY</label>
-                        <input type="text" name="target_school_year" required placeholder="Next SY" 
+                        <input type="text" name="target_school_year" required placeholder="Next SY"
+                               pattern="^\d{4}-\d{4}$" title="Use format YYYY-YYYY (example: 2026-2027)"
                                class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                 </div>
@@ -84,13 +89,18 @@
                     <input type="checkbox" name="clear_sections" id="clear_sections" value="1" checked class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
                     <label for="clear_sections" class="text-[10px] font-bold text-slate-500 uppercase tracking-wide cursor-pointer">Clear Section Assignments</label>
                 </div>
-                <button type="submit" class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
-                    Promote Students
-                </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="submit" name="preview" value="1" class="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all">
+                        Preview Count
+                    </button>
+                    <button type="submit" class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+                        Promote Students
+                    </button>
+                </div>
             </form>
         </div>
         <p class="text-[10px] text-slate-400 italic text-center mt-4">
-            Moves enrolled students from the selected level & SY to the target level & SY.
+            Moves promotable students (Active, Irregular, Enrolled) from the selected level & SY to the target level & SY.
         </p>
     </div>
 
@@ -130,9 +140,14 @@
                         <option value="Enrolled">Enrolled</option>
                     </select>
                 </div>
-                <button type="submit" class="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all shadow-lg shadow-purple-100">
-                    Update All Students
-                </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="submit" name="preview" value="1" class="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all">
+                        Preview Count
+                    </button>
+                    <button type="submit" class="w-full py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all shadow-lg shadow-purple-100">
+                        Update All Students
+                    </button>
+                </div>
             </form>
         </div>
         <p class="text-[10px] text-slate-400 italic text-center mt-4">
@@ -164,7 +179,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('super_admin.bulk.archive') }}" method="POST" class="space-y-3">
+            <form id="archive-form" action="{{ route('super_admin.bulk.archive') }}" method="POST" class="space-y-3">
                 @csrf
                 <div>
                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">School Year</label>
@@ -188,19 +203,32 @@
                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status (Optional)</label>
                     <select name="status" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
                         <option value="">All Statuses</option>
+                        <option value="Active">Active</option>
                         <option value="Enrolled">Enrolled</option>
+                        <option value="Irregular">Irregular</option>
                         <option value="Withdrawn">Withdrawn</option>
                         <option value="Graduated">Graduated</option>
+                        <option value="Dropped">Dropped</option>
                     </select>
                 </div>
-                <button type="submit" class="w-full py-2.5 bg-amber-600 text-white text-sm font-bold rounded-xl hover:bg-amber-700 transition-all shadow-lg shadow-amber-100" 
-                        onclick="return confirm('Are you sure you want to archive these students?');">
-                    Archive Students
-                </button>
+                <div class="p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <label class="flex items-start gap-2 text-[10px] text-amber-800 font-semibold leading-snug cursor-pointer">
+                        <input type="checkbox" id="confirm_archive_all" name="confirm_archive_all" value="1" class="mt-0.5 w-3.5 h-3.5 text-amber-600 border-amber-300 rounded focus:ring-amber-500">
+                        I understand that if Level and Status are blank, this archives all students in the selected school year.
+                    </label>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="submit" name="preview" value="1" class="w-full py-2.5 bg-slate-100 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-200 transition-all">
+                        Preview Count
+                    </button>
+                    <button type="submit" class="w-full py-2.5 bg-amber-600 text-white text-sm font-bold rounded-xl hover:bg-amber-700 transition-all shadow-lg shadow-amber-100">
+                        Archive Students
+                    </button>
+                </div>
             </form>
         </div>
         <p class="text-[10px] text-slate-400 italic text-center mt-4">
-            Soft-deletes students based on filters.
+            Marks students as Archived based on filters.
         </p>
     </div>
 </div>
@@ -264,16 +292,46 @@ document.addEventListener('DOMContentLoaded', function () {
     var statusText = document.getElementById('student-import-status');
 
     if (!form || !submitBtn || !submitLabel || !statusText) {
-        return;
+        // Continue to archive safety handler below when importer controls are absent.
     }
 
-    form.addEventListener('submit', function () {
-        submitBtn.disabled = true;
-        submitLabel.textContent = 'Uploading...';
-        statusText.classList.remove('text-slate-400');
-        statusText.classList.add('text-green-700');
-        statusText.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Import in progress. Please wait for confirmation.';
-    });
+    if (form && submitBtn && submitLabel && statusText) {
+        form.addEventListener('submit', function () {
+            submitBtn.disabled = true;
+            submitLabel.textContent = 'Uploading...';
+            statusText.classList.remove('text-slate-400');
+            statusText.classList.add('text-green-700');
+            statusText.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Import in progress. Please wait for confirmation.';
+        });
+    }
+
+    var archiveForm = document.getElementById('archive-form');
+    if (archiveForm) {
+        archiveForm.addEventListener('submit', function (event) {
+            var submitter = event.submitter;
+            if (!submitter) {
+                return;
+            }
+
+            if (submitter.name === 'preview') {
+                return;
+            }
+
+            var levelInput = archiveForm.querySelector('select[name="level"]');
+            var statusInput = archiveForm.querySelector('select[name="status"]');
+            var syInput = archiveForm.querySelector('select[name="school_year"]');
+            var isArchiveAllForYear = levelInput && statusInput && !levelInput.value && !statusInput.value;
+            var sy = syInput ? syInput.value : '';
+
+            var message = isArchiveAllForYear
+                ? 'This will archive all students in School Year ' + sy + '. Continue?'
+                : 'Are you sure you want to archive students matching the selected filters?';
+
+            if (!window.confirm(message)) {
+                event.preventDefault();
+            }
+        });
+    }
 });
 </script>
 @endsection
