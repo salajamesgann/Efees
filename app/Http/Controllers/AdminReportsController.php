@@ -138,7 +138,7 @@ class AdminReportsController extends Controller
 
         foreach ($logs as $log) {
             fputcsv($fp, [
-                $log->sent_at,
+                optional($log->sent_at)->format('Y-m-d H:i:s') ?? 'N/A',
                 $log->student_id,
                 $log->student ? $log->student->full_name : 'N/A',
                 $log->mobile_number,
@@ -173,7 +173,7 @@ class AdminReportsController extends Controller
         $columns = [
             'Student ID', 'Name', 'Level', 'Section', 'School Year',
             'Tuition', 'Charges', 'Discounts', 'Total Due',
-            'Total Paid', 'Balance', 'Status',
+            'Total Paid', 'Balance', 'Status', 'Last Payment Date',
         ];
 
         // Re-run query for export (without pagination)
@@ -188,7 +188,27 @@ class AdminReportsController extends Controller
         if ($request->section) {
             $query->where('section', $request->section);
         }
-        // ... apply other filters
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            $query->where(function ($sub) use ($search) {
+                $sub->where('student_id', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $status = strtolower((string) $request->status);
+            $query->whereHas('feeRecords', function ($q) use ($status) {
+                if ($status === 'paid') {
+                    $q->where('status', 'paid');
+                } elseif ($status === 'overdue') {
+                    $q->where('status', 'overdue');
+                } elseif ($status === 'partial') {
+                    $q->whereIn('status', ['partial', 'pending'])->where('balance', '>', 0);
+                }
+            });
+        }
 
         $students = $query->get();
         $exportSvc = app(\App\Services\FeeManagementService::class);
@@ -220,6 +240,7 @@ class AdminReportsController extends Controller
                 'Total Paid' => $paid,
                 'Balance' => $balance,
                 'Status' => $status,
+                'Last Payment Date' => optional($student->payments()->whereNotNull('paid_at')->latest('paid_at')->first()?->paid_at)->format('Y-m-d H:i:s') ?? 'N/A',
             ];
         }
         $svc = app(ExportService::class);

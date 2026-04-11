@@ -63,6 +63,7 @@
                     <input type="hidden" name="level" value="{{ request('level') }}">
                     <input type="hidden" name="section" value="{{ request('section') }}">
                     <input type="hidden" name="status" value="{{ request('status') }}">
+                    <input type="hidden" name="search" value="{{ request('search') }}">
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
                         <i class="fas fa-download"></i> Export CSV
                     </button>
