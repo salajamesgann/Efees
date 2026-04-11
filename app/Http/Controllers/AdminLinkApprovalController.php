@@ -59,21 +59,37 @@ class AdminLinkApprovalController extends Controller
             return back()->with('error', 'This request has already been processed.');
         }
 
-        DB::transaction(function () use ($linkRequest) {
+        $requestType = strtolower(trim((string) $linkRequest->type));
+        if (! in_array($requestType, ['link', 'unlink'], true)) {
+            return back()->with('error', 'Invalid request type.');
+        }
+
+        $action = 'updated';
+
+        DB::transaction(function () use ($linkRequest, $requestType, &$action) {
             $linkRequest->update([
                 'status' => 'approved',
                 'reviewed_by' => Auth::user()->user_id,
                 'reviewed_at' => now(),
             ]);
 
-            if ($linkRequest->type === 'link') {
-                // Don't double-attach
+            if ($requestType === 'link') {
                 $alreadyLinked = DB::table('parent_student')
                     ->where('parent_id', $linkRequest->parent_id)
                     ->where('student_id', $linkRequest->student_id)
                     ->exists();
 
-                if (! $alreadyLinked) {
+                if ($alreadyLinked) {
+                    $action = 'already_linked';
+                    DB::table('parent_student')
+                        ->where('parent_id', $linkRequest->parent_id)
+                        ->where('student_id', $linkRequest->student_id)
+                        ->update([
+                            'relationship' => $linkRequest->relationship ?? 'Parent',
+                            'updated_at' => now(),
+                        ]);
+                } else {
+                    $action = 'linked';
                     DB::table('parent_student')->insert([
                         'parent_id' => $linkRequest->parent_id,
                         'student_id' => $linkRequest->student_id,
@@ -84,35 +100,52 @@ class AdminLinkApprovalController extends Controller
                     ]);
                 }
             } else {
-                // Unlink
+                $action = 'unlinked';
                 DB::table('parent_student')
                     ->where('parent_id', $linkRequest->parent_id)
                     ->where('student_id', $linkRequest->student_id)
                     ->delete();
             }
 
-            // Notify the parent
-            try {
-                $parentUser = \App\Models\User::where('roleable_type', \App\Models\ParentContact::class)
-                    ->where('roleable_id', $linkRequest->parent_id)
-                    ->first();
+            // Verify final pivot state before commit to avoid false-positive success.
+            $isLinkedAfter = DB::table('parent_student')
+                ->where('parent_id', $linkRequest->parent_id)
+                ->where('student_id', $linkRequest->student_id)
+                ->exists();
 
-                if ($parentUser) {
-                    $student = $linkRequest->student;
-                    $action = $linkRequest->type === 'link' ? 'linked to' : 'unlinked from';
-                    DB::table('notifications')->insert([
-                        'user_id' => $parentUser->user_id,
-                        'title' => ucfirst($linkRequest->type) . ' Request Approved',
-                        'body' => 'Your request to have ' . ($student ? $student->full_name : $linkRequest->student_id) . " {$action} your account has been approved.",
-                        'created_at' => now(),
-                    ]);
-                }
-            } catch (\Throwable $e) {
-                Log::error('Link approval notification failed: ' . $e->getMessage());
+            if ($requestType === 'link' && ! $isLinkedAfter) {
+                throw new \RuntimeException('Failed to persist parent-student link.');
+            }
+            if ($requestType === 'unlink' && $isLinkedAfter) {
+                throw new \RuntimeException('Failed to remove parent-student link.');
             }
         });
 
-        return back()->with('success', ucfirst($linkRequest->type) . ' request approved successfully.');
+        // Notify parent after successful commit; this should not affect link persistence.
+        try {
+            $parentUser = \App\Models\User::where('roleable_type', \App\Models\ParentContact::class)
+                ->where('roleable_id', $linkRequest->parent_id)
+                ->first();
+
+            if ($parentUser) {
+                $student = $linkRequest->student;
+                $verb = $requestType === 'link' ? 'linked to' : 'unlinked from';
+                DB::table('notifications')->insert([
+                    'user_id' => $parentUser->user_id,
+                    'title' => ucfirst($requestType) . ' Request Approved',
+                    'body' => 'Your request to have ' . ($student ? $student->full_name : $linkRequest->student_id) . " {$verb} your account has been approved.",
+                    'created_at' => now(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Link approval notification failed: ' . $e->getMessage());
+        }
+
+        if ($action === 'already_linked') {
+            return back()->with('success', 'Link request approved. Student was already linked to this parent.');
+        }
+
+        return back()->with('success', ucfirst($requestType) . ' request approved successfully.');
     }
 
     /**
