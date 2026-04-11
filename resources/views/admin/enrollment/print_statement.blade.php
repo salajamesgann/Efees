@@ -32,7 +32,7 @@
         }
 
         .page {
-            max-width: 1200px;
+            max-width: 860px;
             margin: 0 auto;
         }
 
@@ -236,7 +236,7 @@
         @media print {
             @page {
                 margin: 1.2cm;
-                size: auto;
+                size: A4 portrait;
             }
 
             body {

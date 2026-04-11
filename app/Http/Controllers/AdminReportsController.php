@@ -77,13 +77,11 @@ class AdminReportsController extends Controller
         // Pending Outstanding + Total Fees Payable computed in one pass per student
         $svc = app(\App\Services\FeeManagementService::class);
         $pendingOutstanding = FeeRecord::outstandingDebt()->whereIn('student_id', $statsStudentIds)->sum('balance');
-        $totalFeesPayable   = 0.0;
+        $totalFeesPayable   = (float) FeeRecord::whereIn('student_id', $statsStudentIds)->sum('amount');
         $studentTotals      = [];
         Student::whereIn('student_id', $statsStudentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$totalFeesPayable, &$studentTotals, $svc) {
             foreach ($chunk as $stu) {
                 $t           = $svc->computeTotalsForStudent($stu);
-                $total       = (float) ($t['totalAmount'] ?? 0);
-                $totalFeesPayable   += $total;
                 $studentTotals[$stu->student_id] = $t;
             }
         });
@@ -358,16 +356,8 @@ class AdminReportsController extends Controller
             ->where('record_type', '!=', 'tuition_total')
             ->whereIn('status', ['pending', 'partial'])
             ->sum('balance');
-        $svc = app(\App\Services\FeeManagementService::class);
         $pendingOutstanding = FeeRecord::outstandingDebt()->whereIn('student_id', $studentIds)->sum('balance');
-        $totalFeesPayable   = 0.0;
-        Student::whereIn('student_id', $studentIds)->select(['student_id', 'level', 'school_year'])->chunk(200, function ($chunk) use (&$totalFeesPayable, $svc) {
-            foreach ($chunk as $stu) {
-                $t     = $svc->computeTotalsForStudent($stu);
-                $total = (float) ($t['totalAmount'] ?? 0);
-                $totalFeesPayable   += $total;
-            }
-        });
+        $totalFeesPayable = (float) FeeRecord::whereIn('student_id', $studentIds)->sum('amount');
         $overdueBalances = FeeRecord::whereIn('student_id', $studentIds)->overdue()->sum('balance');
         $remindersSent = SmsLog::whereIn('student_id', $studentIds)->where('status', 'sent')->count();
 
