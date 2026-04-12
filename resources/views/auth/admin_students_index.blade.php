@@ -183,12 +183,19 @@
                         </h2>
                     </div>
                     
-                    @if(isset($activeSy) && $currentSchoolYear === $activeSy)
-                        @if($viewState === 'students' && !$q)
+                    @if($viewState === 'students')
+                    <div class="flex items-center gap-2 flex-wrap justify-end">
+                        <a href="{{ route('super_admin.students.export', array_merge(request()->query(), ['school_year' => $currentSchoolYear])) }}" target="_blank" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
+                            <i class="fas fa-file-download"></i> Download Master List
+                        </a>
+                        @if(isset($activeSy) && $currentSchoolYear === $activeSy && !$q)
                         <a href="{{ route('super_admin.students.index', ['create' => true, 'level' => $currentLevel, 'section' => $currentSection, 'strand' => $currentStrand ?? null, 'school_year' => $currentSchoolYear]) }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
                             <i class="fas fa-plus"></i> Add Student
                         </a>
-                        @elseif($viewState === 'sections')
+                        @endif
+                    </div>
+                    @elseif(isset($activeSy) && $currentSchoolYear === $activeSy)
+                        @if($viewState === 'sections')
                         <button @click="sectionModalOpen = true" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-2">
                             <i class="fas fa-plus"></i> Add Section
                         </button>

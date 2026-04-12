@@ -984,16 +984,18 @@ class AdminStudentController extends Controller
 
         // Organize by: School Year, Year Level, Strand, Section, Name
         $students = $students->sort(function ($a, $b) {
-            // 1. School Year (Descending - newest first)
-            if ($a->school_year !== $b->school_year) {
-                return $b->school_year <=> $a->school_year;
-            }
-
-            // 2. Year Level (Numeric sort)
+            // 1. Year Level (Numeric sort)
             $levelA = (int) filter_var($a->level, FILTER_SANITIZE_NUMBER_INT);
             $levelB = (int) filter_var($b->level, FILTER_SANITIZE_NUMBER_INT);
             if ($levelA !== $levelB) {
                 return $levelA <=> $levelB;
+            }
+
+            // 2. Section (Alphabetical, unassigned last)
+            $sectionA = $a->section ?: 'Unassigned';
+            $sectionB = $b->section ?: 'Unassigned';
+            if ($sectionA !== $sectionB) {
+                return strcmp($sectionA, $sectionB);
             }
 
             // 3. Strand (Alphabetical, empty/null last or first doesn't matter much, but usually grouped)
@@ -1003,12 +1005,7 @@ class AdminStudentController extends Controller
                 return strcmp($strandA, $strandB);
             }
 
-            // 4. Section (Alphabetical)
-            if ($a->section !== $b->section) {
-                return strcmp($a->section, $b->section);
-            }
-
-            // 5. Name (Last Name, then First Name)
+            // 4. Name (Last Name, then First Name)
             if ($a->last_name !== $b->last_name) {
                 return strcmp($a->last_name, $b->last_name);
             }
