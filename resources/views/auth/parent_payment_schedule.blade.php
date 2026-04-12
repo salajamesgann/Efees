@@ -7,9 +7,11 @@
         <a href="{{ route('parent.fees.show', $student->student_id) }}" class="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors text-sm">
             <i class="fas fa-arrow-left"></i> Back to Fee Breakdown
         </a>
+        @if((float) ($totals['remainingBalance'] ?? 0) > 0)
         <a href="{{ route('parent.pay', ['student_id' => $student->student_id]) }}" class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 sm:py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all hover:-translate-y-0.5 flex items-center gap-2 active:translate-y-0">
             <i class="fas fa-credit-card"></i> Pay Now
         </a>
+        @endif
     </div>
 
     <!-- Header Card -->
@@ -228,9 +230,11 @@
         <p class="text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
             No installment plan has been set up for this student yet. The school may not have configured a payment schedule, or the full amount may be due in a single payment.
         </p>
+        @if((float) ($totals['remainingBalance'] ?? 0) > 0)
         <a href="{{ route('parent.pay', ['student_id' => $student->student_id]) }}" class="inline-flex items-center gap-2 mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold transition-colors">
             <i class="fas fa-credit-card"></i> Pay Full Amount
         </a>
+        @endif
     </div>
     @endif
 </div>

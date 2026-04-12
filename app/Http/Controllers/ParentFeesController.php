@@ -125,12 +125,17 @@ class ParentFeesController extends Controller
         $svc = app(FeeManagementService::class);
         $totals = $svc->computeTotalsForStudent($student);
 
+        $assignment = $student->getCurrentFeeAssignment();
+        $hasActiveTuition = $assignment && $assignment->tuitionFee && (float) ($totals['totalAmount'] ?? 0) > 0;
+
         // Get installment fee records for this student (tuition_installment records)
-        $installments = FeeRecord::where('student_id', $student->student_id)
-            ->where('record_type', 'tuition_installment')
-            ->orderBy('payment_date', 'asc')
-            ->orderBy('created_at', 'asc')
-            ->get();
+        $installments = $hasActiveTuition
+            ? FeeRecord::where('student_id', $student->student_id)
+                ->where('record_type', 'tuition_installment')
+                ->orderBy('payment_date', 'asc')
+                ->orderBy('created_at', 'asc')
+                ->get()
+            : collect();
 
         // Get total paid for this student
         $totalPaid = Payment::where('student_id', $student->student_id)
@@ -144,6 +149,7 @@ class ParentFeesController extends Controller
             'totals' => $totals,
             'installments' => $installments,
             'totalPaid' => $totalPaid,
+            'hasActiveTuition' => $hasActiveTuition,
             'isParent' => true,
             'myChildren' => $myChildren,
             'selectedChild' => $student,
