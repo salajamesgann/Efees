@@ -518,13 +518,6 @@
                 </div>
                 @endif
                 
-                <!-- Export (Always Visible) -->
-                <div class="p-4 border-t border-slate-100 bg-white shrink-0">
-                    <a href="{{ route('super_admin.students.export', array_merge(request()->query(), ['school_year' => $currentSchoolYear])) }}" target="_blank" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm group">
-                        <i class="fas fa-file-download text-slate-400 group-hover:text-teal-600 transition-colors"></i>
-                        <span>Download Master List</span>
-                    </a>
-                </div>
             </div>
 
             <!-- RIGHT PANEL: Detail / Form -->
